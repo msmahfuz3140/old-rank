@@ -84,3 +84,43 @@ body {
   animation: pulseGlow 3.5s ease-in-out infinite;
 }
 
+/* ========================================================
+   Bottom-to-Top Pop-Up Animation for Products
+   ======================================================== */
+@keyframes popUpFromBottom {
+  0% {
+    opacity: 0;
+    transform: translateY(48px) scale(0.93);
+  }
+  65% {
+    opacity: 0.95;
+    transform: translateY(-6px) scale(1.015);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(2px) scale(0.995);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-pop-up-bottom {
+  animation: popUpFromBottom 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+@keyframes popFloatGently {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-pop-float {
+  animation: popFloatGently 3.5s ease-in-out infinite;
+}
+

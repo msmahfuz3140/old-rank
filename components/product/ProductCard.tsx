@@ -46,7 +46,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="group bg-white rounded-2xl border border-slate-100/90 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden relative">
+    <div className="group bg-white rounded-2xl border border-slate-100/90 shadow-xs hover:shadow-2xl hover:-translate-y-1.5 hover:border-indigo-200/80 transition-all duration-300 flex flex-col overflow-hidden relative">
       {/* Badges */}
       <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 z-10 flex flex-col gap-1">
         {product.discountPercentage && product.discountPercentage > 0 && (

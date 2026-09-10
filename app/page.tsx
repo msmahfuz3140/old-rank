@@ -9,6 +9,7 @@ import {
   Store,
 } from "lucide-react";
 import ProductCard from "@/components/product/ProductCard";
+import PopUpProductCard from "@/components/product/PopUpProductCard";
 import PromoAdBanners from "@/components/home/PromoAdBanners";
 import HeroSlider from "@/components/home/HeroSlider";
 import { api } from "@/lib/api";
@@ -160,8 +161,8 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
-          {(hotDeals.length > 0 ? hotDeals : products).slice(0, 4).map((p) => (
-            <ProductCard key={p._id} product={p} />
+          {(hotDeals.length > 0 ? hotDeals : products).slice(0, 4).map((p, idx) => (
+            <PopUpProductCard key={p._id} product={p} index={idx} isPopHighlight={true} />
           ))}
         </div>
       </section>
@@ -187,8 +188,8 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
-            {electronicsProducts.map((p) => (
-              <ProductCard key={p._id} product={p} />
+            {electronicsProducts.map((p, idx) => (
+              <PopUpProductCard key={p._id} product={p} index={idx} />
             ))}
           </div>
         </section>
@@ -220,8 +221,8 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
-            {womenProducts.map((p) => (
-              <ProductCard key={p._id} product={p} />
+            {womenProducts.map((p, idx) => (
+              <PopUpProductCard key={p._id} product={p} index={idx} />
             ))}
           </div>
         </section>
@@ -253,8 +254,8 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
-            {babyProducts.map((p) => (
-              <ProductCard key={p._id} product={p} />
+            {babyProducts.map((p, idx) => (
+              <PopUpProductCard key={p._id} product={p} index={idx} />
             ))}
           </div>
         </section>
@@ -286,8 +287,8 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
-            {homeElectricProducts.map((p) => (
-              <ProductCard key={p._id} product={p} />
+            {homeElectricProducts.map((p, idx) => (
+              <PopUpProductCard key={p._id} product={p} index={idx} />
             ))}
           </div>
         </section>
@@ -314,8 +315,8 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
-            {fashionProducts.map((p) => (
-              <ProductCard key={p._id} product={p} />
+            {fashionProducts.map((p, idx) => (
+              <PopUpProductCard key={p._id} product={p} index={idx} />
             ))}
           </div>
         </section>
