@@ -42,6 +42,9 @@ import {
   Sparkles,
   Timer,
   Zap,
+  Menu,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { api, fallbackProducts, fallbackVendors } from "@/lib/api";
@@ -60,11 +63,37 @@ const PRESET_GALLERY_IMAGES = [
   { label: "Gaming Desktop Setup", url: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80" },
 ];
 
+export type AdminTab =
+  | "overview"
+  | "products"
+  | "sellers"
+  | "orders"
+  | "incomplete"
+  | "hotoffer"
+  | "settings";
+
+interface NavItem {
+  id: AdminTab;
+  label: string;
+  subtitle: string;
+  icon: any;
+  badge?: string | number;
+  badgeColor?: string;
+  isHot?: boolean;
+}
+
+interface NavSection {
+  group: string;
+  items: NavItem[];
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const { user, isLoggedIn, login, logout } = useAuthStore();
 
-  const [activeTab, setActiveTab] = useState<"overview" | "products" | "sellers" | "orders" | "incomplete" | "hotoffer" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Hot Deal / Timer Settings State
   const [hotDealConfig, setHotDealConfig] = useState({
@@ -542,6 +571,85 @@ export default function AdminPage() {
     );
   });
 
+  // Sidebar Navigation Sections Configuration
+  const navSections: NavSection[] = [
+    {
+      group: "মূল ড্যাশবোর্ড",
+      items: [
+        {
+          id: "overview" as const,
+          label: "ড্যাশবোর্ড ওভারভিউ",
+          subtitle: "অ্যানালিটিক্স ও মেট্রিক্স",
+          icon: LayoutDashboard,
+        },
+      ],
+    },
+    {
+      group: "মার্কেটপ্লেস ও ক্যাটালগ",
+      items: [
+        {
+          id: "products" as const,
+          label: "প্রোডাক্ট পোস্ট ও স্টক",
+          subtitle: "পণ্য ম্যানেজ ও ইনভেন্টরি",
+          icon: ShoppingBag,
+          badge: products.length,
+          badgeColor: "bg-amber-400/20 text-amber-300 border border-amber-400/30",
+        },
+        {
+          id: "sellers" as const,
+          label: "সেলার ও ভেন্ডর হাব",
+          subtitle: "ভেন্ডর একাউন্ট ও পারমিশন",
+          icon: Store,
+          badge: vendors.length,
+          badgeColor: "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30",
+        },
+        {
+          id: "hotoffer" as const,
+          label: "হট অফার ও টাইমার",
+          subtitle: "লাইভ সেল ও কাউন্টডাউন",
+          icon: Flame,
+          badge: hotDealConfig.isOfferActive ? "LIVE" : "SOON",
+          badgeColor: hotDealConfig.isOfferActive
+            ? "bg-red-500 text-white animate-pulse shadow-xs"
+            : "bg-slate-800 text-slate-400 border border-slate-700",
+          isHot: true,
+        },
+      ],
+    },
+    {
+      group: "অর্ডারস ও সেলস পাইপলাইন",
+      items: [
+        {
+          id: "orders" as const,
+          label: "সকল কাস্টমার অর্ডার",
+          subtitle: "শিপিং ও পেমেন্ট স্ট্যাটাস",
+          icon: Package,
+          badge: orders.length,
+          badgeColor: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
+        },
+        {
+          id: "incomplete" as const,
+          label: "ইনকমপ্লিট অর্ডার লিড",
+          subtitle: "ড্রপ-অফ ও ফোন ফলোআপ",
+          icon: Clock,
+          badge: incompleteOrders.length,
+          badgeColor: "bg-rose-500/20 text-rose-300 border border-rose-500/30",
+        },
+      ],
+    },
+    {
+      group: "সিস্টেম ও শপ সেটিংস",
+      items: [
+        {
+          id: "settings" as const,
+          label: "শপ সেটিংস ও চার্জ",
+          subtitle: "ডেলিভারি ও হেল্পলাইন",
+          icon: Settings,
+        },
+      ],
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
       {/* Toast Notification */}
@@ -553,36 +661,60 @@ export default function AdminPage() {
       )}
 
       {/* Admin Top Header Bar */}
-      <header className="sticky top-0 z-30 bg-[#0b0f19] text-white border-b border-slate-800 px-4 sm:px-8 py-3.5 shadow-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-30 bg-[#0b0f19] text-white border-b border-slate-800 px-4 sm:px-6 py-3 shadow-md">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 group">
+            {/* Mobile Menu Hamburger Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              title="মেনু খুলুন"
+            >
+              <Menu size={20} />
+            </button>
+
+            {/* Brand Logo & Name */}
+            <Link href="/" className="flex items-center gap-2.5 group">
               <img
                 src="/images/logo.png"
                 alt="Old Rank Logo"
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-amber-400/50 shadow-md group-hover:scale-105 transition-transform"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-amber-400/50 shadow-md group-hover:scale-105 transition-transform"
               />
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-black text-lg text-white tracking-tight leading-none">
+                  <span className="font-black text-base sm:text-lg text-white tracking-tight leading-none">
                     Old<span className="text-amber-400">Rank</span>
                   </span>
                   <span className="text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 px-1.5 py-0.5 rounded">
                     ADMIN
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 font-medium">পোস্টিং, প্রোডাক্ট, সেলার ও অর্ডার হাব</p>
+                <p className="text-[10px] text-slate-400 font-medium hidden sm:block">
+                  পোস্টিং, প্রোডাক্ট, সেলার ও অর্ডার হাব
+                </p>
               </div>
             </Link>
           </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Desktop Sidebar Expand/Collapse Button */}
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="hidden lg:flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 py-2 px-3 rounded-xl border border-slate-700 transition-colors cursor-pointer"
+              title={isSidebarCollapsed ? "সাইডবার বড় করুন" : "সাইডবার ছোট করুন"}
+            >
+              {isSidebarCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+              <span className="hidden xl:inline">{isSidebarCollapsed ? "সাইডবার বড় করুন" : "মিনিমাইজ"}</span>
+            </button>
+
             <Link
               href="/"
               target="_blank"
-              className="flex items-center gap-1.5 text-xs font-bold text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 py-2 px-3.5 rounded-xl border border-slate-700 transition-colors"
+              className="flex items-center gap-1.5 text-xs font-bold text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 py-2 px-3 rounded-xl border border-slate-700 transition-colors"
             >
-              <span>শপ লাইভ প্রিভিউ</span>
+              <span className="hidden sm:inline">শপ প্রিভিউ</span>
               <ArrowUpRight size={14} className="text-amber-400" />
             </Link>
 
@@ -594,17 +726,17 @@ export default function AdminPage() {
               <RefreshCw size={16} className={isLoading ? "animate-spin text-amber-400" : ""} />
             </button>
 
-            {/* Admin/Seller User Info */}
-            <div className="flex items-center gap-2.5 pl-2 border-l border-slate-800">
+            {/* User Profile / Logout */}
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
               <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xs shadow">
                 {user?.role === "seller" ? <Store size={15} /> : <Crown size={15} />}
               </div>
               <div className="hidden md:block text-left">
-                <span className="text-xs font-bold text-white block leading-tight truncate max-w-[140px]">
+                <span className="text-xs font-bold text-white block leading-tight truncate max-w-[120px]">
                   {user?.name || "Old Rank Admin"}
                 </span>
                 <span className="text-[10px] text-amber-300 block leading-tight">
-                  {user?.role === "seller" ? "Authorized Seller" : "Headquarters Authority"}
+                  {user?.role === "seller" ? "Seller" : "Authority"}
                 </span>
               </div>
               <button
@@ -619,145 +751,306 @@ export default function AdminPage() {
         </div>
       </header>
 
-      {/* Role Banner if Seller */}
-      {user?.role === "seller" ? (
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 mt-4">
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-amber-950 text-xs shadow-xs">
-            <div className="flex items-center gap-2">
-              <Store size={18} className="text-amber-700 shrink-0" />
-              <span>
-                <strong>সেলার পোর্টাল সক্রিয়:</strong> {user.shopName || user.name} (আপনার দোকান ও অর্ডারের পূর্ণ বিবরণ দেখতে পারছেন)
-              </span>
-            </div>
-            <Link href="/login" className="text-amber-800 hover:underline font-bold text-xs shrink-0">
-              রোল পরিবর্তন করুন →
-            </Link>
+      {/* Main Container with Sticky Sidebar + Content Area */}
+      <div className="flex flex-1 min-h-[calc(100vh-61px)] relative">
+        {/* ================= DESKTOP STICKY SIDEBAR ================= */}
+        <aside
+          className={`hidden lg:flex flex-col shrink-0 bg-[#080b11] border-r border-slate-800 text-white sticky top-[61px] h-[calc(100vh-61px)] transition-all duration-300 z-20 select-none ${
+            isSidebarCollapsed ? "w-20" : "w-64 xl:w-72"
+          }`}
+        >
+          {/* Sidebar Top Mini Brand Status */}
+          <div className="p-3.5 border-b border-slate-800/80 flex items-center justify-between">
+            {!isSidebarCollapsed ? (
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-400/20 text-amber-400 flex items-center justify-center font-black">
+                  <Crown size={15} />
+                </div>
+                <div>
+                  <span className="text-xs font-black tracking-wider uppercase text-white block">
+                    Admin Portal
+                  </span>
+                  <span className="text-[10px] text-amber-400 font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    HQ Live Control
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="w-8 h-8 mx-auto rounded-lg bg-amber-400/20 text-amber-400 flex items-center justify-center font-black">
+                <Crown size={16} />
+              </div>
+            )}
           </div>
-        </div>
-      ) : (!isLoggedIn || user?.role !== "admin") ? (
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 mt-4">
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-amber-900 text-xs shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <Crown size={20} className="text-amber-600 shrink-0" />
-              <span>
-                <strong>ডেমো মোড নোটিশ:</strong> আপনি বর্তমানে সরাসরি ভিজিট করেছেন। পূর্ণ কন্ট্রোলের জন্য অ্যাডমিন মোড সক্রিয় করুন।
-              </span>
-            </div>
-            <button
-              onClick={handleSwitchToAdmin}
-              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors shrink-0 cursor-pointer"
-            >
-              <UserCheck size={14} /> ১-ক্লিকে অ্যাডমিন হিসেবে সক্রিয় হন
-            </button>
+
+          {/* Nav Items List */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-5 no-scrollbar">
+            {navSections.map((sec, sIdx) => (
+              <div key={sIdx} className="space-y-1">
+                {!isSidebarCollapsed && (
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 px-3 block mb-1.5">
+                    {sec.group}
+                  </span>
+                )}
+                <div className="space-y-1">
+                  {sec.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setActiveTab(item.id)}
+                        title={isSidebarCollapsed ? item.label : undefined}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 cursor-pointer group relative ${
+                          isActive
+                            ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-400 font-black border-l-4 border-amber-400 shadow-sm shadow-amber-500/5"
+                            : "text-slate-400 hover:text-white hover:bg-slate-800/60 font-medium border-l-4 border-transparent"
+                        } ${isSidebarCollapsed ? "justify-center px-0" : ""}`}
+                      >
+                        <Icon
+                          size={18}
+                          className={`shrink-0 transition-transform group-hover:scale-110 ${
+                            isActive
+                              ? "text-amber-400"
+                              : item.isHot
+                              ? "text-red-400 animate-pulse"
+                              : "text-slate-400 group-hover:text-slate-200"
+                          }`}
+                        />
+                        {!isSidebarCollapsed && (
+                          <div className="flex-1 min-w-0 flex items-center justify-between">
+                            <div className="truncate">
+                              <span className="text-xs block leading-tight truncate">{item.label}</span>
+                              <span className="text-[10px] text-slate-500 block leading-tight font-normal truncate">
+                                {item.subtitle}
+                              </span>
+                            </div>
+                            {item.badge !== undefined && (
+                              <span
+                                className={`text-[10px] font-black px-2 py-0.5 rounded-full ml-1.5 shrink-0 ${
+                                  item.badgeColor || "bg-slate-800 text-slate-300"
+                                }`}
+                              >
+                                {item.badge}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {isSidebarCollapsed && item.badge !== undefined && (
+                          <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-[#080b11]" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
-      ) : null}
 
-      {/* Main Admin Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6">
-        {/* Navigation Tabs Bar */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 border-b border-slate-200 no-scrollbar">
-          <button
-            onClick={() => setActiveTab("overview")}
-            className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-              activeTab === "overview"
-                ? "bg-[#0b0f19] text-amber-400 shadow-md border border-slate-800"
-                : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200/80 hover:bg-slate-50"
-            }`}
-          >
-            <LayoutDashboard size={15} />
-            <span>ওভারভিউ ও অ্যানালিটিক্স</span>
-          </button>
+          {/* Sidebar Bottom Footer Profile Widget */}
+          <div className="p-3 border-t border-slate-800/80 bg-[#05070c]/60">
+            {!isSidebarCollapsed ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/80 border border-slate-800">
+                  <div className="flex items-center gap-2.5 truncate">
+                    <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xs shrink-0 shadow">
+                      {user?.role === "seller" ? <Store size={14} /> : <Crown size={14} />}
+                    </div>
+                    <div className="truncate">
+                      <span className="text-xs font-bold text-white block truncate leading-tight">
+                        {user?.name || "Old Rank Admin"}
+                      </span>
+                      <span className="text-[10px] text-amber-300 block truncate leading-tight">
+                        {user?.role === "seller" ? "Authorized Seller" : "Headquarters Authority"}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
+                    title="লগআউট"
+                  >
+                    <LogOut size={15} />
+                  </button>
+                </div>
 
-          <button
-            onClick={() => setActiveTab("products")}
-            className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-              activeTab === "products"
-                ? "bg-[#0b0f19] text-amber-400 shadow-md border border-slate-800"
-                : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200/80 hover:bg-slate-50"
-            }`}
-          >
-            <ShoppingBag size={15} />
-            <span>প্রোডাক্ট পোস্ট ও স্টক</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-400/20 text-amber-700 font-extrabold">
-              {products.length}
-            </span>
-          </button>
+                <Link
+                  href="/"
+                  target="_blank"
+                  className="w-full flex items-center justify-center gap-1.5 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 hover:bg-amber-400/20 py-2 rounded-xl border border-amber-400/20 transition-all"
+                >
+                  <span>শপ লাইভ দেখুন</span>
+                  <ArrowUpRight size={13} />
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <div
+                  className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xs shadow"
+                  title={user?.name || "Admin"}
+                >
+                  {user?.role === "seller" ? <Store size={14} /> : <Crown size={14} />}
+                </div>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                  title="লগআউট"
+                >
+                  <LogOut size={15} />
+                </button>
+              </div>
+            )}
+          </div>
+        </aside>
 
-          <button
-            onClick={() => setActiveTab("sellers")}
-            className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-              activeTab === "sellers"
-                ? "bg-[#0b0f19] text-amber-400 shadow-md border border-slate-800"
-                : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200/80 hover:bg-slate-50"
-            }`}
-          >
-            <Store size={15} />
-            <span>সেলার ও ভেন্ডর হাব</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-indigo-50 text-indigo-700 font-extrabold">
-              {vendors.length}
-            </span>
-          </button>
+        {/* ================= MOBILE OVERLAY DRAWER SIDEBAR ================= */}
+        {isMobileSidebarOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            {/* Dark Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/75 backdrop-blur-xs transition-opacity duration-300"
+              onClick={() => setIsMobileSidebarOpen(false)}
+            />
 
-          <button
-            onClick={() => setActiveTab("orders")}
-            className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-              activeTab === "orders"
-                ? "bg-[#0b0f19] text-amber-400 shadow-md border border-slate-800"
-                : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200/80 hover:bg-slate-50"
-            }`}
-          >
-            <Package size={15} />
-            <span>অর্ডারসমূহ</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-50 text-emerald-700 font-extrabold">
-              {orders.length}
-            </span>
-          </button>
+            {/* Slide-out Drawer */}
+            <aside className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-[#080b11] border-r border-slate-800 text-white shadow-2xl flex flex-col z-10 animate-slide-in">
+              {/* Drawer Header */}
+              <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <img
+                    src="/images/logo.png"
+                    alt="Old Rank Logo"
+                    className="w-8 h-8 rounded-full object-cover ring-2 ring-amber-400/60"
+                  />
+                  <div>
+                    <span className="font-black text-sm text-white tracking-tight">
+                      Old<span className="text-amber-400">Rank</span> Admin
+                    </span>
+                    <span className="text-[10px] text-amber-300 block">কন্ট্রোল প্যানেল</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileSidebarOpen(false)}
+                  className="p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
+                  title="বন্ধ করুন"
+                >
+                  <X size={18} />
+                </button>
+              </div>
 
-          <button
-            onClick={() => setActiveTab("incomplete")}
-            className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-              activeTab === "incomplete"
-                ? "bg-[#0b0f19] text-amber-400 shadow-md border border-slate-800"
-                : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200/80 hover:bg-slate-50"
-            }`}
-          >
-            <Clock size={15} className="text-rose-500" />
-            <span>ইনকমপ্লিট অর্ডার ও লিড</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-50 text-rose-700 font-extrabold">
-              {incompleteOrders.length}
-            </span>
-          </button>
+              {/* Drawer Nav Items */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-4 no-scrollbar">
+                {navSections.map((sec, sIdx) => (
+                  <div key={sIdx} className="space-y-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 px-3 block mb-1">
+                      {sec.group}
+                    </span>
+                    <div className="space-y-1">
+                      {sec.items.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = activeTab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveTab(item.id);
+                              setIsMobileSidebarOpen(false);
+                            }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                              isActive
+                                ? "bg-gradient-to-r from-amber-500/25 via-amber-500/10 to-transparent text-amber-400 font-black border-l-4 border-amber-400 shadow-sm"
+                                : "text-slate-300 hover:text-white hover:bg-slate-800/80 font-medium"
+                            }`}
+                          >
+                            <Icon
+                              size={18}
+                              className={
+                                isActive
+                                  ? "text-amber-400"
+                                  : item.isHot
+                                  ? "text-red-400 animate-pulse"
+                                  : "text-amber-400/80"
+                              }
+                            />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs block leading-tight truncate">{item.label}</span>
+                              <span className="text-[10px] text-slate-500 block truncate">{item.subtitle}</span>
+                            </div>
+                            {item.badge !== undefined && (
+                              <span
+                                className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                  item.badgeColor || "bg-slate-800 text-slate-300"
+                                }`}
+                              >
+                                {item.badge}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-          <button
-            onClick={() => setActiveTab("hotoffer")}
-            className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-              activeTab === "hotoffer"
-                ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md border border-red-500"
-                : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200/80 hover:bg-slate-50"
-            }`}
-          >
-            <Flame size={15} className={activeTab === "hotoffer" ? "text-white animate-pulse" : "text-red-500"} />
-            <span>হট অফার ও টাইমার</span>
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-              hotDealConfig.isOfferActive ? "bg-amber-400 text-slate-950" : "bg-slate-200 text-slate-700"
-            }`}>
-              {hotDealConfig.isOfferActive ? "LIVE" : "SOON"}
-            </span>
-          </button>
+              {/* Drawer Footer */}
+              <div className="p-4 border-t border-slate-800 bg-[#05070c] space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 truncate">
+                    <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-xs shrink-0">
+                      <Crown size={14} />
+                    </div>
+                    <div className="truncate">
+                      <span className="text-xs font-bold text-white block truncate">{user?.name || "Admin"}</span>
+                      <span className="text-[10px] text-amber-400 block truncate">Headquarters Authority</span>
+                    </div>
+                  </div>
+                  <button onClick={logout} className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg">
+                    <LogOut size={16} />
+                  </button>
+                </div>
+              </div>
+            </aside>
+          </div>
+        )}
 
-          <button
-            onClick={() => setActiveTab("settings")}
-            className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-              activeTab === "settings"
-                ? "bg-[#0b0f19] text-amber-400 shadow-md border border-slate-800"
-                : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200/80 hover:bg-slate-50"
-            }`}
-          >
-            <Settings size={15} />
-            <span>শপ সেটিংস ও চার্জ</span>
-          </button>
-        </div>
+        {/* ================= MAIN DASHBOARD CONTENT ================= */}
+        <main className="flex-1 min-w-0 bg-[#f8fafc] p-4 sm:p-6 lg:p-8 overflow-y-auto space-y-6">
+          {/* Role Banner if Seller */}
+          {user?.role === "seller" ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-amber-950 text-xs shadow-xs">
+              <div className="flex items-center gap-2">
+                <Store size={18} className="text-amber-700 shrink-0" />
+                <span>
+                  <strong>সেলার পোর্টাল সক্রিয়:</strong> {user.shopName || user.name} (আপনার দোকান ও অর্ডারের পূর্ণ বিবরণ দেখতে পারছেন)
+                </span>
+              </div>
+              <Link href="/login" className="text-amber-800 hover:underline font-bold text-xs shrink-0">
+                রোল পরিবর্তন করুন →
+              </Link>
+            </div>
+          ) : !isLoggedIn || user?.role !== "admin" ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-amber-900 text-xs shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <Crown size={20} className="text-amber-600 shrink-0" />
+                <span>
+                  <strong>ডেমো মোড নোটিশ:</strong> আপনি বর্তমানে সরাসরি ভিজিট করেছেন। পূর্ণ কন্ট্রোলের জন্য অ্যাডমিন মোড সক্রিয় করুন।
+                </span>
+              </div>
+              <button
+                onClick={handleSwitchToAdmin}
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors shrink-0 cursor-pointer"
+              >
+                <UserCheck size={14} /> ১-ক্লিকে অ্যাডমিন হিসেবে সক্রিয় হন
+              </button>
+            </div>
+          ) : null}
 
         {/* TAB 1: OVERVIEW */}
         {activeTab === "overview" && (
@@ -1907,6 +2200,7 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+        </main>
       </div>
 
       {/* MODAL 1: ADD NEW PRODUCT MODAL */}
