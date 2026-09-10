@@ -674,25 +674,36 @@ export default function AdminPage() {
           isSidebarCollapsed ? "w-20" : "w-64 xl:w-72"
         }`}
       >
-        {/* Sidebar Brand Header */}
-        <div className="h-16 px-4 border-b border-slate-100 flex items-center justify-between">
+        {/* Sidebar Brand Header (Starts at absolute top of viewport) */}
+        <div className="h-16 px-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
           {!isSidebarCollapsed ? (
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 rounded-lg bg-[#5064df] text-white flex items-center justify-center font-black text-xs shadow-sm group-hover:scale-105 transition-transform">
-                <span>OR</span>
-              </div>
-              <div>
-                <span className="font-black text-base text-slate-900 tracking-tight leading-none block">
-                  OLD <span className="text-[#5064df]">RANK</span>
-                </span>
-                <span className="text-[10px] text-slate-400 font-bold tracking-wider uppercase block">
+            <Link href="/" className="flex items-center gap-3 group">
+              <img
+                src="/images/logo.png"
+                alt="Old Rank Logo"
+                className="w-10 h-10 rounded-full object-cover shadow-sm group-hover:scale-105 transition-transform shrink-0 ring-1 ring-slate-200"
+              />
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-black text-base text-slate-900 tracking-tight leading-none block">
+                    Old<span className="text-[#5064df]">Rank</span>
+                  </span>
+                  <span className="text-[9px] font-extrabold bg-indigo-50 text-[#5064df] px-1.5 py-0.5 rounded border border-indigo-200/60 uppercase">
+                    PRO
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-bold tracking-wider uppercase block mt-1">
                   ADMIN CONSOLE
                 </span>
               </div>
             </Link>
           ) : (
-            <Link href="/" className="w-9 h-9 mx-auto rounded-lg bg-[#5064df] text-white flex items-center justify-center font-black text-sm shadow-sm hover:scale-105 transition-transform">
-              OR
+            <Link href="/" className="mx-auto group flex items-center justify-center" title="Old Rank Store">
+              <img
+                src="/images/logo.png"
+                alt="Old Rank Logo"
+                className="w-10 h-10 rounded-full object-cover shadow-sm group-hover:scale-110 transition-transform ring-1 ring-slate-200"
+              />
             </Link>
           )}
         </div>
@@ -810,14 +821,21 @@ export default function AdminPage() {
           <aside className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white border-r border-slate-200 text-slate-700 shadow-2xl flex flex-col z-10 animate-slide-in">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#5064df] text-white flex items-center justify-center font-black text-xs shadow-sm">
-                  OR
-                </div>
+                <img
+                  src="/images/logo.png"
+                  alt="Old Rank Logo"
+                  className="w-10 h-10 rounded-full object-cover shadow-sm shrink-0 ring-1 ring-slate-200"
+                />
                 <div>
-                  <span className="font-black text-sm text-slate-900 tracking-tight">
-                    OLD <span className="text-[#5064df]">RANK</span>
-                  </span>
-                  <span className="text-[10px] text-slate-400 block font-bold">ADMIN PANEL</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-black text-sm text-slate-900 tracking-tight">
+                      Old<span className="text-[#5064df]">Rank</span>
+                    </span>
+                    <span className="text-[9px] font-extrabold bg-indigo-50 text-[#5064df] px-1.5 py-0.2 rounded border border-indigo-200/60 uppercase">
+                      PRO
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 block font-bold mt-0.5">ADMIN CONSOLE</span>
                 </div>
               </div>
               <button
@@ -917,6 +935,18 @@ export default function AdminPage() {
               >
                 <Menu size={20} />
               </button>
+
+              {/* Mobile Brand Logo */}
+              <Link href="/" className="lg:hidden flex items-center gap-2" title="Old Rank Store">
+                <img
+                  src="/images/logo.png"
+                  alt="Old Rank Logo"
+                  className="w-7 h-7 rounded-full object-cover ring-1 ring-white/40 shadow-xs"
+                />
+                <span className="font-black text-sm text-white tracking-tight">
+                  Old<span className="text-amber-300">Rank</span>
+                </span>
+              </Link>
 
               {/* Desktop Sidebar Collapse Button */}
               <button

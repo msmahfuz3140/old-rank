@@ -2,14 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-import NewsTickerBar from "@/components/layout/NewsTickerBar";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import MobileBottomNav from "@/components/layout/MobileBottomNav";
-import PromoModal from "@/components/popups/PromoModal";
-import SocialProofPopup from "@/components/popups/SocialProofPopup";
-import QuickViewModal from "@/components/popups/QuickViewModal";
-import CartDrawer from "@/components/cart/CartDrawer";
+import StorefrontShell from "@/components/layout/StorefrontShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,17 +40,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 selection:bg-[#303d6e] selection:text-white">
-        <NewsTickerBar />
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <MobileBottomNav />
-
-        {/* Dynamic Modals & Notifications */}
-        <PromoModal />
-        <SocialProofPopup />
-        <QuickViewModal />
-        <CartDrawer />
+        <StorefrontShell>{children}</StorefrontShell>
       </body>
     </html>
   );
