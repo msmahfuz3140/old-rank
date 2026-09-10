@@ -38,6 +38,10 @@ import {
   BadgeCheck,
   Ban,
   Percent,
+  UploadCloud,
+  Sparkles,
+  Timer,
+  Zap,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { api, fallbackProducts, fallbackVendors } from "@/lib/api";
@@ -60,7 +64,19 @@ export default function AdminPage() {
   const router = useRouter();
   const { user, isLoggedIn, login, logout } = useAuthStore();
 
-  const [activeTab, setActiveTab] = useState<"overview" | "products" | "sellers" | "orders" | "incomplete" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "products" | "sellers" | "orders" | "incomplete" | "hotoffer" | "settings">("overview");
+
+  // Hot Deal / Timer Settings State
+  const [hotDealConfig, setHotDealConfig] = useState({
+    isOfferActive: true,
+    offerTitle: "হট ডিল কালেকশন",
+    offerSubtitle: "সবচেয়ে বেশি বিক্রিত পণ্যগুলোতে বিশাল ডিসকাউন্ট অফার",
+    offerEndTime: new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 16),
+    discountBadge: "সীমিত স্টক",
+  });
+  const [isSavingHotDeal, setIsSavingHotDeal] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadSuccessMessage, setUploadSuccessMessage] = useState("");
 
   // Core Data States
   const [orders, setOrders] = useState<IOrder[]>([]);
@@ -151,6 +167,26 @@ export default function AdminPage() {
       if (fetchedStats) setStats(fetchedStats);
       setProducts(fetchedProducts);
       setVendors(fetchedVendors);
+
+      // Fetch Hot Deal / Timer settings
+      try {
+        const hd = await api.getHotDealSettings();
+        if (hd) {
+          let timeFormatted = hd.offerEndTime;
+          try {
+            const d = new Date(hd.offerEndTime);
+            if (!isNaN(d.getTime())) {
+              // Convert to local YYYY-MM-DDTHH:mm
+              const offsetMs = d.getTimezoneOffset() * 60000;
+              timeFormatted = new Date(d.getTime() - offsetMs).toISOString().slice(0, 16);
+            }
+          } catch {}
+          setHotDealConfig({
+            ...hd,
+            offerEndTime: timeFormatted,
+          });
+        }
+      } catch {}
     } catch (e) {
       console.warn("Failed loading admin data:", e);
     } finally {
@@ -165,6 +201,77 @@ export default function AdminPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     loadData();
+  };
+
+  // Hot Deal / Timer Management Handlers
+  const handleSaveHotDeal = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsSavingHotDeal(true);
+    try {
+      const payload = {
+        ...hotDealConfig,
+        offerEndTime: new Date(hotDealConfig.offerEndTime).toISOString(),
+      };
+      await api.updateHotDealSettings(payload);
+      showToast("🔥 হট অফার ও টাইমার সেটিংস সফলভাবে সেভ হয়েছে!");
+    } catch (err: any) {
+      showToast("হট অফার সেভ করা সম্ভব হয়নি: " + err.message);
+    } finally {
+      setIsSavingHotDeal(false);
+    }
+  };
+
+  const handleToggleGlobalHotOffer = async (active: boolean) => {
+    const updated = { ...hotDealConfig, isOfferActive: active };
+    setHotDealConfig(updated);
+    try {
+      await api.updateHotDealSettings({
+        ...updated,
+        offerEndTime: new Date(updated.offerEndTime).toISOString(),
+      });
+      showToast(
+        active
+          ? "🔥 হট অফার সক্রিয় করা হয়েছে (Live Countdown Ticker)!"
+          : "⏳ অফার সাময়িক বন্ধ রাখা হয়েছে (Offer Coming Soon মোড)!"
+      );
+    } catch (err: any) {
+      showToast("আপডেট ব্যর্থ হয়েছে: " + err.message);
+    }
+  };
+
+  const handleApplyPresetTime = (hoursFromNow: number) => {
+    const target = new Date(Date.now() + hoursFromNow * 3600 * 1000);
+    const offsetMs = target.getTimezoneOffset() * 60000;
+    const timeStr = new Date(target.getTime() - offsetMs).toISOString().slice(0, 16);
+    setHotDealConfig((prev) => ({ ...prev, offerEndTime: timeStr }));
+    showToast(
+      `⏱️ অফারের সময় ${
+        hoursFromNow >= 24 ? `${Math.round(hoursFromNow / 24)} দিন` : `${hoursFromNow} ঘণ্টা`
+      } নির্ধারণ করা হয়েছে!`
+    );
+  };
+
+  // Cloudinary Image / PDF Upload Handler
+  const handleCloudinaryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    setUploadSuccessMessage("");
+    try {
+      const res = await api.uploadFile(file);
+      if (res.success && res.url) {
+        setProductForm((prev) => ({ ...prev, mainImage: res.url }));
+        setUploadSuccessMessage(`✅ ক্লাউডিনারিতে আপলোড সফল! (${file.name})`);
+        showToast("🎉 ছবি সফলভাবে ক্লাউডিনারিতে আপলোড হয়েছে!");
+      } else {
+        showToast(res.message || "আপলোড ব্যর্থ হয়েছে।");
+      }
+    } catch (err: any) {
+      showToast("আপলোডে ত্রুটি: " + err.message);
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   // Order Handlers
@@ -619,6 +726,23 @@ export default function AdminPage() {
             <span>ইনকমপ্লিট অর্ডার ও লিড</span>
             <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-50 text-rose-700 font-extrabold">
               {incompleteOrders.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("hotoffer")}
+            className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+              activeTab === "hotoffer"
+                ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md border border-red-500"
+                : "bg-white text-slate-600 hover:text-slate-900 border border-slate-200/80 hover:bg-slate-50"
+            }`}
+          >
+            <Flame size={15} className={activeTab === "hotoffer" ? "text-white animate-pulse" : "text-red-500"} />
+            <span>হট অফার ও টাইমার</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              hotDealConfig.isOfferActive ? "bg-amber-400 text-slate-950" : "bg-slate-200 text-slate-700"
+            }`}>
+              {hotDealConfig.isOfferActive ? "LIVE" : "SOON"}
             </span>
           </button>
 
@@ -1463,6 +1587,326 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {/* TAB 7: HOT OFFER & REAL-TIME TIMER MANAGEMENT */}
+        {activeTab === "hotoffer" && (
+          <div className="space-y-6">
+            {/* Header Status Card */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-white shadow-md ${
+                    hotDealConfig.isOfferActive
+                      ? "bg-gradient-to-br from-red-500 to-rose-600 shadow-red-500/30 animate-pulse"
+                      : "bg-slate-700 shadow-slate-700/20"
+                  }`}
+                >
+                  <Flame size={24} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                      হট অফার ও রিয়েল-টাইম কাউন্টডাউন টাইমার কন্ট্রোল
+                    </h2>
+                    <span
+                      className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                        hotDealConfig.isOfferActive
+                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                          : "bg-amber-100 text-amber-800 border border-amber-300"
+                      }`}
+                    >
+                      {hotDealConfig.isOfferActive ? "● অফার লাইভ আছে" : "○ অফার বন্ধ (Coming Soon)"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    অফার সক্রিয়/নিষ্ক্রিয় করুন, শেষ হওয়ার রিয়েল-টাইম টাইমার সেট করুন এবং লাইভ প্রিভিউ দেখুন
+                  </p>
+                </div>
+              </div>
+
+              {/* Instant Status Toggle Button */}
+              <div className="flex items-center gap-2 shrink-0">
+                {hotDealConfig.isOfferActive ? (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleGlobalHotOffer(false)}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 border border-slate-300 transition-colors cursor-pointer"
+                  >
+                    <Clock size={14} className="text-slate-600" />
+                    <span>অফার বন্ধ রাখুন (Coming Soon মোড)</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleGlobalHotOffer(true)}
+                    className="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black px-4 py-2.5 rounded-xl text-xs flex items-center gap-2 shadow-lg shadow-red-500/20 transition-transform active:scale-95 cursor-pointer"
+                  >
+                    <Flame size={14} className="animate-pulse" />
+                    <span>১-ক্লিকে অফার সক্রিয় করুন (Go Live)</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Form + Live Preview Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Form Controls (7 Columns) */}
+              <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-5">
+                <div className="border-b border-slate-100 pb-3">
+                  <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                    <Sliders size={16} className="text-amber-500" />
+                    <span>অফারের বিস্তারিত সেটিংস</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    হোমপেজের হট ডিল সেকশনের টেক্সট এবং কাউন্টডাউন কনফিগার করুন
+                  </p>
+                </div>
+
+                <form onSubmit={handleSaveHotDeal} className="space-y-4 text-xs">
+                  {/* Active Switch */}
+                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-slate-800 block">অফার স্ট্যাটাস (Offer Status)</span>
+                      <span className="text-[11px] text-slate-500">
+                        {hotDealConfig.isOfferActive
+                          ? "হোমপেজে লাল রঙের হট ডিল সেকশন ও টাইমার প্রদর্শিত হবে।"
+                          : "হোমপেজে 'Offer Coming Soon (শীঘ্রই নতুন অফার আসছে)' সেকশন দেখাবে।"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setHotDealConfig({
+                          ...hotDealConfig,
+                          isOfferActive: !hotDealConfig.isOfferActive,
+                        })
+                      }
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        hotDealConfig.isOfferActive ? "bg-red-600" : "bg-slate-300"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          hotDealConfig.isOfferActive ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Title & Badge */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        অফারের শিরোনাম (Offer Title) *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={hotDealConfig.offerTitle}
+                        onChange={(e) =>
+                          setHotDealConfig({ ...hotDealConfig, offerTitle: e.target.value })
+                        }
+                        placeholder="হট ডিল কালেকশন"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-semibold focus:ring-2 focus:ring-red-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        ডিসকাউন্ট ব্যাজ (Badge Text)
+                      </label>
+                      <input
+                        type="text"
+                        value={hotDealConfig.discountBadge}
+                        onChange={(e) =>
+                          setHotDealConfig({ ...hotDealConfig, discountBadge: e.target.value })
+                        }
+                        placeholder="সীমিত স্টক / মেগা সেল"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-semibold focus:ring-2 focus:ring-red-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Subtitle */}
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1">
+                      অফারের সাবটাইটেল (Subtitle)
+                    </label>
+                    <input
+                      type="text"
+                      value={hotDealConfig.offerSubtitle}
+                      onChange={(e) =>
+                        setHotDealConfig({ ...hotDealConfig, offerSubtitle: e.target.value })
+                      }
+                      placeholder="সবচেয়ে বেশি বিক্রিত পণ্যগুলোতে বিশাল ডিসকাউন্ট অফার"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+
+                  {/* End Time Picker */}
+                  <div className="space-y-2 pt-1">
+                    <label className="block font-bold text-slate-700">
+                      অফার শেষ হওয়ার তারিখ ও সময় (Offer End Date & Time) *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      required
+                      value={hotDealConfig.offerEndTime}
+                      onChange={(e) =>
+                        setHotDealConfig({ ...hotDealConfig, offerEndTime: e.target.value })
+                      }
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:ring-2 focus:ring-red-500"
+                    />
+
+                    {/* Quick Preset Buttons */}
+                    <div className="pt-1">
+                      <span className="text-[11px] font-bold text-slate-500 block mb-1.5">
+                        ⚡ কুইক প্রিসেট (১-ক্লিকে সময় নির্ধারণ করুন):
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleApplyPresetTime(6)}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition-colors cursor-pointer"
+                        >
+                          +৬ ঘণ্টা
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyPresetTime(12)}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition-colors cursor-pointer"
+                        >
+                          +১২ ঘণ্টা
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyPresetTime(24)}
+                          className="px-2.5 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[11px] transition-colors cursor-pointer"
+                        >
+                          +২৪ ঘণ্টা (১ দিন)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyPresetTime(72)}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition-colors cursor-pointer"
+                        >
+                          +৩ দিন
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyPresetTime(168)}
+                          className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition-colors cursor-pointer"
+                        >
+                          +৭ দিন (১ সপ্তাহ)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  <div className="pt-3">
+                    <button
+                      type="submit"
+                      disabled={isSavingHotDeal}
+                      className="w-full bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 hover:opacity-95 text-white font-black py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-500/25 transition-transform active:scale-98 cursor-pointer disabled:opacity-50"
+                    >
+                      {isSavingHotDeal ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>সংরক্ষণ হচ্ছে...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check size={16} />
+                          <span>হট অফার সেটিংস সংরক্ষণ ও হোমপেজে লাইভ করুন</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Live Preview Column (5 Columns) */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Eye size={16} className="text-indigo-600" />
+                      <h4 className="font-black text-xs text-slate-900">হোমপেজ লাইভ প্রিভিউ</h4>
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-400">রিয়েল-টাইম লুক</span>
+                  </div>
+
+                  {hotDealConfig.isOfferActive ? (
+                    /* Active Preview */
+                    <div className="bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 rounded-2xl p-4 text-white shadow-lg space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-white text-red-600 flex items-center justify-center font-bold shadow shrink-0 animate-pulse">
+                          <Zap size={16} className="fill-red-600" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-black text-xs">{hotDealConfig.offerTitle || "হট ডিল"}</span>
+                            <span className="text-[9px] bg-amber-400 text-slate-900 font-bold px-1.5 py-0.2 rounded-full">
+                              {hotDealConfig.discountBadge || "সীমিত স্টক"}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-rose-100 line-clamp-1">
+                            {hotDealConfig.offerSubtitle || "ডিসকাউন্ট অফার"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="bg-black/35 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 font-mono text-[11px] font-black flex items-center justify-between">
+                        <span className="text-[10px] text-amber-300 font-sans font-bold flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                          লাইভ টাইমার:
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="bg-white text-slate-900 px-1 py-0.5 rounded">12h</span> :
+                          <span className="bg-white text-slate-900 px-1 py-0.5 rounded">35m</span> :
+                          <span className="bg-amber-400 text-slate-950 px-1 py-0.5 rounded animate-pulse">
+                            40s
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Coming Soon Preview */
+                    <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-amber-500/30 rounded-2xl p-4 text-white shadow-lg space-y-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center font-bold shadow">
+                          <Clock size={18} />
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-black uppercase text-amber-300 bg-amber-400/20 border border-amber-400/30 px-2 py-0.2 rounded-full inline-block mb-0.5">
+                            Offer Coming Soon
+                          </span>
+                          <h5 className="text-xs font-black text-white">শীঘ্রই নতুন অফার আসছে!</h5>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-300 leading-relaxed">
+                        আমাদের পরবর্তী ধামাকা অফারের প্রস্তুতি চলছে। চোখ রাখুন আমাদের ওয়েবসাইটে।
+                      </p>
+                      <div className="pt-1">
+                        <span className="inline-block bg-amber-400 text-slate-950 font-black text-[10px] px-3 py-1 rounded-lg">
+                          সব প্রোডাক্ট দেখুন →
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-500 space-y-1">
+                    <p className="font-bold text-slate-700">💡 অ্যাডমিন নির্দেশিকা:</p>
+                    <p>• অফার অফ রাখলে হোমপেজে সুন্দর "Offer Coming Soon" ব্যানার প্রদর্শিত হবে।</p>
+                    <p>• অফার সক্রিয় থাকলে রিয়েল-টাইম ঘড়ির কাঁটার মতো ১ সেকেন্ড পর পর সময় কমতে থাকবে।</p>
+                    <p>• নির্ধারিত সময়ে কাউন্টডাউন ০ হয়ে গেলে স্বয়ংক্রিয়ভাবে কামিং সুন মোডে পরিবর্তিত হবে।</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MODAL 1: ADD NEW PRODUCT MODAL */}
@@ -1584,6 +2028,68 @@ export default function AdminPage() {
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
+              </div>
+
+              {/* Cloudinary Direct File & Document Upload */}
+              <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
+                    <UploadCloud size={16} className="text-amber-600" />
+                    <span>ক্লাউডিনারি ফাইল আপলোড (Cloudinary Upload)</span>
+                  </label>
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                    ছবি ও PDF ডকুমেন্টস
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <label className="flex-1 cursor-pointer">
+                    <div className="border-2 border-dashed border-amber-300 hover:border-amber-500 bg-white hover:bg-amber-50/40 rounded-xl p-3 text-center transition-all flex flex-col items-center justify-center gap-1">
+                      {isUploadingImage ? (
+                        <div className="flex items-center gap-2 text-amber-700 font-bold py-1">
+                          <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+                          <span>ক্লাউডিনারিতে আপলোড হচ্ছে...</span>
+                        </div>
+                      ) : (
+                        <>
+                          <UploadCloud size={20} className="text-amber-600 mb-0.5" />
+                          <span className="text-xs font-bold text-slate-800">
+                            কম্পিউটার বা মোবাইল থেকে ফাইল আপলোড করুন
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            JPG, PNG, WEBP অথবা ক্যাটালগ PDF (Cloudinary Secure CDN)
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={handleCloudinaryUpload}
+                      disabled={isUploadingImage}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {productForm.mainImage && (
+                    <div className="relative w-16 h-16 rounded-xl overflow-hidden border-2 border-amber-400 shadow-sm shrink-0 bg-slate-100">
+                      <img
+                        src={productForm.mainImage}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[8px] text-center font-bold py-0.5">
+                        প্রিভিউ
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {uploadSuccessMessage && (
+                  <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                    <CheckCircle2 size={12} /> {uploadSuccessMessage}
+                  </p>
+                )}
               </div>
 
               {/* Quick Image Preset Selector */}

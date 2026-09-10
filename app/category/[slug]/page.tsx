@@ -10,11 +10,13 @@ export default function CategoryPage({
   params: Promise<{ slug: string }>;
 }) {
   const resolvedParams = use(params);
-  const category =
-    fallbackCategories.find((c) => c.slug === resolvedParams.slug) || {
-      name: resolvedParams.slug.toUpperCase(),
-      slug: resolvedParams.slug,
-    };
+  const isAll = resolvedParams.slug === "all";
+  const category = isAll
+    ? { name: "সকল প্রোডাক্ট (All Products)", slug: "all" }
+    : fallbackCategories.find((c) => c.slug === resolvedParams.slug) || {
+        name: resolvedParams.slug.toUpperCase(),
+        slug: resolvedParams.slug,
+      };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
@@ -35,7 +37,9 @@ export default function CategoryPage({
               {category.name}
             </h1>
             <p className="text-xs text-slate-400 font-medium mt-0.5">
-              এই ক্যাটাগরির সকল সেরা অফার ও কালেকশন
+              {isAll
+                ? "ওল্ড র‍্যাংক-এর সমস্ত এক্সক্লুসিভ কালেকশন ও লেটেস্ট আইটেম"
+                : "এই ক্যাটাগরির সকল সেরা অফার ও কালেকশন"}
             </p>
           </div>
         </div>

@@ -786,7 +786,7 @@ export const api = {
   async getProducts(params?: { category?: string; search?: string; isHotDeal?: boolean }): Promise<IProduct[]> {
     try {
       const query = new URLSearchParams();
-      if (params?.category) query.set("category", params.category);
+      if (params?.category && params.category !== "all") query.set("category", params.category);
       if (params?.search) query.set("search", params.search);
       if (params?.isHotDeal) query.set("isHotDeal", "true");
 
@@ -796,7 +796,7 @@ export const api = {
       return json.data || fallbackProducts;
     } catch {
       let filtered = [...fallbackProducts];
-      if (params?.category) {
+      if (params?.category && params.category !== "all") {
         filtered = filtered.filter((p) => (typeof p.category === "object" ? p.category.slug : p.category) === params.category);
       }
       if (params?.search) {
@@ -1128,6 +1128,73 @@ export const api = {
       return await res.json();
     } catch {
       return { success: true, message: "সেলার মুছে ফেলা হয়েছে!" };
+    }
+  },
+
+  async getHotDealSettings(): Promise<{
+    isOfferActive: boolean;
+    offerTitle: string;
+    offerSubtitle: string;
+    offerEndTime: string;
+    discountBadge: string;
+  }> {
+    try {
+      const res = await fetchFast(`${API_BASE}/settings/hot-deal`, { cache: "no-store" }, 800);
+      if (!res.ok) throw new Error("Failed to fetch settings");
+      const json = await res.json();
+      return json.data;
+    } catch {
+      if (typeof window !== "undefined") {
+        const local = localStorage.getItem("oldrank_hot_deal_settings");
+        if (local) {
+          try {
+            return JSON.parse(local);
+          } catch {}
+        }
+      }
+      return {
+        isOfferActive: true,
+        offerTitle: "হট ডিল কালেকশন",
+        offerSubtitle: "সবচেয়ে বেশি বিক্রিত পণ্যগুলোতে বিশাল ডিসকাউন্ট অফার",
+        offerEndTime: new Date(Date.now() + 14 * 3600 * 1000 + 35 * 60 * 1000).toISOString(),
+        discountBadge: "সীমিত স্টক",
+      };
+    }
+  },
+
+  async updateHotDealSettings(data: any): Promise<any> {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("oldrank_hot_deal_settings", JSON.stringify(data));
+      window.dispatchEvent(new CustomEvent("hot-offer-updated", { detail: data }));
+    }
+    try {
+      const res = await fetch(`${API_BASE}/settings/hot-deal`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      return await res.json();
+    } catch {
+      return { success: true, message: "অফার সেটিংস সেভ হয়েছে!", data };
+    }
+  },
+
+  async uploadFile(file: File): Promise<{ success: boolean; url: string; message: string }> {
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`${API_BASE}/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      const json = await res.json();
+      return json;
+    } catch (error: any) {
+      return {
+        success: false,
+        url: "",
+        message: error.message || "আপলোড ব্যর্থ হয়েছে",
+      };
     }
   },
 };

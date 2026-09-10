@@ -52,13 +52,13 @@ const slides: SlideData[] = [
       "Wear Your Rank — স্টাইলিশ ড্রপ-শোল্ডার টি-শার্ট, প্রিমিয়াম হুডি, জ্যাকেট ও ফ্যাশন এক্সেসরিজে আধুনিক আভিজাত্য।",
     chips: ["👑 ১০০% প্রিমিয়াম কম্বড কটন", "🔥 ক্লাসিক স্টাইল ও মডার্ন ফিট", "🚚 সারা দেশে ক্যাশ অন ডেলিভারি"],
     primaryBtn: {
-      text: "মেনস কালেকশন",
-      link: "/category/fashion",
+      text: "সব প্রোডাক্ট দেখুন",
+      link: "/category/all",
       bg: "bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-amber-400/25",
     },
     secondaryBtn: {
-      text: "সব প্রোডাক্ট দেখুন",
-      link: "/category/all",
+      text: "মেনস কালেকশন",
+      link: "/category/fashion",
     },
     image: "/images/old-rank-banner.jpg",
     imageAlt: "Old Rank Clothing Brand - Wear Your Rank",

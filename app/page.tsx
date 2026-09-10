@@ -12,6 +12,7 @@ import ProductCard from "@/components/product/ProductCard";
 import PopUpProductCard from "@/components/product/PopUpProductCard";
 import PromoAdBanners from "@/components/home/PromoAdBanners";
 import HeroSlider from "@/components/home/HeroSlider";
+import HotDealsSection from "@/components/home/HotDealsSection";
 import { api } from "@/lib/api";
 
 export default async function HomePage() {
@@ -133,39 +134,8 @@ export default async function HomePage() {
       {/* 4. Promotional Advertisement Banners */}
       <PromoAdBanners />
 
-      {/* 5. Hot Deals Section */}
-      <section id="hot-deals" className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 rounded-2xl sm:rounded-3xl p-4 sm:p-7 shadow-xl text-white mb-4 sm:mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-            <div className="flex items-center gap-2.5 sm:gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white text-red-600 flex items-center justify-center font-bold shadow shrink-0">
-                <Zap size={22} className="fill-red-600 sm:w-[26px] sm:h-[26px]" />
-              </div>
-              <div>
-                <h2 className="text-base sm:text-2xl font-black tracking-tight flex items-center gap-1.5 sm:gap-2">
-                  হট ডিল কালেকশন <span className="text-[10px] sm:text-xs bg-amber-400 text-slate-900 font-bold px-2 py-0.5 rounded-full">সীমিত স্টক</span>
-                </h2>
-                <p className="text-[11px] sm:text-xs text-rose-100 font-medium mt-0.5">
-                  সবচেয়ে বেশি বিক্রিত পণ্যগুলোতে বিশাল ডিসকাউন্ট অফার
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 sm:gap-2 font-mono text-[11px] sm:text-xs font-black bg-black/30 backdrop-blur-md px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border border-white/20 w-fit">
-              <span>অফার বাকি:</span>
-              <span className="bg-white text-slate-900 px-1.5 py-0.5 rounded">12h</span> :
-              <span className="bg-white text-slate-900 px-1.5 py-0.5 rounded">35m</span> :
-              <span className="bg-white text-slate-900 px-1.5 py-0.5 rounded">40s</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
-          {(hotDeals.length > 0 ? hotDeals : products).slice(0, 4).map((p, idx) => (
-            <PopUpProductCard key={p._id} product={p} index={idx} isPopHighlight={true} />
-          ))}
-        </div>
-      </section>
+      {/* 5. Hot Deals Section (Live Real-Time Countdown or Offer Coming Soon) */}
+      <HotDealsSection products={products} hotDeals={hotDeals} />
 
       {/* 6. Electronics Showcase */}
       {electronicsProducts.length > 0 && (
@@ -297,7 +267,7 @@ export default async function HomePage() {
       {/* 9.5 Old Rank Official Clothing Brand Panoramic Banner */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <Link
-          href="/category/fashion"
+          href="/category/all"
           className="group block relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-black transition-all duration-300 hover:border-amber-400/40"
         >
           <img
@@ -315,7 +285,7 @@ export default async function HomePage() {
               </h3>
             </div>
             <span className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl shadow-xl transition-transform">
-              কালেকশন দেখুন <ArrowRight size={16} />
+              সব প্রোডাক্ট দেখুন <ArrowRight size={16} />
             </span>
           </div>
         </Link>
