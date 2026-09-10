@@ -47,6 +47,7 @@ import {
   ChevronRight,
   Bell,
   Mail,
+  Home,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { api, fallbackProducts, fallbackVendors } from "@/lib/api";
@@ -936,18 +937,6 @@ export default function AdminPage() {
                 <Menu size={20} />
               </button>
 
-              {/* Mobile Brand Logo */}
-              <Link href="/" className="lg:hidden flex items-center gap-2" title="Old Rank Store">
-                <img
-                  src="/images/logo.png"
-                  alt="Old Rank Logo"
-                  className="w-7 h-7 rounded-full object-cover ring-1 ring-white/40 shadow-xs"
-                />
-                <span className="font-black text-sm text-white tracking-tight">
-                  Old<span className="text-amber-300">Rank</span>
-                </span>
-              </Link>
-
               {/* Desktop Sidebar Collapse Button */}
               <button
                 type="button"
@@ -958,35 +947,66 @@ export default function AdminPage() {
                 {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
               </button>
 
+              {/* Prominent Brand Logo in Dashboard Header */}
+              <Link
+                href="/"
+                className="flex items-center gap-2.5 py-1 px-2.5 rounded-xl bg-white/15 hover:bg-white/25 transition-all group shrink-0 border border-white/20 shadow-xs"
+                title="Old Rank হোমপেজে যান"
+              >
+                <img
+                  src="/images/logo.png"
+                  alt="Old Rank Logo"
+                  className="w-8 h-8 rounded-full object-cover shadow-sm ring-2 ring-white/40 group-hover:scale-105 transition-transform shrink-0"
+                />
+                <div>
+                  <div className="flex items-center gap-1">
+                    <span className="font-black text-sm sm:text-base text-white tracking-tight leading-none">
+                      Old<span className="text-amber-300">Rank</span>
+                    </span>
+                    <span className="text-[8px] font-extrabold bg-amber-400 text-slate-950 px-1 py-0.2 rounded uppercase">
+                      Admin
+                    </span>
+                  </div>
+                  <span className="text-[9px] text-white/70 font-semibold tracking-wider uppercase block mt-0.5 hidden sm:block">
+                    Control Center
+                  </span>
+                </div>
+              </Link>
+
               {/* Annex Pill Search Bar */}
-              <div className="relative">
+              <div className="relative hidden xl:block">
                 <Search size={14} className="absolute left-3.5 top-2.5 text-white/60 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Search..."
+                  placeholder="Search products, orders..."
                   value={productSearch || searchQuery}
                   onChange={(e) => {
                     setProductSearch(e.target.value);
                     setSearchQuery(e.target.value);
                   }}
-                  className="bg-white/15 hover:bg-white/20 focus:bg-white/25 text-white placeholder-white/70 text-xs pl-9 pr-4 py-1.5 rounded-full outline-none transition-all w-36 sm:w-56 focus:w-64 border border-white/10"
+                  className="bg-white/15 hover:bg-white/20 focus:bg-white/25 text-white placeholder-white/70 text-xs pl-9 pr-4 py-1.5 rounded-full outline-none transition-all w-36 sm:w-52 focus:w-60 border border-white/10"
                 />
               </div>
             </div>
 
-            {/* Right Icons matching Annex */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Language Indicator */}
-              <div className="hidden sm:flex items-center gap-1.5 text-xs text-white/90 bg-white/10 px-2.5 py-1.5 rounded-lg font-medium">
-                <span>English</span>
-                <span className="text-sm">🇺🇸</span>
-              </div>
+            {/* Right Icons & Homepage Action Button */}
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+              {/* Prominent Homepage Button */}
+              <Link
+                href="/"
+                className="flex items-center gap-1.5 text-xs font-black text-slate-950 bg-amber-400 hover:bg-amber-300 active:scale-95 py-1.5 sm:py-2 px-3 sm:px-4 rounded-xl shadow-md transition-all shrink-0 border border-amber-300 group cursor-pointer"
+                title="মূল ওয়েবসাইটে / হোমপেজে ফিরে যান"
+              >
+                <Home size={15} className="text-slate-950 group-hover:-translate-y-0.5 transition-transform shrink-0" />
+                <span className="hidden sm:inline">হোমপেজে যান</span>
+                <span className="sm:hidden">হোম</span>
+              </Link>
 
               {/* Notification Bell with Badge */}
               <button
                 type="button"
                 onClick={() => setActiveTab("orders")}
-                className="relative p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="relative p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer hidden sm:block"
                 title="অর্ডার নোটিফিকেশন"
               >
                 <Bell size={17} />
@@ -1001,7 +1021,7 @@ export default function AdminPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab("incomplete")}
-                className="relative p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="relative p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer hidden sm:block"
                 title="ড্রপ-অফ লিডস"
               >
                 <Mail size={17} />
@@ -1011,16 +1031,6 @@ export default function AdminPage() {
                   </span>
                 )}
               </button>
-
-              {/* Live Shop Preview Button */}
-              <Link
-                href="/"
-                target="_blank"
-                className="hidden md:flex items-center gap-1.5 text-xs font-bold text-white bg-white/15 hover:bg-white/25 py-1.5 px-3 rounded-xl border border-white/20 transition-colors"
-              >
-                <span>শপ দেখুন</span>
-                <ArrowUpRight size={13} />
-              </Link>
 
               {/* Refresh Data */}
               <button
@@ -1037,7 +1047,7 @@ export default function AdminPage() {
                   {user?.name ? user.name[0].toUpperCase() : "A"}
                 </div>
                 <div className="hidden lg:block text-left">
-                  <span className="text-xs font-bold text-white block leading-tight truncate max-w-[110px]">
+                  <span className="text-xs font-bold text-white block leading-tight truncate max-w-[100px]">
                     {user?.name || "Admin"}
                   </span>
                   <span className="text-[10px] text-white/70 block leading-tight">
@@ -1073,7 +1083,14 @@ export default function AdminPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-            <Link href="/" className="hover:text-[#5064df]">Old Rank</Link>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 font-bold text-[#5064df] hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-200/60 transition-colors"
+              title="ওয়েবসাইট হোমপেজে যান"
+            >
+              <Home size={13} />
+              <span>হোমপেজ ↗</span>
+            </Link>
             <span>/</span>
             <span>Admin</span>
             <span>/</span>
