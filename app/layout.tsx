@@ -22,9 +22,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Old Rank | Ultra-Premium E-Commerce Marketplace",
+  title: "Old Rank | Premium Men's Wear & Clothing Brand",
   description:
-    "বাংলাদেশের সেরা আধুনিক, সুপার ফাস্ট ও প্রিমিয়াম ই-কমার্স প্ল্যাটফর্ম Old Rank।",
+    "Old Rank - Wear Your Rank. বাংলাদেশের সেরা প্রিমিয়াম লাইফস্টাইল ও মেনস ওয়্যার ক্লথিং ব্র্যান্ড।",
+  icons: {
+    icon: [
+      { url: "/images/logo.png", type: "image/png" },
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico" },
+    ],
+    shortcut: "/images/logo.png",
+    apple: "/images/logo.png",
+  },
 };
 
 export default function RootLayout({

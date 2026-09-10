@@ -23,21 +23,47 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {/* Col 1: Brand */}
           <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#303d6e] to-indigo-600 flex items-center justify-center text-white font-extrabold text-xl shadow">
-                OR
+            <div className="flex items-center gap-2.5 mb-4">
+              <img
+                src="/images/logo.png"
+                alt="Old Rank Logo"
+                className="w-11 h-11 rounded-full object-cover shadow border border-amber-400/30"
+              />
+              <div>
+                <span className="font-extrabold text-2xl text-white tracking-tight block leading-none">
+                  Old<span className="text-amber-400">Rank</span>
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5 block">
+                  Wear Your Rank
+                </span>
               </div>
-              <span className="font-extrabold text-2xl text-white tracking-tight">
-                Old<span className="text-indigo-400">Rank</span>
-              </span>
             </div>
             <p className="text-sm text-slate-400 leading-relaxed mb-4">
-              বাংলাদেশের সেরা ও দ্রুততম বিশ্বস্ত ই-কমার্স প্ল্যাটফর্ম। অরিজিনাল গ্যাজেট, ফ্যাশন ও ডিজিটাল সার্ভিস শতভাগ নিশ্চিন্তে কিনুন।
+              বাংলাদেশের প্রিমিয়াম মেনস ওয়্যার ও ফ্যাশন লাইফস্টাইল ব্র্যান্ড। অরিজিনাল ক্লোথিং ও কোয়ালিটি প্রোডাক্ট শতভাগ নিশ্চিন্তে কিনুন।
             </p>
             <div className="space-y-2 text-xs text-slate-400">
-              <p className="flex items-center gap-2"><Phone size={14} className="text-indigo-400" /> +880 1849-832178 (Hotline)</p>
-              <p className="flex items-center gap-2"><Mail size={14} className="text-indigo-400" /> support@oldrank.com</p>
-              <p className="flex items-center gap-2"><MapPin size={14} className="text-indigo-400" /> Dhanmondi, Dhaka, Bangladesh</p>
+              <p className="flex items-center gap-2">
+                <Phone size={14} className="text-amber-400 shrink-0" />
+                <span>
+                  <a href="tel:01956016119" className="hover:text-white transition-colors">+880 1956-016119</a>,{" "}
+                  <a href="tel:01301010553" className="hover:text-white transition-colors">+880 1301-010553</a>
+                </span>
+              </p>
+              <p className="flex items-center gap-2">
+                <Mail size={14} className="text-amber-400 shrink-0" />
+                <a href="mailto:mdmahfuzulhaque3140@gmail.com" className="hover:text-white transition-colors truncate">
+                  mdmahfuzulhaque3140@gmail.com
+                </a>
+              </p>
+              <p className="flex items-center gap-2">
+                <Mail size={14} className="text-amber-400 shrink-0" />
+                <a href="mailto:niloy@gmail.com" className="hover:text-white transition-colors truncate">
+                  niloy@gmail.com
+                </a>
+              </p>
+              <p className="flex items-center gap-2">
+                <MapPin size={14} className="text-amber-400 shrink-0" /> Dhanmondi, Dhaka, Bangladesh
+              </p>
             </div>
           </div>
 

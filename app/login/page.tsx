@@ -43,9 +43,9 @@ export default function LoginPage() {
     if (role === "admin") {
       demoUser = {
         id: "usr_admin",
-        name: "Old Rank Super Admin",
-        phone: "01849832178",
-        email: "admin@oldrank.com",
+        name: "Old Rank Admin",
+        phone: "01956016119",
+        email: "mdmahfuzulhaque3140@gmail.com",
         role: "admin",
       };
       redirectPath = "/admin";
@@ -112,9 +112,9 @@ export default function LoginPage() {
       let name = "সম্মানিত গ্রাহক";
       let shopName: string | undefined = undefined;
 
-      if (input.includes("admin") || input === "01849832178") {
+      if (input.includes("admin") || input === "01956016119" || input === "01301010553" || input === "mdmahfuzulhaque3140@gmail.com" || input === "niloy@gmail.com") {
         role = "admin";
-        name = "Old Rank Super Admin";
+        name = "Old Rank Admin";
       } else if (input.includes("seller") || input.includes("vendor") || input === "01822334455") {
         role = "seller";
         name = "Gadget King BD (সেলার)";
@@ -125,7 +125,7 @@ export default function LoginPage() {
         id: `usr_${Date.now()}`,
         name,
         phone: input.includes("@") ? "01712345678" : input,
-        email: input.includes("@") ? input : `${role}@oldrank.com`,
+        email: input.includes("@") ? input : (role === "admin" ? "mdmahfuzulhaque3140@gmail.com" : `${role}@gmail.com`),
         role,
         shopName,
       };

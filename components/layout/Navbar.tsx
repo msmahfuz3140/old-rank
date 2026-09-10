@@ -95,13 +95,20 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-6 min-w-0">
             <a
-              href="tel:01849832178"
+              href="tel:01956016119"
               className="flex items-center gap-1 sm:gap-1.5 hover:text-white transition-colors truncate"
             >
               <PhoneCall size={12} className="text-emerald-400 shrink-0" />
               <span className="truncate">
-                হটলাইন: <strong className="text-white">01849-832178</strong>
+                হটলাইন: <strong className="text-white">01956-016119</strong>
               </span>
+            </a>
+            <a
+              href="tel:01301010553"
+              className="hidden lg:flex items-center gap-1 hover:text-white transition-colors"
+            >
+              <span className="text-slate-400">/</span>
+              <strong className="text-white">01301-010553</strong>
             </a>
             <span className="hidden md:inline-flex items-center gap-1 text-slate-400">
               <Truck size={12} className="text-amber-400 shrink-0" />
@@ -141,20 +148,22 @@ export default function Navbar() {
             </button>
 
             <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-[#303d6e] to-indigo-600 flex items-center justify-center text-white font-extrabold text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform shrink-0">
-                OR
-              </div>
+              <img
+                src="/images/logo.png"
+                alt="Old Rank Logo"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover shadow-md group-hover:scale-105 transition-transform shrink-0 ring-1 ring-slate-200"
+              />
               <div>
                 <div className="flex items-center gap-1">
                   <span className="font-black text-lg sm:text-2xl text-slate-900 tracking-tight block leading-none">
                     Old<span className="text-[#303d6e]">Rank</span>
                   </span>
-                  <span className="text-[9px] sm:text-[10px] font-bold bg-indigo-50 text-[#303d6e] px-1 sm:px-1.5 py-0.5 rounded border border-indigo-100">
-                    PRO
+                  <span className="text-[9px] sm:text-[10px] font-bold bg-amber-50 text-amber-700 px-1 sm:px-1.5 py-0.5 rounded border border-amber-200">
+                    CLOTHING
                   </span>
                 </div>
                 <span className="text-[9px] sm:text-[10px] font-medium text-slate-500 uppercase tracking-widest block mt-0.5 hidden sm:block">
-                  Modern E-Commerce BD
+                  Wear Your Rank
                 </span>
               </div>
             </Link>
@@ -499,13 +508,15 @@ export default function Navbar() {
           <div className="fixed inset-y-0 left-0 w-4/5 max-w-xs bg-white shadow-2xl flex flex-col z-10 animate-slide-left [transform:translateX(0)]">
             {/* Header */}
             <div className="p-4 bg-gradient-to-r from-[#1e293b] to-[#303d6e] text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center font-black text-sm">
-                  OR
-                </div>
+              <div className="flex items-center gap-2.5">
+                <img
+                  src="/images/logo.png"
+                  alt="Old Rank Logo"
+                  className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-amber-400/40"
+                />
                 <div>
-                  <h3 className="font-extrabold text-sm text-white leading-tight">Old Rank PRO</h3>
-                  <p className="text-[10px] text-slate-300">মেন্যু ও ক্যাটাগরি</p>
+                  <h3 className="font-extrabold text-sm text-white leading-tight">Old Rank</h3>
+                  <p className="text-[10px] text-amber-300 font-medium">Wear Your Rank</p>
                 </div>
               </div>
               <button
@@ -630,13 +641,20 @@ export default function Navbar() {
             </div>
 
             {/* Bottom Hotline Action in Drawer */}
-            <div className="p-3 border-t border-slate-100 bg-slate-50">
+            <div className="p-3 border-t border-slate-100 bg-slate-50 space-y-1.5">
               <a
-                href="tel:01849832178"
+                href="tel:01956016119"
                 className="flex items-center justify-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 py-2.5 px-3 rounded-xl transition-colors"
               >
                 <PhoneCall size={14} />
-                <span>হটলাইন: 01849-832178</span>
+                <span>হটলাইন: 01956-016119</span>
+              </a>
+              <a
+                href="tel:01301010553"
+                className="flex items-center justify-center gap-2 text-xs font-bold text-slate-700 bg-slate-200 hover:bg-slate-300 py-2 px-3 rounded-xl transition-colors"
+              >
+                <PhoneCall size={14} />
+                <span>হেল্পলাইন: 01301-010553</span>
               </a>
             </div>
           </div>

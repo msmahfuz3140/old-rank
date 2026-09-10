@@ -294,6 +294,33 @@ export default async function HomePage() {
         </section>
       )}
 
+      {/* 9.5 Old Rank Official Clothing Brand Panoramic Banner */}
+      <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <Link
+          href="/category/fashion"
+          className="group block relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-black transition-all duration-300 hover:border-amber-400/40"
+        >
+          <img
+            src="/images/old-rank-banner.jpg"
+            alt="Old Rank Clothing Brand - Wear Your Rank"
+            className="w-full h-auto object-cover transform group-hover:scale-[1.01] transition-transform duration-700"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-4 sm:p-8">
+            <div>
+              <span className="text-amber-400 font-bold text-xs uppercase tracking-widest block">
+                Official Brand Showcase
+              </span>
+              <h3 className="text-white text-base sm:text-2xl font-black">
+                Old Rank Clothing — Wear Your Rank
+              </h3>
+            </div>
+            <span className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl shadow-xl transition-transform">
+              কালেকশন দেখুন <ArrowRight size={16} />
+            </span>
+          </div>
+        </Link>
+      </section>
+
       {/* 10. Men's Fashion Showcase */}
       {fashionProducts.length > 0 && (
         <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">

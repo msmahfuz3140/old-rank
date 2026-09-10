@@ -61,9 +61,9 @@ export default function AdminPage() {
 
   // Gateway Settings State
   const [settings, setSettings] = useState({
-    bkashNumber: "01849832178",
-    nagadNumber: "01849832178",
-    rocketNumber: "01849832178",
+    bkashNumber: "01956016119",
+    nagadNumber: "01956016119",
+    rocketNumber: "01956016119",
     dhakaCharge: 60,
     outsideDhakaCharge: 120,
     freeDeliveryThreshold: 2000,
@@ -135,9 +135,9 @@ export default function AdminPage() {
   const handleSwitchToAdmin = () => {
     login({
       id: "usr_admin",
-      name: "ShopGenie Admin",
-      phone: "01849832178",
-      email: "admin@shopgenie.com",
+      name: "Old Rank Admin",
+      phone: "01956016119",
+      email: "mdmahfuzulhaque3140@gmail.com",
       role: "admin",
     });
     showToast("অ্যাডমিন মোড সক্রিয় হয়েছে!");
