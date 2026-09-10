@@ -40,20 +40,29 @@ export default function Navbar() {
   const [searchResults, setSearchResults] = useState<IProduct[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [isServicesOpen, setIsServicesOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const servicesRef = useRef<HTMLDivElement>(null);
+  const categoryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     api.getCategories().then(setCategories);
   }, []);
 
-  // Close user dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
+      }
+      if (servicesRef.current && !servicesRef.current.contains(event.target as Node)) {
+        setIsServicesOpen(false);
+      }
+      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+        setIsCategoryOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -116,40 +125,31 @@ export default function Navbar() {
             </span>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-5 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <span className="hidden sm:inline-flex items-center gap-1 text-emerald-400 font-semibold">
               <ShieldCheck size={13} />
-              <span>১০০% অথেনটিক প্রোডাক্ট গ্যারান্টি</span>
+              <span>১০০% অথেনটিক পণ্য গ্যারান্টি</span>
             </span>
-
-            {/* Quick Seller & Admin Direct Shortcuts */}
+            <span className="text-slate-500 hidden sm:inline">•</span>
             <Link
-              href="/login"
-              className="inline-flex items-center gap-1 text-slate-300 hover:text-white font-bold px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors border border-white/10 text-[10px] sm:text-[11px]"
+              href="/order-track"
+              className="text-slate-300 hover:text-white transition-colors text-[11px] flex items-center gap-1 font-medium"
             >
-              <Store size={12} className="text-amber-400" />
-              <span>সেলার হাব</span>
-            </Link>
-
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 font-bold px-2 py-0.5 rounded bg-amber-400/10 hover:bg-amber-400/20 transition-colors border border-amber-400/20 text-[10px] sm:text-[11px]"
-            >
-              <Crown size={12} />
-              <span>অ্যাডমিন</span>
+              <Truck size={12} className="text-amber-400" />
+              <span>অর্ডার ট্র্যাকিং</span>
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Main Header Bar */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5">
-        <div className="flex items-center justify-between gap-2 sm:gap-6">
+      {/* Main Header Bar (Single Unified Navigation Bar) */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3">
+        <div className="flex items-center justify-between gap-2 sm:gap-4 lg:gap-6">
           {/* Mobile Menu Button + Logo */}
           <div className="flex items-center gap-1 sm:gap-2.5 shrink-0">
             <button
               onClick={() => setIsMobileDrawerOpen(true)}
-              className="md:hidden p-1.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-[#303d6e] transition-colors cursor-pointer"
+              className="lg:hidden p-1.5 rounded-xl text-slate-700 hover:bg-slate-100 hover:text-[#303d6e] transition-colors cursor-pointer"
               aria-label="Open Navigation Drawer"
             >
               <Menu size={22} />
@@ -159,7 +159,7 @@ export default function Navbar() {
               <img
                 src="/images/logo.png"
                 alt="Old Rank Logo"
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover shadow-md group-hover:scale-105 transition-transform shrink-0 ring-1 ring-slate-200"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover shadow-sm group-hover:scale-105 transition-transform shrink-0 ring-1 ring-slate-200"
               />
               <div>
                 <div className="flex items-center gap-1">
@@ -170,29 +170,228 @@ export default function Navbar() {
                     CLOTHING
                   </span>
                 </div>
-                <span className="text-[9px] sm:text-[10px] font-medium text-slate-500 uppercase tracking-widest block mt-0.5 hidden sm:block">
+                <span className="text-[9px] sm:text-[10px] font-medium text-slate-500 uppercase tracking-widest block mt-0.5 hidden xl:block">
                   Wear Your Rank
                 </span>
               </div>
             </Link>
           </div>
 
+          {/* Primary Nav Menu (Embedded Directly in Navbar Row) */}
+          <nav className="hidden lg:flex items-center gap-1 xl:gap-2 text-xs font-bold text-slate-700">
+            <Link
+              href="/"
+              className="px-2.5 py-2 rounded-xl hover:text-[#303d6e] hover:bg-slate-100 transition-colors"
+            >
+              হোম
+            </Link>
+
+            <Link
+              href="/category/all"
+              className="px-2.5 py-2 rounded-xl hover:text-[#303d6e] hover:bg-slate-100 transition-colors"
+            >
+              সকল প্রোডাক্ট
+            </Link>
+
+            {/* Categories Dropdown in Navbar */}
+            <div className="relative" ref={categoryRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCategoryOpen(!isCategoryOpen);
+                  setIsServicesOpen(false);
+                }}
+                className={`flex items-center gap-1 px-2.5 py-2 rounded-xl transition-colors cursor-pointer ${
+                  isCategoryOpen
+                    ? "bg-[#303d6e] text-white"
+                    : "hover:text-[#303d6e] hover:bg-slate-100 text-slate-700"
+                }`}
+              >
+                <Layers size={14} />
+                <span>ক্যাটাগরি</span>
+                <ChevronDown
+                  size={13}
+                  className={`transition-transform duration-200 ${
+                    isCategoryOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {isCategoryOpen && (
+                <div className="absolute left-0 top-full mt-2 w-60 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 py-2 animate-fadeIn">
+                  <div className="px-3.5 py-2 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span>ক্যাটাগরি তালিকা</span>
+                    <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                      {categories.length}
+                    </span>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto py-1">
+                    <Link
+                      href="/category/all"
+                      onClick={() => setIsCategoryOpen(false)}
+                      className="flex items-center justify-between px-4 py-2 text-xs font-bold text-[#303d6e] hover:bg-indigo-50 transition-colors border-b border-slate-50"
+                    >
+                      <span>সব প্রডাক্ট একসাথে</span>
+                      <ArrowRight size={13} />
+                    </Link>
+                    {categories.map((cat) => (
+                      <Link
+                        key={cat._id}
+                        href={`/category/${cat.slug}`}
+                        onClick={() => setIsCategoryOpen(false)}
+                        className="flex items-center justify-between px-4 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-[#303d6e] font-semibold transition-colors"
+                      >
+                        <span>{cat.name}</span>
+                        <span className="text-slate-400 text-xs">›</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Hot Deals */}
+            <Link
+              href="/#hot-deals"
+              className="px-2.5 py-2 rounded-xl text-rose-600 hover:text-rose-700 hover:bg-rose-50 font-bold flex items-center gap-1 transition-colors"
+            >
+              <Flame size={14} className="text-rose-600" />
+              <span>হট অফার 🔥</span>
+            </Link>
+
+            {/* Services & Partner Dropdown (Order Track, Seller Hub, Top Shops, Admin) */}
+            <div className="relative" ref={servicesRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsServicesOpen(!isServicesOpen);
+                  setIsCategoryOpen(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border transition-all cursor-pointer font-bold ${
+                  isServicesOpen
+                    ? "bg-[#303d6e] text-white border-[#303d6e]"
+                    : "border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 text-slate-700 hover:text-[#303d6e]"
+                }`}
+              >
+                <Store size={14} className={isServicesOpen ? "text-amber-300" : "text-amber-600"} />
+                <span>সার্ভিস ও ট্র্যাকিং</span>
+                <ChevronDown
+                  size={13}
+                  className={`transition-transform duration-200 ${
+                    isServicesOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {isServicesOpen && (
+                <div className="absolute left-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 p-2 animate-fadeIn">
+                  <div className="px-3 py-2 bg-slate-50 rounded-xl mb-1.5 border border-slate-100">
+                    <p className="text-[11px] font-bold text-slate-900">সার্ভিস ও ভেন্ডর হাব</p>
+                    <p className="text-[10px] text-slate-500">ট্র্যাকিং ও পার্টনার পোর্টালে স্বাগতম</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    {/* Order Track */}
+                    <Link
+                      href="/order-track"
+                      onClick={() => setIsServicesOpen(false)}
+                      className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-indigo-50 transition-colors group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-indigo-100 text-[#303d6e] flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+                        <Truck size={16} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 group-hover:text-[#303d6e]">
+                          অর্ডার ট্র্যাক করুন
+                        </p>
+                        <p className="text-[10px] text-slate-500">পার্সেল রিয়েল-টাইম অবস্থান জানুন</p>
+                      </div>
+                    </Link>
+
+                    {/* Seller Hub */}
+                    <Link
+                      href="/login"
+                      onClick={() => setIsServicesOpen(false)}
+                      className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-amber-50/70 transition-colors group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+                        <Store size={16} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 group-hover:text-amber-800">
+                          সেলার হাব ও রেজিস্টার
+                        </p>
+                        <p className="text-[10px] text-slate-500">ভেন্ডর একাউন্ট ও পার্টনার পোর্টাল</p>
+                      </div>
+                    </Link>
+
+                    {/* Top Shops */}
+                    <Link
+                      href="/sellers"
+                      onClick={() => setIsServicesOpen(false)}
+                      className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-100 transition-colors group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+                        <Package size={16} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 group-hover:text-[#303d6e]">
+                          টপ ভেন্ডর শপসমূহ
+                        </p>
+                        <p className="text-[10px] text-slate-500">সেরা বিশ্বস্ত সেলারদের শপ</p>
+                      </div>
+                    </Link>
+
+                    {/* Admin Dashboard */}
+                    <Link
+                      href="/admin"
+                      onClick={() => setIsServicesOpen(false)}
+                      className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-amber-100/60 bg-amber-50/50 transition-colors group border border-amber-200/50"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center group-hover:scale-105 transition-transform shrink-0">
+                        <Crown size={16} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-amber-950">
+                          অ্যাডমিন ড্যাশবোর্ড
+                        </p>
+                        <p className="text-[10px] text-amber-700">সাইট কন্ট্রোল ও অ্যানালিটিক্স</p>
+                      </div>
+                    </Link>
+                  </div>
+
+                  {/* Customer Hotline in Dropdown */}
+                  <div className="mt-2 pt-2 border-t border-slate-100 space-y-1">
+                    <p className="text-[10px] text-slate-400 font-bold px-2">কাস্টমার হেল্পলাইন</p>
+                    <a
+                      href="tel:01956016119"
+                      className="flex items-center gap-2 px-2 py-1 text-[11px] font-semibold text-slate-700 hover:text-emerald-600 transition-colors"
+                    >
+                      <PhoneCall size={12} className="text-emerald-500" />
+                      <span>01956-016119</span>
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+          </nav>
+
           {/* Search Box with Autocomplete */}
-          <div className="flex-1 max-w-2xl relative hidden sm:block">
+          <div className="flex-1 max-w-xs xl:max-w-sm relative hidden sm:block">
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
                 type="text"
-                placeholder="প্রোডাক্ট খুঁজুন... যেমন: PC, Smartwatch, Shirt, Canva"
+                placeholder="প্রোডাক্ট খুঁজুন... যেমন: Shirt, Canva"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-5 pr-12 py-2.5 bg-slate-50 border border-slate-200 rounded-full text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#303d6e] focus:bg-white transition-all shadow-inner"
+                className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-full text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#303d6e] focus:bg-white transition-all shadow-inner"
               />
               <button
                 type="submit"
-                className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#303d6e] hover:bg-indigo-900 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer"
+                className="absolute right-1 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-[#303d6e] hover:bg-indigo-900 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer"
                 aria-label="Search"
               >
-                <Search size={16} />
+                <Search size={13} />
               </button>
             </form>
 
@@ -238,30 +437,8 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Right Actions (Track, Sellers, Auth, Cart) */}
-          <div className="flex items-center gap-2.5 sm:gap-4">
-            {/* Order Tracking */}
-            <Link
-              href="/order-track"
-              className="hidden lg:flex items-center gap-2 text-slate-700 hover:text-[#303d6e] text-xs font-bold transition-colors py-1.5 px-2 rounded-xl hover:bg-slate-50"
-            >
-              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
-                <Truck size={16} />
-              </div>
-              <span>ট্র্যাক অর্ডার</span>
-            </Link>
-
-            {/* Sellers */}
-            <Link
-              href="/sellers"
-              className="hidden md:flex items-center gap-2 text-slate-700 hover:text-[#303d6e] text-xs font-bold transition-colors py-1.5 px-2 rounded-xl hover:bg-slate-50"
-            >
-              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
-                <Store size={16} />
-              </div>
-              <span>সেলার শপ</span>
-            </Link>
-
+          {/* Right Actions (Auth, Cart) */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* USER LOGIN / LOGOUT PROFILE DROPDOWN */}
             <div className="relative" ref={userMenuRef}>
               {isLoggedIn && user ? (
@@ -346,7 +523,6 @@ export default function Navbar() {
                           </Link>
                         )}
 
-
                         <Link
                           href="/order-track"
                           onClick={() => setIsUserMenuOpen(false)}
@@ -382,13 +558,13 @@ export default function Navbar() {
               ) : (
                 <Link
                   href="/login"
-                  className="flex items-center gap-2 py-2 px-3 rounded-xl bg-slate-50 hover:bg-amber-50/80 border border-slate-200 text-slate-800 hover:text-amber-800 transition-all text-xs font-bold group"
-                  title="সেলার রেজিস্ট্রেশন ও পার্টনার পোর্টাল"
+                  className="flex items-center gap-2 py-2 px-3 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-slate-800 hover:text-[#303d6e] transition-all text-xs font-bold group"
+                  title="লগইন বা রেজিস্টার"
                 >
-                  <div className="w-6 h-6 rounded-md bg-amber-100 text-amber-800 flex items-center justify-center group-hover:bg-amber-400 group-hover:text-slate-950 transition-colors">
-                    <Store size={14} />
+                  <div className="w-6 h-6 rounded-md bg-[#303d6e]/10 text-[#303d6e] flex items-center justify-center group-hover:bg-[#303d6e] group-hover:text-white transition-colors">
+                    <User size={14} />
                   </div>
-                  <span className="hidden sm:inline">সেলার হাব</span>
+                  <span className="hidden sm:inline">লগইন</span>
                 </Link>
               )}
             </div>
@@ -396,7 +572,7 @@ export default function Navbar() {
             {/* Cart Trigger */}
             <button
               onClick={openCart}
-              className="flex items-center gap-2.5 p-1.5 sm:px-3 sm:py-2 rounded-xl bg-[#303d6e] text-white hover:bg-indigo-900 transition-all text-left group shadow-sm cursor-pointer"
+              className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-2 rounded-xl bg-[#303d6e] text-white hover:bg-indigo-900 transition-all text-left group shadow-sm cursor-pointer shrink-0"
               aria-label="View Cart"
             >
               <div className="relative">
@@ -431,76 +607,12 @@ export default function Navbar() {
             />
             <button
               type="submit"
-              className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#303d6e] text-white flex items-center justify-center"
+              className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#303d6e] text-white flex items-center justify-center cursor-pointer"
               aria-label="Search"
             >
               <Search size={14} />
             </button>
           </form>
-        </div>
-      </div>
-
-      {/* Sub Navigation / Category Bar (Corporate Light Aesthetic) */}
-      <div className="bg-white text-slate-700 border-t border-slate-200 shadow-xs hidden md:block">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between text-xs font-semibold">
-          {/* Categories Mega Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-              className="flex items-center gap-2.5 bg-[#303d6e] hover:bg-indigo-950 text-white px-5 py-2.5 font-bold tracking-wide transition-colors shadow-xs cursor-pointer"
-            >
-              <Menu size={16} />
-              <span>সকল ক্যাটাগরি</span>
-              <ChevronDown
-                size={14}
-                className={`transition-transform duration-200 ${isCategoryOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-
-            {isCategoryOpen && (
-              <div className="absolute left-0 top-full w-64 bg-white text-slate-800 shadow-2xl rounded-b-2xl border border-slate-100 overflow-hidden z-50 py-2 animate-fadeIn">
-                {categories.map((cat) => (
-                  <Link
-                    key={cat._id}
-                    href={`/category/${cat.slug}`}
-                    onClick={() => setIsCategoryOpen(false)}
-                    className="flex items-center justify-between px-4 py-2.5 hover:bg-indigo-50 hover:text-[#303d6e] transition-colors border-b border-slate-50 last:border-none"
-                  >
-                    <span className="font-semibold text-sm">{cat.name}</span>
-                    <span className="text-xs text-slate-400">›</span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Quick Links */}
-          <div className="flex items-center gap-6 text-slate-700">
-            <Link href="/" className="hover:text-[#303d6e] transition-colors py-2.5">
-              হোম
-            </Link>
-            <Link href="/sellers" className="hover:text-[#303d6e] transition-colors py-2.5">
-              টপ শপসমূহ
-            </Link>
-            <Link href="/order-track" className="hover:text-[#303d6e] transition-colors py-2.5">
-              অর্ডার ট্র্যাকিং
-            </Link>
-            <Link
-              href="/admin"
-              className="hover:text-[#303d6e] text-amber-700 font-bold transition-colors py-2.5 flex items-center gap-1"
-            >
-              <Crown size={13} className="text-amber-600" /> অ্যাডমিন প্যানেল
-            </Link>
-          </div>
-
-          {/* Promo Badge */}
-          <Link
-            href="/category/all"
-            className="bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors font-bold px-3 py-1 rounded-full flex items-center gap-1.5 border border-rose-200/60"
-          >
-            <Flame size={14} className="text-rose-600" />
-            <span>স্পেশাল ডিসকাউন্ট অফার চলছে!</span>
-          </Link>
         </div>
       </div>
 
@@ -572,12 +684,30 @@ export default function Navbar() {
 
             {/* Scrollable Navigation Items */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs font-semibold">
-              {/* Quick Links */}
+              {/* Primary Nav Links */}
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                  কুইক লিঙ্কস
+                  মূল মেনু
                 </span>
                 <div className="space-y-1">
+                  <Link
+                    href="/"
+                    onClick={() => setIsMobileDrawerOpen(false)}
+                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 transition-colors font-bold"
+                  >
+                    <span>হোম</span>
+                    <ArrowRight size={13} className="text-slate-400" />
+                  </Link>
+
+                  <Link
+                    href="/category/all"
+                    onClick={() => setIsMobileDrawerOpen(false)}
+                    className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 transition-colors font-bold"
+                  >
+                    <span>সকল প্রোডাক্ট</span>
+                    <ArrowRight size={13} className="text-slate-400" />
+                  </Link>
+
                   <Link
                     href="/#hot-deals"
                     onClick={() => setIsMobileDrawerOpen(false)}
@@ -589,26 +719,46 @@ export default function Navbar() {
                     </span>
                     <span className="text-[10px] bg-rose-600 text-white px-1.5 py-0.5 rounded-full">HOT</span>
                   </Link>
-                  <Link
-                    href="/sellers"
-                    onClick={() => setIsMobileDrawerOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 hover:text-[#303d6e] transition-colors"
-                  >
-                    <Store size={16} className="text-slate-500" />
-                    <span>ভেরিফাইড শপসমূহ</span>
-                  </Link>
+                </div>
+              </div>
+
+              {/* Services & Partner Links */}
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                  সার্ভিস ও ট্র্যাকিং
+                </span>
+                <div className="space-y-1">
                   <Link
                     href="/order-track"
                     onClick={() => setIsMobileDrawerOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 hover:text-[#303d6e] transition-colors"
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-indigo-50 hover:text-[#303d6e] transition-colors"
                   >
-                    <Truck size={16} className="text-slate-500" />
+                    <Truck size={16} className="text-indigo-600" />
                     <span>অর্ডার ট্র্যাকিং</span>
                   </Link>
+
+                  <Link
+                    href="/login"
+                    onClick={() => setIsMobileDrawerOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-amber-50 hover:text-amber-800 transition-colors"
+                  >
+                    <Store size={16} className="text-amber-600" />
+                    <span>সেলার হাব ও পার্টনার পোর্টাল</span>
+                  </Link>
+
+                  <Link
+                    href="/sellers"
+                    onClick={() => setIsMobileDrawerOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-slate-700 hover:bg-slate-50 hover:text-[#303d6e] transition-colors"
+                  >
+                    <Package size={16} className="text-slate-500" />
+                    <span>ভেরিফাইড শপসমূহ</span>
+                  </Link>
+
                   <Link
                     href="/admin"
                     onClick={() => setIsMobileDrawerOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 text-amber-900 font-bold hover:bg-amber-100 transition-colors"
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 text-amber-900 font-bold hover:bg-amber-100 transition-colors border border-amber-200/50"
                   >
                     <Crown size={16} className="text-amber-600" />
                     <span>অ্যাডমিন ড্যাশবোর্ড</span>
