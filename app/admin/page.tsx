@@ -45,11 +45,19 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
+  Bell,
+  Mail,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { api, fallbackProducts, fallbackVendors } from "@/lib/api";
 import { IOrder, IIncompleteOrder, IProduct, IVendor } from "@/lib/types";
 import ProductImage from "@/components/product/ProductImage";
+import {
+  SalesBarChart,
+  StackedBarChart,
+  DonutWheelChart,
+  CleanPieChart,
+} from "@/components/admin/AnnexCharts";
 
 // Preset clothing & accessories images for 1-click rapid posting
 const PRESET_GALLERY_IMAGES = [
@@ -571,21 +579,21 @@ export default function AdminPage() {
     );
   });
 
-  // Sidebar Navigation Sections Configuration
+  // Sidebar Navigation Sections Configuration (Annex Theme)
   const navSections: NavSection[] = [
     {
-      group: "মূল ড্যাশবোর্ড",
+      group: "MAIN",
       items: [
         {
           id: "overview" as const,
-          label: "ড্যাশবোর্ড ওভারভিউ",
-          subtitle: "অ্যানালিটিক্স ও মেট্রিক্স",
+          label: "ড্যাশবোর্ড ও চার্টস",
+          subtitle: "Chartist Analytics & KPIs",
           icon: LayoutDashboard,
         },
       ],
     },
     {
-      group: "মার্কেটপ্লেস ও ক্যাটালগ",
+      group: "CATALOG & PRODUCTS",
       items: [
         {
           id: "products" as const,
@@ -593,7 +601,7 @@ export default function AdminPage() {
           subtitle: "পণ্য ম্যানেজ ও ইনভেন্টরি",
           icon: ShoppingBag,
           badge: products.length,
-          badgeColor: "bg-amber-400/20 text-amber-300 border border-amber-400/30",
+          badgeColor: "bg-blue-50 text-[#5064df] font-bold border border-blue-200/60",
         },
         {
           id: "sellers" as const,
@@ -601,7 +609,7 @@ export default function AdminPage() {
           subtitle: "ভেন্ডর একাউন্ট ও পারমিশন",
           icon: Store,
           badge: vendors.length,
-          badgeColor: "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30",
+          badgeColor: "bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/60",
         },
         {
           id: "hotoffer" as const,
@@ -610,14 +618,14 @@ export default function AdminPage() {
           icon: Flame,
           badge: hotDealConfig.isOfferActive ? "LIVE" : "SOON",
           badgeColor: hotDealConfig.isOfferActive
-            ? "bg-red-500 text-white animate-pulse shadow-xs"
-            : "bg-slate-800 text-slate-400 border border-slate-700",
+            ? "bg-red-500 text-white font-bold animate-pulse shadow-xs"
+            : "bg-slate-100 text-slate-600 font-medium border border-slate-200",
           isHot: true,
         },
       ],
     },
     {
-      group: "অর্ডারস ও সেলস পাইপলাইন",
+      group: "ORDERS & PIPELINE",
       items: [
         {
           id: "orders" as const,
@@ -625,7 +633,7 @@ export default function AdminPage() {
           subtitle: "শিপিং ও পেমেন্ট স্ট্যাটাস",
           icon: Package,
           badge: orders.length,
-          badgeColor: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
+          badgeColor: "bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60",
         },
         {
           id: "incomplete" as const,
@@ -633,12 +641,12 @@ export default function AdminPage() {
           subtitle: "ড্রপ-অফ ও ফোন ফলোআপ",
           icon: Clock,
           badge: incompleteOrders.length,
-          badgeColor: "bg-rose-500/20 text-rose-300 border border-rose-500/30",
+          badgeColor: "bg-rose-50 text-rose-700 font-bold border border-rose-200/60",
         },
       ],
     },
     {
-      group: "সিস্টেম ও শপ সেটিংস",
+      group: "SYSTEM CONFIG",
       items: [
         {
           id: "settings" as const,
@@ -651,377 +659,402 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
+    <div className="min-h-screen bg-[#f4f6fb] text-slate-800 font-sans flex">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 bg-[#0f172a] text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-bold border border-amber-400/40 animate-fade-in">
-          <CheckCircle2 size={18} className="text-amber-400 shrink-0" />
+        <div className="fixed top-5 right-5 z-50 bg-[#0f172a] text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-bold border border-indigo-400/40 animate-fade-in">
+          <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Admin Top Header Bar */}
-      <header className="sticky top-0 z-30 bg-[#0b0f19] text-white border-b border-slate-800 px-4 sm:px-6 py-3 shadow-md">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            {/* Mobile Menu Hamburger Button */}
-            <button
-              type="button"
-              onClick={() => setIsMobileSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-              title="মেনু খুলুন"
-            >
-              <Menu size={20} />
-            </button>
-
-            {/* Brand Logo & Name */}
+      {/* ================= DESKTOP STICKY WHITE SIDEBAR (ANNEX STYLE) ================= */}
+      <aside
+        className={`hidden lg:flex flex-col shrink-0 bg-white border-r border-slate-200/90 text-slate-700 sticky top-0 h-screen transition-all duration-300 z-30 select-none shadow-xs ${
+          isSidebarCollapsed ? "w-20" : "w-64 xl:w-72"
+        }`}
+      >
+        {/* Sidebar Brand Header */}
+        <div className="h-16 px-4 border-b border-slate-100 flex items-center justify-between">
+          {!isSidebarCollapsed ? (
             <Link href="/" className="flex items-center gap-2.5 group">
-              <img
-                src="/images/logo.png"
-                alt="Old Rank Logo"
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-amber-400/50 shadow-md group-hover:scale-105 transition-transform"
-              />
+              <div className="w-8 h-8 rounded-lg bg-[#5064df] text-white flex items-center justify-center font-black text-xs shadow-sm group-hover:scale-105 transition-transform">
+                <span>OR</span>
+              </div>
               <div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-black text-base sm:text-lg text-white tracking-tight leading-none">
-                    Old<span className="text-amber-400">Rank</span>
+                <span className="font-black text-base text-slate-900 tracking-tight leading-none block">
+                  OLD <span className="text-[#5064df]">RANK</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-bold tracking-wider uppercase block">
+                  ADMIN CONSOLE
+                </span>
+              </div>
+            </Link>
+          ) : (
+            <Link href="/" className="w-9 h-9 mx-auto rounded-lg bg-[#5064df] text-white flex items-center justify-center font-black text-sm shadow-sm hover:scale-105 transition-transform">
+              OR
+            </Link>
+          )}
+        </div>
+
+        {/* Sidebar Navigation Items */}
+        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-5 no-scrollbar">
+          {navSections.map((sec, sIdx) => (
+            <div key={sIdx} className="space-y-1">
+              {!isSidebarCollapsed && (
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 block mb-1">
+                  {sec.group}
+                </span>
+              )}
+              <div className="space-y-1">
+                {sec.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActiveTab(item.id)}
+                      title={isSidebarCollapsed ? item.label : undefined}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 cursor-pointer group relative ${
+                        isActive
+                          ? "bg-indigo-50/90 text-[#5064df] font-bold shadow-2xs"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium"
+                      } ${isSidebarCollapsed ? "justify-center px-0" : ""}`}
+                    >
+                      <Icon
+                        size={17}
+                        className={`shrink-0 transition-transform group-hover:scale-110 ${
+                          isActive
+                            ? "text-[#5064df]"
+                            : item.isHot
+                            ? "text-red-500 animate-pulse"
+                            : "text-slate-400 group-hover:text-slate-600"
+                        }`}
+                      />
+                      {!isSidebarCollapsed && (
+                        <div className="flex-1 min-w-0 flex items-center justify-between">
+                          <span className="text-xs truncate">{item.label}</span>
+                          {item.badge !== undefined ? (
+                            <span
+                              className={`text-[10px] px-2 py-0.5 rounded-full ml-1.5 shrink-0 ${
+                                item.badgeColor || "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {item.badge}
+                            </span>
+                          ) : (
+                            <ChevronRight size={13} className="text-slate-300 group-hover:text-slate-400 transition-transform group-hover:translate-x-0.5" />
+                          )}
+                        </div>
+                      )}
+
+                      {isSidebarCollapsed && item.badge !== undefined && (
+                        <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-[#5064df] ring-2 ring-white" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Sidebar Bottom Profile Card */}
+        <div className="p-3 border-t border-slate-100 bg-slate-50/70">
+          {!isSidebarCollapsed ? (
+            <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-2.5 truncate">
+                <div className="w-8 h-8 rounded-full bg-indigo-50 text-[#5064df] flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-100">
+                  {user?.role === "seller" ? <Store size={14} /> : <Crown size={14} />}
+                </div>
+                <div className="truncate">
+                  <span className="text-xs font-bold text-slate-800 block truncate leading-tight">
+                    {user?.name || "Admin"}
                   </span>
-                  <span className="text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 px-1.5 py-0.5 rounded">
-                    ADMIN
+                  <span className="text-[10px] text-emerald-600 font-semibold block truncate leading-tight">
+                    ● Online (HQ Authority)
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 font-medium hidden sm:block">
-                  পোস্টিং, প্রোডাক্ট, সেলার ও অর্ডার হাব
-                </p>
-              </div>
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Desktop Sidebar Expand/Collapse Button */}
-            <button
-              type="button"
-              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="hidden lg:flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700 py-2 px-3 rounded-xl border border-slate-700 transition-colors cursor-pointer"
-              title={isSidebarCollapsed ? "সাইডবার বড় করুন" : "সাইডবার ছোট করুন"}
-            >
-              {isSidebarCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
-              <span className="hidden xl:inline">{isSidebarCollapsed ? "সাইডবার বড় করুন" : "মিনিমাইজ"}</span>
-            </button>
-
-            <Link
-              href="/"
-              target="_blank"
-              className="flex items-center gap-1.5 text-xs font-bold text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 py-2 px-3 rounded-xl border border-slate-700 transition-colors"
-            >
-              <span className="hidden sm:inline">শপ প্রিভিউ</span>
-              <ArrowUpRight size={14} className="text-amber-400" />
-            </Link>
-
-            <button
-              onClick={loadData}
-              className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-              title="রিফ্রেশ করুন"
-            >
-              <RefreshCw size={16} className={isLoading ? "animate-spin text-amber-400" : ""} />
-            </button>
-
-            {/* User Profile / Logout */}
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-              <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xs shadow">
-                {user?.role === "seller" ? <Store size={15} /> : <Crown size={15} />}
-              </div>
-              <div className="hidden md:block text-left">
-                <span className="text-xs font-bold text-white block leading-tight truncate max-w-[120px]">
-                  {user?.name || "Old Rank Admin"}
-                </span>
-                <span className="text-[10px] text-amber-300 block leading-tight">
-                  {user?.role === "seller" ? "Seller" : "Authority"}
-                </span>
               </div>
               <button
+                type="button"
                 onClick={logout}
-                className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 transition-colors ml-1 cursor-pointer"
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                 title="লগআউট"
               >
+                <LogOut size={15} />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={logout}
+              className="w-full flex items-center justify-center p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+              title="লগআউট"
+            >
+              <LogOut size={16} />
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* ================= MOBILE OVERLAY DRAWER SIDEBAR ================= */}
+      {isMobileSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+
+          <aside className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white border-r border-slate-200 text-slate-700 shadow-2xl flex flex-col z-10 animate-slide-in">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#5064df] text-white flex items-center justify-center font-black text-xs shadow-sm">
+                  OR
+                </div>
+                <div>
+                  <span className="font-black text-sm text-slate-900 tracking-tight">
+                    OLD <span className="text-[#5064df]">RANK</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 block font-bold">ADMIN PANEL</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3 space-y-4 no-scrollbar">
+              {navSections.map((sec, sIdx) => (
+                <div key={sIdx} className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 block mb-1">
+                    {sec.group}
+                  </span>
+                  <div className="space-y-1">
+                    {sec.items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = activeTab === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveTab(item.id);
+                            setIsMobileSidebarOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                            isActive
+                              ? "bg-indigo-50 text-[#5064df] font-bold shadow-2xs"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium"
+                          }`}
+                        >
+                          <Icon
+                            size={18}
+                            className={
+                              isActive
+                                ? "text-[#5064df]"
+                                : item.isHot
+                                ? "text-red-500 animate-pulse"
+                                : "text-slate-400"
+                            }
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs block leading-tight truncate">{item.label}</span>
+                            <span className="text-[10px] text-slate-400 block truncate">{item.subtitle}</span>
+                          </div>
+                          {item.badge !== undefined && (
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                item.badgeColor || "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {item.badge}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-2 truncate">
+                <div className="w-8 h-8 rounded-full bg-indigo-50 text-[#5064df] flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-100">
+                  {user?.role === "seller" ? <Store size={14} /> : <Crown size={14} />}
+                </div>
+                <div className="truncate">
+                  <span className="text-xs font-bold text-slate-800 block truncate">{user?.name || "Admin"}</span>
+                  <span className="text-[10px] text-slate-400 block truncate">HQ Authority</span>
+                </div>
+              </div>
+              <button onClick={logout} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg">
                 <LogOut size={16} />
               </button>
             </div>
-          </div>
+          </aside>
         </div>
-      </header>
+      )}
 
-      {/* Main Container with Sticky Sidebar + Content Area */}
-      <div className="flex flex-1 min-h-[calc(100vh-61px)] relative">
-        {/* ================= DESKTOP STICKY SIDEBAR ================= */}
-        <aside
-          className={`hidden lg:flex flex-col shrink-0 bg-[#080b11] border-r border-slate-800 text-white sticky top-[61px] h-[calc(100vh-61px)] transition-all duration-300 z-20 select-none ${
-            isSidebarCollapsed ? "w-20" : "w-64 xl:w-72"
-          }`}
-        >
-          {/* Sidebar Top Mini Brand Status */}
-          <div className="p-3.5 border-b border-slate-800/80 flex items-center justify-between">
-            {!isSidebarCollapsed ? (
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-amber-400/20 text-amber-400 flex items-center justify-center font-black">
-                  <Crown size={15} />
-                </div>
-                <div>
-                  <span className="text-xs font-black tracking-wider uppercase text-white block">
-                    Admin Portal
-                  </span>
-                  <span className="text-[10px] text-amber-400 font-bold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    HQ Live Control
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="w-8 h-8 mx-auto rounded-lg bg-amber-400/20 text-amber-400 flex items-center justify-center font-black">
-                <Crown size={16} />
-              </div>
-            )}
-          </div>
+      {/* ================= RIGHT CONTENT COLUMN (HEADER + SUBHEADER + MAIN) ================= */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        {/* Annex Vibrant Royal Blue / Indigo Top Header Bar */}
+        <header className="sticky top-0 z-20 bg-gradient-to-r from-[#4d62e5] via-[#5064df] to-[#5b6be8] text-white px-4 sm:px-6 py-3 shadow-md">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {/* Mobile Hamburger Button */}
+              <button
+                type="button"
+                onClick={() => setIsMobileSidebarOpen(true)}
+                className="lg:hidden p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="মেনু খুলুন"
+              >
+                <Menu size={20} />
+              </button>
 
-          {/* Nav Items List */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-5 no-scrollbar">
-            {navSections.map((sec, sIdx) => (
-              <div key={sIdx} className="space-y-1">
-                {!isSidebarCollapsed && (
-                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 px-3 block mb-1.5">
-                    {sec.group}
+              {/* Desktop Sidebar Collapse Button */}
+              <button
+                type="button"
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className="hidden lg:flex p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title={isSidebarCollapsed ? "সাইডবার বড় করুন" : "সাইডবার ছোট করুন"}
+              >
+                {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+              </button>
+
+              {/* Annex Pill Search Bar */}
+              <div className="relative">
+                <Search size={14} className="absolute left-3.5 top-2.5 text-white/60 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={productSearch || searchQuery}
+                  onChange={(e) => {
+                    setProductSearch(e.target.value);
+                    setSearchQuery(e.target.value);
+                  }}
+                  className="bg-white/15 hover:bg-white/20 focus:bg-white/25 text-white placeholder-white/70 text-xs pl-9 pr-4 py-1.5 rounded-full outline-none transition-all w-36 sm:w-56 focus:w-64 border border-white/10"
+                />
+              </div>
+            </div>
+
+            {/* Right Icons matching Annex */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Language Indicator */}
+              <div className="hidden sm:flex items-center gap-1.5 text-xs text-white/90 bg-white/10 px-2.5 py-1.5 rounded-lg font-medium">
+                <span>English</span>
+                <span className="text-sm">🇺🇸</span>
+              </div>
+
+              {/* Notification Bell with Badge */}
+              <button
+                type="button"
+                onClick={() => setActiveTab("orders")}
+                className="relative p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="অর্ডার নোটিফিকেশন"
+              >
+                <Bell size={17} />
+                {orders.filter((o) => o.status === "pending").length > 0 && (
+                  <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-amber-400 text-slate-900 font-bold text-[9px] flex items-center justify-center shadow">
+                    {orders.filter((o) => o.status === "pending").length}
                   </span>
                 )}
-                <div className="space-y-1">
-                  {sec.items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeTab === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setActiveTab(item.id)}
-                        title={isSidebarCollapsed ? item.label : undefined}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 cursor-pointer group relative ${
-                          isActive
-                            ? "bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent text-amber-400 font-black border-l-4 border-amber-400 shadow-sm shadow-amber-500/5"
-                            : "text-slate-400 hover:text-white hover:bg-slate-800/60 font-medium border-l-4 border-transparent"
-                        } ${isSidebarCollapsed ? "justify-center px-0" : ""}`}
-                      >
-                        <Icon
-                          size={18}
-                          className={`shrink-0 transition-transform group-hover:scale-110 ${
-                            isActive
-                              ? "text-amber-400"
-                              : item.isHot
-                              ? "text-red-400 animate-pulse"
-                              : "text-slate-400 group-hover:text-slate-200"
-                          }`}
-                        />
-                        {!isSidebarCollapsed && (
-                          <div className="flex-1 min-w-0 flex items-center justify-between">
-                            <div className="truncate">
-                              <span className="text-xs block leading-tight truncate">{item.label}</span>
-                              <span className="text-[10px] text-slate-500 block leading-tight font-normal truncate">
-                                {item.subtitle}
-                              </span>
-                            </div>
-                            {item.badge !== undefined && (
-                              <span
-                                className={`text-[10px] font-black px-2 py-0.5 rounded-full ml-1.5 shrink-0 ${
-                                  item.badgeColor || "bg-slate-800 text-slate-300"
-                                }`}
-                              >
-                                {item.badge}
-                              </span>
-                            )}
-                          </div>
-                        )}
+              </button>
 
-                        {isSidebarCollapsed && item.badge !== undefined && (
-                          <span className="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-[#080b11]" />
-                        )}
-                      </button>
-                    );
-                  })}
+              {/* Messages / Incomplete Leads with Badge */}
+              <button
+                type="button"
+                onClick={() => setActiveTab("incomplete")}
+                className="relative p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="ড্রপ-অফ লিডস"
+              >
+                <Mail size={17} />
+                {incompleteOrders.length > 0 && (
+                  <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-rose-500 text-white font-bold text-[9px] flex items-center justify-center shadow">
+                    {incompleteOrders.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Live Shop Preview Button */}
+              <Link
+                href="/"
+                target="_blank"
+                className="hidden md:flex items-center gap-1.5 text-xs font-bold text-white bg-white/15 hover:bg-white/25 py-1.5 px-3 rounded-xl border border-white/20 transition-colors"
+              >
+                <span>শপ দেখুন</span>
+                <ArrowUpRight size={13} />
+              </Link>
+
+              {/* Refresh Data */}
+              <button
+                onClick={loadData}
+                className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="রিফ্রেশ করুন"
+              >
+                <RefreshCw size={16} className={isLoading ? "animate-spin text-amber-300" : ""} />
+              </button>
+
+              {/* User Avatar & Logout */}
+              <div className="flex items-center gap-2 pl-2 border-l border-white/20">
+                <div className="w-8 h-8 rounded-full bg-white text-[#5064df] flex items-center justify-center font-bold text-xs shadow">
+                  {user?.name ? user.name[0].toUpperCase() : "A"}
                 </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Sidebar Bottom Footer Profile Widget */}
-          <div className="p-3 border-t border-slate-800/80 bg-[#05070c]/60">
-            {!isSidebarCollapsed ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/80 border border-slate-800">
-                  <div className="flex items-center gap-2.5 truncate">
-                    <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xs shrink-0 shadow">
-                      {user?.role === "seller" ? <Store size={14} /> : <Crown size={14} />}
-                    </div>
-                    <div className="truncate">
-                      <span className="text-xs font-bold text-white block truncate leading-tight">
-                        {user?.name || "Old Rank Admin"}
-                      </span>
-                      <span className="text-[10px] text-amber-300 block truncate leading-tight">
-                        {user?.role === "seller" ? "Authorized Seller" : "Headquarters Authority"}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={logout}
-                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
-                    title="লগআউট"
-                  >
-                    <LogOut size={15} />
-                  </button>
-                </div>
-
-                <Link
-                  href="/"
-                  target="_blank"
-                  className="w-full flex items-center justify-center gap-1.5 text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-400/10 hover:bg-amber-400/20 py-2 rounded-xl border border-amber-400/20 transition-all"
-                >
-                  <span>শপ লাইভ দেখুন</span>
-                  <ArrowUpRight size={13} />
-                </Link>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2">
-                <div
-                  className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xs shadow"
-                  title={user?.name || "Admin"}
-                >
-                  {user?.role === "seller" ? <Store size={14} /> : <Crown size={14} />}
+                <div className="hidden lg:block text-left">
+                  <span className="text-xs font-bold text-white block leading-tight truncate max-w-[110px]">
+                    {user?.name || "Admin"}
+                  </span>
+                  <span className="text-[10px] text-white/70 block leading-tight">
+                    HQ Authority
+                  </span>
                 </div>
                 <button
-                  type="button"
                   onClick={logout}
-                  className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+                  className="p-1.5 rounded-lg text-white/80 hover:text-rose-200 hover:bg-rose-500/20 transition-colors cursor-pointer"
                   title="লগআউট"
                 >
-                  <LogOut size={15} />
+                  <LogOut size={16} />
                 </button>
               </div>
-            )}
+            </div>
           </div>
-        </aside>
+        </header>
 
-        {/* ================= MOBILE OVERLAY DRAWER SIDEBAR ================= */}
-        {isMobileSidebarOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden">
-            {/* Dark Backdrop */}
-            <div
-              className="fixed inset-0 bg-black/75 backdrop-blur-xs transition-opacity duration-300"
-              onClick={() => setIsMobileSidebarOpen(false)}
-            />
-
-            {/* Slide-out Drawer */}
-            <aside className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-[#080b11] border-r border-slate-800 text-white shadow-2xl flex flex-col z-10 animate-slide-in">
-              {/* Drawer Header */}
-              <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <img
-                    src="/images/logo.png"
-                    alt="Old Rank Logo"
-                    className="w-8 h-8 rounded-full object-cover ring-2 ring-amber-400/60"
-                  />
-                  <div>
-                    <span className="font-black text-sm text-white tracking-tight">
-                      Old<span className="text-amber-400">Rank</span> Admin
-                    </span>
-                    <span className="text-[10px] text-amber-300 block">কন্ট্রোল প্যানেল</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsMobileSidebarOpen(false)}
-                  className="p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer"
-                  title="বন্ধ করুন"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Drawer Nav Items */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-4 no-scrollbar">
-                {navSections.map((sec, sIdx) => (
-                  <div key={sIdx} className="space-y-1">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 px-3 block mb-1">
-                      {sec.group}
-                    </span>
-                    <div className="space-y-1">
-                      {sec.items.map((item) => {
-                        const Icon = item.icon;
-                        const isActive = activeTab === item.id;
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => {
-                              setActiveTab(item.id);
-                              setIsMobileSidebarOpen(false);
-                            }}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer ${
-                              isActive
-                                ? "bg-gradient-to-r from-amber-500/25 via-amber-500/10 to-transparent text-amber-400 font-black border-l-4 border-amber-400 shadow-sm"
-                                : "text-slate-300 hover:text-white hover:bg-slate-800/80 font-medium"
-                            }`}
-                          >
-                            <Icon
-                              size={18}
-                              className={
-                                isActive
-                                  ? "text-amber-400"
-                                  : item.isHot
-                                  ? "text-red-400 animate-pulse"
-                                  : "text-amber-400/80"
-                              }
-                            />
-                            <div className="flex-1 min-w-0">
-                              <span className="text-xs block leading-tight truncate">{item.label}</span>
-                              <span className="text-[10px] text-slate-500 block truncate">{item.subtitle}</span>
-                            </div>
-                            {item.badge !== undefined && (
-                              <span
-                                className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                                  item.badgeColor || "bg-slate-800 text-slate-300"
-                                }`}
-                              >
-                                {item.badge}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Drawer Footer */}
-              <div className="p-4 border-t border-slate-800 bg-[#05070c] space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 truncate">
-                    <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-xs shrink-0">
-                      <Crown size={14} />
-                    </div>
-                    <div className="truncate">
-                      <span className="text-xs font-bold text-white block truncate">{user?.name || "Admin"}</span>
-                      <span className="text-[10px] text-amber-400 block truncate">Headquarters Authority</span>
-                    </div>
-                  </div>
-                  <button onClick={logout} className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg">
-                    <LogOut size={16} />
-                  </button>
-                </div>
-              </div>
-            </aside>
+        {/* Annex Subheader / Breadcrumb Bar */}
+        <div className="bg-white border-b border-slate-200/80 px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+          <div>
+            <h1 className="text-lg sm:text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+              {activeTab === "overview" && "Chartist Chart (ড্যাশবোর্ড ও সেলস ওভারভিউ)"}
+              {activeTab === "products" && "প্রোডাক্ট পোস্ট ও স্টক ইনভেন্টরি"}
+              {activeTab === "sellers" && "সেলার ও ভেন্ডর ম্যানেজমেন্ট হাব"}
+              {activeTab === "orders" && "সকল কাস্টমার অর্ডার ও ইনভয়েস"}
+              {activeTab === "incomplete" && "ইনকমপ্লিট অর্ডার ও ড্রপ-অফ লিডস"}
+              {activeTab === "hotoffer" && "হট অফার ও রিয়েল-টাইম টাইমার"}
+              {activeTab === "settings" && "শপ সেটিংস ও চার্জ কনফিগারেশন"}
+            </h1>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Old Rank Official Administration Console & E-Commerce Control Center
+            </p>
           </div>
-        )}
+          <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+            <Link href="/" className="hover:text-[#5064df]">Old Rank</Link>
+            <span>/</span>
+            <span>Admin</span>
+            <span>/</span>
+            <span className="text-[#5064df] font-bold">
+              {activeTab === "overview" ? "Chartist Chart" : activeTab}
+            </span>
+          </div>
+        </div>
 
-        {/* ================= MAIN DASHBOARD CONTENT ================= */}
-        <main className="flex-1 min-w-0 bg-[#f8fafc] p-4 sm:p-6 lg:p-8 overflow-y-auto space-y-6">
+        {/* Main Dashboard Content Area */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 overflow-y-auto">
           {/* Role Banner if Seller */}
           {user?.role === "seller" ? (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-3 text-amber-950 text-xs shadow-xs">
@@ -1036,16 +1069,16 @@ export default function AdminPage() {
               </Link>
             </div>
           ) : !isLoggedIn || user?.role !== "admin" ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-amber-900 text-xs shadow-xs">
+            <div className="bg-indigo-50 border border-indigo-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-indigo-950 text-xs shadow-xs">
               <div className="flex items-center gap-2.5">
-                <Crown size={20} className="text-amber-600 shrink-0" />
+                <Crown size={20} className="text-[#5064df] shrink-0" />
                 <span>
                   <strong>ডেমো মোড নোটিশ:</strong> আপনি বর্তমানে সরাসরি ভিজিট করেছেন। পূর্ণ কন্ট্রোলের জন্য অ্যাডমিন মোড সক্রিয় করুন।
                 </span>
               </div>
               <button
                 onClick={handleSwitchToAdmin}
-                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors shrink-0 cursor-pointer"
+                className="bg-[#5064df] hover:bg-[#3f51b5] text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors shrink-0 cursor-pointer"
               >
                 <UserCheck size={14} /> ১-ক্লিকে অ্যাডমিন হিসেবে সক্রিয় হন
               </button>
@@ -1055,6 +1088,32 @@ export default function AdminPage() {
         {/* TAB 1: OVERVIEW */}
         {activeTab === "overview" && (
           <div className="space-y-6">
+            {/* 4 Chartist Cards matching Annex Screenshot (2x2 Grid) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Card 1: Overlapping bars on mobile */}
+              <SalesBarChart
+                marketplaceTotal={stats.totalRevenue || 365400}
+                lastWeekTotal={Math.round((stats.totalRevenue || 365400) * 0.26)}
+                lastMonthTotal={Math.round((stats.totalRevenue || 365400) * 0.82)}
+              />
+
+              {/* Card 2: Stacked bar chart */}
+              <StackedBarChart
+                deliveredCount={stats.deliveredOrders || 3654}
+                processingCount={orders.filter((o) => o.status === "processing" || o.status === "shipped").length || 954}
+                pendingCount={orders.filter((o) => o.status === "pending").length || 8462}
+              />
+
+              {/* Card 3: Animating a Donut with Svg.animate */}
+              <DonutWheelChart
+                cat1={products.length || 3654}
+                cat2={vendors.length || 954}
+                cat3={stats.totalOrders || 8462}
+              />
+
+              {/* Card 4: Simple pie chart */}
+              <CleanPieChart p1={33} p2={42} p3={25} />
+            </div>
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
