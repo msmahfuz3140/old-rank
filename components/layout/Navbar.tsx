@@ -122,7 +122,15 @@ export default function Navbar() {
               <span>১০০% অথেনটিক প্রোডাক্ট গ্যারান্টি</span>
             </span>
 
-            {/* Quick Admin Direct Shortcut */}
+            {/* Quick Seller & Admin Direct Shortcuts */}
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1 text-slate-300 hover:text-white font-bold px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 transition-colors border border-white/10 text-[10px] sm:text-[11px]"
+            >
+              <Store size={12} className="text-amber-400" />
+              <span>সেলার হাব</span>
+            </Link>
+
             <Link
               href="/admin"
               className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 font-bold px-2 py-0.5 rounded bg-amber-400/10 hover:bg-amber-400/20 transition-colors border border-amber-400/20 text-[10px] sm:text-[11px]"
@@ -374,12 +382,13 @@ export default function Navbar() {
               ) : (
                 <Link
                   href="/login"
-                  className="flex items-center gap-2 py-2 px-3 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-slate-800 hover:text-[#303d6e] transition-all text-xs font-bold group"
+                  className="flex items-center gap-2 py-2 px-3 rounded-xl bg-slate-50 hover:bg-amber-50/80 border border-slate-200 text-slate-800 hover:text-amber-800 transition-all text-xs font-bold group"
+                  title="সেলার রেজিস্ট্রেশন ও পার্টনার পোর্টাল"
                 >
-                  <div className="w-6 h-6 rounded-md bg-indigo-100 text-[#303d6e] flex items-center justify-center group-hover:bg-[#303d6e] group-hover:text-white transition-colors">
-                    <User size={14} />
+                  <div className="w-6 h-6 rounded-md bg-amber-100 text-amber-800 flex items-center justify-center group-hover:bg-amber-400 group-hover:text-slate-950 transition-colors">
+                    <Store size={14} />
                   </div>
-                  <span className="hidden sm:inline">লগইন</span>
+                  <span className="hidden sm:inline">সেলার হাব</span>
                 </Link>
               )}
             </div>
@@ -553,10 +562,10 @@ export default function Navbar() {
                 <Link
                   href="/login"
                   onClick={() => setIsMobileDrawerOpen(false)}
-                  className="flex items-center justify-center gap-2 bg-[#303d6e] hover:bg-indigo-900 text-white text-xs font-bold py-2 rounded-xl shadow-xs transition-colors"
+                  className="flex items-center justify-center gap-2 bg-[#0b0f19] hover:bg-slate-900 text-amber-400 text-xs font-bold py-2 rounded-xl shadow-xs transition-colors border border-amber-400/30"
                 >
-                  <User size={14} />
-                  <span>লগইন / রেজিস্টার করুন</span>
+                  <Store size={14} />
+                  <span>সেলার অ্যাকাউন্ট / লগইন</span>
                 </Link>
               )}
             </div>

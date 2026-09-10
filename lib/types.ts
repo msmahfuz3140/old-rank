@@ -61,14 +61,19 @@ export interface IVendor {
   shopName: string;
   slug: string;
   logo: string;
-  banner: string;
+  banner?: string;
   rating: number;
   reviewCount: number;
   isVerified: boolean;
+  status?: "Active" | "Pending" | "Suspended";
+  plan?: "Standard" | "Pro" | "VIP";
+  ownerName?: string;
+  email?: string;
   totalProducts: number;
   phone: string;
   address: string;
   description: string;
+  createdAt?: string;
 }
 
 export interface ICartItem {

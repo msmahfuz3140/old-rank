@@ -204,6 +204,21 @@ export default function CheckoutForm() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Delivery & Payment Details */}
         <div className="lg:col-span-7 space-y-6">
+          {/* Frictionless Guest Checkout Reassurance Banner */}
+          <div className="bg-emerald-50 border border-emerald-200/90 rounded-2xl p-4 flex items-center gap-3 text-emerald-950 shadow-xs">
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+              <CheckCircle2 size={18} />
+            </div>
+            <div>
+              <h4 className="font-extrabold text-xs text-emerald-950">
+                কোনো অ্যাকাউন্ট বা লগইন ছাড়াই সরাসরি ক্যাশ অন ডেলিভারি
+              </h4>
+              <p className="text-[11px] text-emerald-800 mt-0.5">
+                শুধু আপনার নাম, ফোন ও ঠিকানা লিখে সরাসরি অর্ডার করুন। পণ্য হাতে পেয়ে সম্পূর্ণ নিশ্চিন্তে মূল্য পরিশোধ করবেন।
+              </p>
+            </div>
+          </div>
+
           {/* Card 1: Customer & Shipping Information */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
             <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
