@@ -16,17 +16,12 @@ import {
 import { useCartStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { IDeliveryZone } from "@/lib/types";
-import MfsPaymentModal from "@/components/popups/MfsPaymentModal";
 import ProductImage from "@/components/product/ProductImage";
 
 export default function CheckoutForm() {
   const router = useRouter();
   const { items, getSubtotal, clearCart } = useCartStore();
   const subtotal = getSubtotal();
-
-  // MFS Payment Gateway Modal State
-  const [isMfsModalOpen, setIsMfsModalOpen] = useState(false);
-  const [mfsGateway, setMfsGateway] = useState<"bkash" | "nagad">("bkash");
 
 
   // Form State
@@ -41,12 +36,8 @@ export default function CheckoutForm() {
   const [deliveryZones, setDeliveryZones] = useState<IDeliveryZone[]>([]);
   const [deliveryCharge, setDeliveryCharge] = useState(60);
 
-  // Payment Selection
-  const [paymentMethod, setPaymentMethod] = useState<
-    "cod" | "bkash_manual" | "nagad_manual" | "rocket_manual" | "bkash_auto" | "nagad_auto" | "card_auto"
-  >("cod");
-  const [manualTrxId, setManualTrxId] = useState("");
-  const [manualSenderNumber, setManualSenderNumber] = useState("");
+  // Payment Selection (Cash on Delivery Only)
+  const paymentMethod = "cod";
 
   // Coupon
   const [couponInput, setCouponInput] = useState("");
@@ -130,8 +121,8 @@ export default function CheckoutForm() {
     setErrorMessage("");
 
     try {
-      const finalPhone = phone.trim() || mfsPaymentData?.senderPhone || "01712345678";
-      const finalName = name.trim() || (mfsPaymentData ? "bKash Customer" : "সম্মানিত গ্রাহক");
+      const finalPhone = phone.trim() || "01712345678";
+      const finalName = name.trim() || "সম্মানিত গ্রাহক";
       const finalAddress = address.trim() || "মিরপুর ১০, ঢাকা ১২১৬ (অনলাইন অর্ডার)";
 
       const orderData = {
@@ -154,9 +145,7 @@ export default function CheckoutForm() {
         deliveryCharge,
         discount: discountAmount,
         grandTotal,
-        paymentMethod: mfsPaymentData?.method || paymentMethod,
-        manualTrxId: mfsPaymentData?.trxId || manualTrxId,
-        manualSenderNumber: mfsPaymentData?.senderPhone || manualSenderNumber,
+        paymentMethod: "cod",
         couponCode: appliedCoupon || "",
       };
 
@@ -164,10 +153,8 @@ export default function CheckoutForm() {
 
       if (result.success) {
         clearCart();
-        const invoiceId = result.data?.order?.invoiceId || "SG-ORDER";
-        const isPaid = mfsPaymentData ? "paid" : "pending";
-        const trxQuery = mfsPaymentData?.trxId ? `&trxId=${mfsPaymentData.trxId}` : "";
-        router.push(`/order-success?invoiceId=${invoiceId}&phone=${finalPhone}&paymentStatus=${isPaid}${trxQuery}`);
+        const invoiceId = result.data?.order?.invoiceId || "OR-ORDER";
+        router.push(`/order-success?invoiceId=${invoiceId}&phone=${finalPhone}&paymentStatus=pending`);
       } else {
         setErrorMessage(result.message || "অর্ডার সম্পন্ন হতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
       }
@@ -188,17 +175,8 @@ export default function CheckoutForm() {
       return;
     }
 
-    // 🎯 If Automated bKash is selected: open authentic bKash PGW Modal directly!
-    if (paymentMethod === "bkash_auto") {
-      setMfsGateway("bkash");
-      setIsMfsModalOpen(true);
-      return;
-    }
-
-    // 🎯 If Automated Nagad is selected: open authentic Nagad PGW Modal directly!
-    if (paymentMethod === "nagad_auto") {
-      setMfsGateway("nagad");
-      setIsMfsModalOpen(true);
+    if (!name.trim() || name.trim().length < 2) {
+      setErrorMessage("অনুগ্রহ করে আপনার নাম প্রদান করুন।");
       return;
     }
 
@@ -212,15 +190,7 @@ export default function CheckoutForm() {
       return;
     }
 
-    // If Manual bKash/Nagad/Rocket is selected: check TrxID
-    if (["bkash_manual", "nagad_manual", "rocket_manual"].includes(paymentMethod)) {
-      if (!manualTrxId.trim() || manualTrxId.trim().length < 5) {
-        setErrorMessage("ম্যানুয়াল পেমেন্টের ট্রানজেকশন আইডি (TrxID) আবশ্যক।");
-        return;
-      }
-    }
-
-    // Proceed for COD or Manual Payment
+    // Proceed for Cash on Delivery
     await finalizeOrder();
   };
 
@@ -230,8 +200,7 @@ export default function CheckoutForm() {
     .map((z) => z.district);
 
   return (
-    <>
-      <form onSubmit={handleSubmitOrder} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <form onSubmit={handleSubmitOrder} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Delivery & Payment Details */}
         <div className="lg:col-span-7 space-y-6">
@@ -362,337 +331,38 @@ export default function CheckoutForm() {
           {/* Card 2: Payment Method Selection */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
             <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-[#303d6e] flex items-center justify-center font-bold">
-                <Wallet size={20} />
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                <Truck size={20} />
               </div>
               <div>
                 <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">
-                  পেমেন্ট মেথড নির্বাচন করুন
+                  পেমেন্ট পদ্ধতি (Payment Method)
                 </h2>
                 <p className="text-xs text-slate-400">
-                  নিরাপদ ও সহজ উপায়ে মূল্য পরিশোধ করুন
+                  সারা বাংলাদেশে সহজ ও বিশ্বস্ত ক্যাশ অন ডেলিভারি
                 </p>
               </div>
             </div>
 
-            {/* Radio Options Grid */}
-            <div className="space-y-3">
-              {/* Option: COD */}
-              <label
-                className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                  paymentMethod === "cod"
-                    ? "border-[#303d6e] bg-indigo-50/30 shadow-sm"
-                    : "border-slate-100 bg-slate-50/60 hover:border-slate-200"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="cod"
-                    checked={paymentMethod === "cod"}
-                    onChange={() => setPaymentMethod("cod")}
-                    className="accent-[#303d6e] w-4 h-4"
-                  />
-                  <div>
-                    <span className="text-sm font-bold text-slate-900 block">
-                      Cash on Delivery (ক্যাশ অন ডেলিভারি)
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      পণ্য হাতে পেয়ে সম্পূর্ণ মূল্য পরিশোধ করুন
-                    </span>
-                  </div>
+            {/* Option: Cash on Delivery Only */}
+            <div className="p-4 sm:p-5 rounded-2xl border-2 border-emerald-500 bg-emerald-50/40 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3.5">
+                <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-black shrink-0 shadow-sm">
+                  ✓
                 </div>
-                <Truck size={22} className="text-emerald-600 shrink-0" />
-              </label>
-
-              {/* Option: Automated bKash */}
-              <div className="space-y-2">
-                <label
-                  className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                    paymentMethod === "bkash_auto"
-                      ? "border-[#E2136E] bg-pink-50/40 shadow-sm"
-                      : "border-slate-100 bg-slate-50/60 hover:border-slate-200"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="payment_method"
-                      value="bkash_auto"
-                      checked={paymentMethod === "bkash_auto"}
-                      onChange={() => setPaymentMethod("bkash_auto")}
-                      className="accent-[#E2136E] w-4 h-4"
-                    />
-                    <div>
-                      <span className="text-sm font-bold text-slate-900 block">
-                        bKash Gateway (অটোমেটিক বিকাশ)
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        বিকাশ নম্বর, SMS ওটিপি ও পিন দিয়ে সরাসরি অনলাইন পে করুন
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-black text-pink-600 bg-pink-50 px-2.5 py-1 rounded">
-                    bKash
+                <div>
+                  <span className="text-sm sm:text-base font-extrabold text-slate-900 block">
+                    Cash on Delivery (ক্যাশ অন ডেলিভারি)
                   </span>
-                </label>
-
-                {paymentMethod === "bkash_auto" && (
-                  <div className="p-3.5 rounded-2xl bg-pink-50/90 border border-pink-200 flex flex-col sm:flex-row items-center justify-between gap-3 animate-slide-up">
-                    <div className="text-xs text-pink-900 font-medium">
-                      বিকাশ একাউন্ট নম্বর, SMS ওটিপি ও পিন দিয়ে পেমেন্ট করুন:
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMfsGateway("bkash");
-                        setIsMfsModalOpen(true);
-                      }}
-                      className="w-full sm:w-auto px-4 py-2 bg-[#E2136E] hover:bg-[#c90f60] text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap transition-transform active:scale-98"
-                    >
-                      <span>বিকাশ পেমেন্ট স্ক্রিন ওপেন করুন</span>
-                      <ArrowRight size={14} />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Option: Automated Nagad */}
-              <div className="space-y-2">
-                <label
-                  className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                    paymentMethod === "nagad_auto"
-                      ? "border-[#F7941D] bg-orange-50/40 shadow-sm"
-                      : "border-slate-100 bg-slate-50/60 hover:border-slate-200"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="radio"
-                      name="payment_method"
-                      value="nagad_auto"
-                      checked={paymentMethod === "nagad_auto"}
-                      onChange={() => setPaymentMethod("nagad_auto")}
-                      className="accent-[#F7941D] w-4 h-4"
-                    />
-                    <div>
-                      <span className="text-sm font-bold text-slate-900 block">
-                        Nagad Gateway (অটোমেটিক নগদ)
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        নগদ অনলাইন পেমেন্ট গেটওয়ে দিয়ে পে করুন
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-black text-orange-600 bg-orange-50 px-2.5 py-1 rounded">
-                    Nagad
+                  <span className="text-xs text-slate-600 mt-0.5 block">
+                    পণ্য হাতে পেয়ে চেক করে সম্পূর্ণ মূল্য ডেলিভারি ম্যানকে পরিশোধ করবেন। কোনো অগ্রিম পেমেন্টের প্রয়োজন নেই।
                   </span>
-                </label>
-
-                {paymentMethod === "nagad_auto" && (
-                  <div className="p-3.5 rounded-2xl bg-orange-50/90 border border-orange-200 flex flex-col sm:flex-row items-center justify-between gap-3 animate-slide-up">
-                    <div className="text-xs text-orange-900 font-medium">
-                      নগদ একাউন্ট নম্বর, SMS ওটিপি ও পিন দিয়ে পেমেন্ট করুন:
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMfsGateway("nagad");
-                        setIsMfsModalOpen(true);
-                      }}
-                      className="w-full sm:w-auto px-4 py-2 bg-[#F7941D] hover:bg-orange-600 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap transition-transform active:scale-98"
-                    >
-                      <span>নগদ পেমেন্ট স্ক্রিন ওপেন করুন</span>
-                      <ArrowRight size={14} />
-                    </button>
-                  </div>
-                )}
+                </div>
               </div>
-
-              {/* Option: Automated Card Payment */}
-              <label
-                className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                  paymentMethod === "card_auto"
-                    ? "border-[#303d6e] bg-indigo-50/30 shadow-sm"
-                    : "border-slate-100 bg-slate-50/60 hover:border-slate-200"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="card_auto"
-                    checked={paymentMethod === "card_auto"}
-                    onChange={() => setPaymentMethod("card_auto")}
-                    className="accent-[#303d6e] w-4 h-4"
-                  />
-                  <div>
-                    <span className="text-sm font-bold text-slate-900 block">
-                      Debit / Credit Card & Banking
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      Visa, Mastercard, Amex ও অনলাইন ব্যাংকিং
-                    </span>
-                  </div>
-                </div>
-                <CreditCard size={22} className="text-indigo-600 shrink-0" />
-              </label>
-
-              {/* Option: Manual bKash */}
-              <label
-                className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                  paymentMethod === "bkash_manual"
-                    ? "border-[#303d6e] bg-indigo-50/30 shadow-sm"
-                    : "border-slate-100 bg-slate-50/60 hover:border-slate-200"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="bkash_manual"
-                    checked={paymentMethod === "bkash_manual"}
-                    onChange={() => setPaymentMethod("bkash_manual")}
-                    className="accent-[#303d6e] w-4 h-4"
-                  />
-                  <div>
-                    <span className="text-sm font-bold text-slate-900 block">
-                      Manual bKash (বিকাশ পার্সোনাল)
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      পার্সোনাল নম্বরে Send Money করে TrxID দিন
-                    </span>
-                  </div>
-                </div>
-                <span className="text-xs font-bold text-pink-700 bg-pink-100 px-2 py-0.5 rounded">
-                  Send Money
-                </span>
-              </label>
-
-              {/* Option: Manual Nagad */}
-              <label
-                className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                  paymentMethod === "nagad_manual"
-                    ? "border-[#303d6e] bg-indigo-50/30 shadow-sm"
-                    : "border-slate-100 bg-slate-50/60 hover:border-slate-200"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="nagad_manual"
-                    checked={paymentMethod === "nagad_manual"}
-                    onChange={() => setPaymentMethod("nagad_manual")}
-                    className="accent-[#303d6e] w-4 h-4"
-                  />
-                  <div>
-                    <span className="text-sm font-bold text-slate-900 block">
-                      Manual Nagad (নগদ পার্সোনাল)
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      পার্সোনাল নম্বরে Send Money করে TrxID দিন
-                    </span>
-                  </div>
-                </div>
-                <span className="text-xs font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded">
-                  Send Money
-                </span>
-              </label>
-
-              {/* Option: Manual Rocket */}
-              <label
-                className={`flex items-center justify-between p-4 rounded-2xl border-2 cursor-pointer transition-all ${
-                  paymentMethod === "rocket_manual"
-                    ? "border-[#303d6e] bg-indigo-50/30 shadow-sm"
-                    : "border-slate-100 bg-slate-50/60 hover:border-slate-200"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="payment_method"
-                    value="rocket_manual"
-                    checked={paymentMethod === "rocket_manual"}
-                    onChange={() => setPaymentMethod("rocket_manual")}
-                    className="accent-[#303d6e] w-4 h-4"
-                  />
-                  <div>
-                    <span className="text-sm font-bold text-slate-900 block">
-                      Manual Rocket (রকেট পার্সোনাল)
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      রকেট নম্বরে টাকা পাঠিয়ে TrxID প্রদান করুন
-                    </span>
-                  </div>
-                </div>
-                <span className="text-xs font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded">
-                  Send Money
-                </span>
-              </label>
+              <span className="text-[11px] sm:text-xs font-bold text-emerald-800 bg-emerald-100/90 px-3 py-1.5 rounded-xl shrink-0 border border-emerald-200 w-fit">
+                ক্যাশ অন ডেলিভারি
+              </span>
             </div>
-
-            {/* Dynamic Manual Payment Instructions Box */}
-            {["bkash_manual", "nagad_manual", "rocket_manual"].includes(paymentMethod) && (
-              <div className="mt-5 p-4 rounded-2xl bg-amber-50/80 border border-amber-200 animate-slide-up">
-                <div className="flex items-center gap-2 text-amber-800 font-bold text-sm mb-2">
-                  <AlertCircle size={17} />
-                  <span>ম্যানুয়াল পেমেন্ট নির্দেশিকা</span>
-                </div>
-                <p className="text-xs text-amber-900 leading-relaxed mb-3">
-                  নিচের পার্সোনাল নম্বরে <strong className="font-extrabold">৳ {grandTotal.toLocaleString()}</strong> টাকা সেন্ড মানি করুন:
-                </p>
-                <div className="p-3 bg-white rounded-xl border border-amber-300 flex items-center justify-between mb-4 shadow-inner">
-                  <div>
-                    <span className="text-[11px] text-slate-400 block font-semibold uppercase">
-                      {paymentMethod.replace("_manual", "").toUpperCase()} Personal Number:
-                    </span>
-                    <span className="text-base sm:text-lg font-black text-slate-900 font-mono tracking-wider">
-                      01849832178
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText("01849832178");
-                      alert("নম্বর কপি হয়েছে: 01849832178");
-                    }}
-                    className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-xs"
-                  >
-                    কপি করুন
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-bold text-slate-800 block mb-1">
-                      ট্রানজেকশন আইডি (TrxID) <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="যেমন: 9J4K2L8M"
-                      value={manualTrxId}
-                      onChange={(e) => setManualTrxId(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-800 block mb-1">
-                      যে নম্বর থেকে পাঠিয়েছেন (ঐচ্ছিক)
-                    </label>
-                    <input
-                      type="tel"
-                      placeholder="01xxxxxxxxx"
-                      value={manualSenderNumber}
-                      onChange={(e) => setManualSenderNumber(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-white border border-amber-300 rounded-xl text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -801,25 +471,13 @@ export default function CheckoutForm() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`w-full mt-6 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-xl transition-all hover:scale-[1.01] active:scale-98 disabled:opacity-50 ${
-                paymentMethod === "bkash_auto"
-                  ? "bg-[#E2136E] hover:bg-[#c90f60] shadow-pink-900/20"
-                  : paymentMethod === "nagad_auto"
-                  ? "bg-[#F7941D] hover:bg-orange-600 shadow-orange-900/20"
-                  : "bg-[#303d6e] hover:bg-indigo-900 shadow-indigo-950/20"
-              }`}
+              className="w-full mt-6 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-xl bg-[#303d6e] hover:bg-indigo-900 shadow-indigo-950/20 transition-all hover:scale-[1.01] active:scale-98 disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
                 <span>প্রসেসিং হচ্ছে...</span>
               ) : (
                 <>
-                  <span>
-                    {paymentMethod === "bkash_auto"
-                      ? "বিকাশ দিয়ে সরাসরি পে করুন (Pay with bKash)"
-                      : paymentMethod === "nagad_auto"
-                      ? "নগদ দিয়ে সরাসরি পে করুন (Pay with Nagad)"
-                      : "অর্ডার নিশ্চিত করুন"}
-                  </span>
+                  <span>অর্ডার নিশ্চিত করুন (Cash on Delivery)</span>
                   <ArrowRight size={18} />
                 </>
               )}
@@ -833,20 +491,6 @@ export default function CheckoutForm() {
         </div>
       </div>
     </form>
-
-      {/* 💳 Authentic bKash & Nagad Payment Gateway Modal (Phone -> OTP -> PIN -> Auto Pay) */}
-      <MfsPaymentModal
-        isOpen={isMfsModalOpen}
-        gateway={mfsGateway}
-        amount={grandTotal}
-        customerPhone={phone}
-        onClose={() => setIsMfsModalOpen(false)}
-        onSuccess={async (paymentData) => {
-          setIsMfsModalOpen(false);
-          await finalizeOrder(paymentData);
-        }}
-      />
-    </>
   );
 }
 

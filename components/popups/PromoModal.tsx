@@ -10,13 +10,13 @@ export default function PromoModal() {
   useEffect(() => {
     const hoursToWait = 3;
     const timeLimit = hoursToWait * 60 * 60 * 1000;
-    const lastShown = localStorage.getItem("shopgenie_promo_last_shown");
+    const lastShown = localStorage.getItem("oldrank_promo_last_shown");
     const now = Date.now();
 
     if (!lastShown || now - Number(lastShown) > timeLimit) {
       const timer = setTimeout(() => {
         setIsOpen(true);
-        localStorage.setItem("shopgenie_promo_last_shown", String(now));
+        localStorage.setItem("oldrank_promo_last_shown", String(now));
       }, 2500);
 
       return () => clearTimeout(timer);

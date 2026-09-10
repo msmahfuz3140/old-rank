@@ -103,7 +103,7 @@ export const useAuthStore = create<AuthStore>((set) => {
 
   if (typeof window !== "undefined") {
     try {
-      const saved = localStorage.getItem("shopgenie_user");
+      const saved = localStorage.getItem("oldrank_user");
       if (saved) {
         initialUser = JSON.parse(saved);
         initialLoggedIn = true;
@@ -117,7 +117,7 @@ export const useAuthStore = create<AuthStore>((set) => {
     login: (user) => {
       if (typeof window !== "undefined") {
         try {
-          localStorage.setItem("shopgenie_user", JSON.stringify(user));
+          localStorage.setItem("oldrank_user", JSON.stringify(user));
         } catch {}
       }
       set({ user, isLoggedIn: true });
@@ -125,7 +125,7 @@ export const useAuthStore = create<AuthStore>((set) => {
     logout: () => {
       if (typeof window !== "undefined") {
         try {
-          localStorage.removeItem("shopgenie_user");
+          localStorage.removeItem("oldrank_user");
         } catch {}
       }
       set({ user: null, isLoggedIn: false });

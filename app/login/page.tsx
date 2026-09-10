@@ -43,9 +43,9 @@ export default function LoginPage() {
     if (role === "admin") {
       demoUser = {
         id: "usr_admin",
-        name: "ShopGenie Super Admin",
+        name: "Old Rank Super Admin",
         phone: "01849832178",
-        email: "admin@shopgenie.com",
+        email: "admin@oldrank.com",
         role: "admin",
       };
       redirectPath = "/admin";
@@ -114,7 +114,7 @@ export default function LoginPage() {
 
       if (input.includes("admin") || input === "01849832178") {
         role = "admin";
-        name = "ShopGenie Super Admin";
+        name = "Old Rank Super Admin";
       } else if (input.includes("seller") || input.includes("vendor") || input === "01822334455") {
         role = "seller";
         name = "Gadget King BD (সেলার)";
@@ -125,7 +125,7 @@ export default function LoginPage() {
         id: `usr_${Date.now()}`,
         name,
         phone: input.includes("@") ? "01712345678" : input,
-        email: input.includes("@") ? input : `${role}@shopgenie.com`,
+        email: input.includes("@") ? input : `${role}@oldrank.com`,
         role,
         shopName,
       };

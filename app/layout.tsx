@@ -22,9 +22,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Shop Genie | Ultra-Premium E-Commerce Marketplace",
+  title: "Old Rank | Ultra-Premium E-Commerce Marketplace",
   description:
-    "বাংলাদেশের সেরা লারাভেল ভিত্তিক ই-কমার্স প্ল্যাটফর্মের চেয়েও উন্নত, সুপার ফাস্ট ও আধুনিক নেক্সট জেএস ই-কমার্স ওয়েবসাইট।",
+    "বাংলাদেশের সেরা আধুনিক, সুপার ফাস্ট ও প্রিমিয়াম ই-কমার্স প্ল্যাটফর্ম Old Rank।",
 };
 
 export default function RootLayout({

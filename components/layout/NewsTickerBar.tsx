@@ -7,7 +7,7 @@ export default function NewsTickerBar() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const isClosed = sessionStorage.getItem("shopgenie_ticker_closed");
+    const isClosed = sessionStorage.getItem("oldrank_ticker_closed");
     if (!isClosed) {
       setIsVisible(true);
     }
@@ -15,7 +15,7 @@ export default function NewsTickerBar() {
 
   const handleClose = () => {
     setIsVisible(false);
-    sessionStorage.setItem("shopgenie_ticker_closed", "true");
+    sessionStorage.setItem("oldrank_ticker_closed", "true");
   };
 
   if (!isVisible) return null;

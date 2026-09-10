@@ -142,12 +142,12 @@ export default function Navbar() {
 
             <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-[#303d6e] to-indigo-600 flex items-center justify-center text-white font-extrabold text-lg sm:text-xl shadow-md group-hover:scale-105 transition-transform shrink-0">
-                SG
+                OR
               </div>
               <div>
                 <div className="flex items-center gap-1">
                   <span className="font-black text-lg sm:text-2xl text-slate-900 tracking-tight block leading-none">
-                    Shop<span className="text-[#303d6e]">Genie</span>
+                    Old<span className="text-[#303d6e]">Rank</span>
                   </span>
                   <span className="text-[9px] sm:text-[10px] font-bold bg-indigo-50 text-[#303d6e] px-1 sm:px-1.5 py-0.5 rounded border border-indigo-100">
                     PRO
@@ -501,10 +501,10 @@ export default function Navbar() {
             <div className="p-4 bg-gradient-to-r from-[#1e293b] to-[#303d6e] text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center font-black text-sm">
-                  SG
+                  OR
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-sm text-white leading-tight">ShopGenie PRO</h3>
+                  <h3 className="font-extrabold text-sm text-white leading-tight">Old Rank PRO</h3>
                   <p className="text-[10px] text-slate-300">মেন্যু ও ক্যাটাগরি</p>
                 </div>
               </div>

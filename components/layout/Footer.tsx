@@ -25,10 +25,10 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#303d6e] to-indigo-600 flex items-center justify-center text-white font-extrabold text-xl shadow">
-                SG
+                OR
               </div>
               <span className="font-extrabold text-2xl text-white tracking-tight">
-                Shop<span className="text-indigo-400">Genie</span>
+                Old<span className="text-indigo-400">Rank</span>
               </span>
             </div>
             <p className="text-sm text-slate-400 leading-relaxed mb-4">
@@ -36,7 +36,7 @@ export default function Footer() {
             </p>
             <div className="space-y-2 text-xs text-slate-400">
               <p className="flex items-center gap-2"><Phone size={14} className="text-indigo-400" /> +880 1849-832178 (Hotline)</p>
-              <p className="flex items-center gap-2"><Mail size={14} className="text-indigo-400" /> support@shopgenie.com</p>
+              <p className="flex items-center gap-2"><Mail size={14} className="text-indigo-400" /> support@oldrank.com</p>
               <p className="flex items-center gap-2"><MapPin size={14} className="text-indigo-400" /> Dhanmondi, Dhaka, Bangladesh</p>
             </div>
           </div>
@@ -100,20 +100,18 @@ export default function Footer() {
             )}
 
             <div className="mt-4">
-              <p className="text-xs font-semibold text-slate-400 mb-2">We Accept:</p>
+              <p className="text-xs font-semibold text-slate-400 mb-2">Payment Method:</p>
               <div className="flex flex-wrap gap-2 text-xs font-bold text-slate-300">
-                <span className="bg-pink-900/40 text-pink-300 border border-pink-700/50 px-2 py-1 rounded">bKash</span>
-                <span className="bg-orange-900/40 text-orange-300 border border-orange-700/50 px-2 py-1 rounded">Nagad</span>
-                <span className="bg-purple-900/40 text-purple-300 border border-purple-700/50 px-2 py-1 rounded">Rocket</span>
-                <span className="bg-blue-900/40 text-blue-300 border border-blue-700/50 px-2 py-1 rounded">Visa/Mastercard</span>
-                <span className="bg-emerald-900/40 text-emerald-300 border border-emerald-700/50 px-2 py-1 rounded">Cash on Delivery</span>
+                <span className="bg-emerald-900/50 text-emerald-300 border border-emerald-600/60 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                  ✓ Cash on Delivery (ক্যাশ অন ডেলিভারি)
+                </span>
               </div>
             </div>
           </div>
         </div>
 
         <div className="border-t border-slate-800 pt-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© 2026 <strong>Shop Genie Next</strong>. All rights reserved.</p>
+          <p>© 2026 <strong>Old Rank</strong>. All rights reserved.</p>
           <p className="text-slate-400">
             Powered by Next.js & Express.js • Made for High Conversion E-Commerce
           </p>
