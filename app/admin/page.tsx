@@ -660,7 +660,7 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f4f6fb] text-slate-800 font-sans flex">
+    <div className="min-h-screen bg-[#f4f6fb] text-slate-800 font-sans flex w-full max-w-full overflow-x-hidden">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 bg-[#0f172a] text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-bold border border-indigo-400/40 animate-fade-in">
@@ -922,26 +922,26 @@ export default function AdminPage() {
       )}
 
       {/* ================= RIGHT CONTENT COLUMN (HEADER + SUBHEADER + MAIN) ================= */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen w-full max-w-full overflow-x-hidden">
         {/* Annex Vibrant Royal Blue / Indigo Top Header Bar */}
-        <header className="sticky top-0 z-20 bg-gradient-to-r from-[#4d62e5] via-[#5064df] to-[#5b6be8] text-white px-4 sm:px-6 py-3 shadow-md">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-20 bg-gradient-to-r from-[#4d62e5] via-[#5064df] to-[#5b6be8] text-white px-3 sm:px-6 py-2 sm:py-3 shadow-md w-full">
+          <div className="flex items-center justify-between gap-1.5 sm:gap-3 w-full">
+            <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
               {/* Mobile Hamburger Button */}
               <button
                 type="button"
                 onClick={() => setIsMobileSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="lg:hidden p-1.5 sm:p-2 rounded-xl text-white/90 hover:text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer shrink-0"
                 title="মেনু খুলুন"
               >
-                <Menu size={20} />
+                <Menu size={19} />
               </button>
 
               {/* Desktop Sidebar Collapse Button */}
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                className="hidden lg:flex p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="hidden lg:flex p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
                 title={isSidebarCollapsed ? "সাইডবার বড় করুন" : "সাইডবার ছোট করুন"}
               >
                 {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
@@ -950,20 +950,20 @@ export default function AdminPage() {
               {/* Prominent Brand Logo in Dashboard Header */}
               <Link
                 href="/"
-                className="flex items-center gap-2.5 py-1 px-2.5 rounded-xl bg-white/15 hover:bg-white/25 transition-all group shrink-0 border border-white/20 shadow-xs"
+                className="flex items-center gap-1.5 sm:gap-2.5 py-1 px-1.5 sm:px-2.5 rounded-xl bg-white/15 hover:bg-white/25 transition-all group shrink-0 border border-white/20 shadow-xs"
                 title="Old Rank হোমপেজে যান"
               >
                 <img
                   src="/images/logo.png"
                   alt="Old Rank Logo"
-                  className="w-8 h-8 rounded-full object-cover shadow-sm ring-2 ring-white/40 group-hover:scale-105 transition-transform shrink-0"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover shadow-sm ring-1 sm:ring-2 ring-white/40 group-hover:scale-105 transition-transform shrink-0"
                 />
-                <div>
+                <div className="min-w-0">
                   <div className="flex items-center gap-1">
-                    <span className="font-black text-sm sm:text-base text-white tracking-tight leading-none">
+                    <span className="font-black text-xs sm:text-base text-white tracking-tight leading-none">
                       Old<span className="text-amber-300">Rank</span>
                     </span>
-                    <span className="text-[8px] font-extrabold bg-amber-400 text-slate-950 px-1 py-0.2 rounded uppercase">
+                    <span className="text-[7px] sm:text-[8px] font-extrabold bg-amber-400 text-slate-950 px-1 py-0.2 rounded uppercase shrink-0">
                       Admin
                     </span>
                   </div>
@@ -990,23 +990,23 @@ export default function AdminPage() {
             </div>
 
             {/* Right Icons & Homepage Action Button */}
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               {/* Prominent Homepage Button */}
               <Link
                 href="/"
-                className="flex items-center gap-1.5 text-xs font-black text-slate-950 bg-amber-400 hover:bg-amber-300 active:scale-95 py-1.5 sm:py-2 px-3 sm:px-4 rounded-xl shadow-md transition-all shrink-0 border border-amber-300 group cursor-pointer"
+                className="flex items-center gap-1 text-[11px] sm:text-xs font-black text-slate-950 bg-amber-400 hover:bg-amber-300 active:scale-95 py-1.5 px-2 sm:px-3.5 rounded-xl shadow-xs transition-all shrink-0 border border-amber-300 group cursor-pointer"
                 title="মূল ওয়েবসাইটে / হোমপেজে ফিরে যান"
               >
-                <Home size={15} className="text-slate-950 group-hover:-translate-y-0.5 transition-transform shrink-0" />
+                <Home size={14} className="text-slate-950 group-hover:-translate-y-0.5 transition-transform shrink-0" />
                 <span className="hidden sm:inline">হোমপেজে যান</span>
-                <span className="sm:hidden">হোম</span>
+                <span className="sm:hidden hidden xs:inline">হোম</span>
               </Link>
 
               {/* Notification Bell with Badge */}
               <button
                 type="button"
                 onClick={() => setActiveTab("orders")}
-                className="relative p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer hidden sm:block"
+                className="relative p-1.5 sm:p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer hidden sm:block"
                 title="অর্ডার নোটিফিকেশন"
               >
                 <Bell size={17} />
@@ -1021,7 +1021,7 @@ export default function AdminPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab("incomplete")}
-                className="relative p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer hidden sm:block"
+                className="relative p-1.5 sm:p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer hidden sm:block"
                 title="ড্রপ-অফ লিডস"
               >
                 <Mail size={17} />
@@ -1035,15 +1035,15 @@ export default function AdminPage() {
               {/* Refresh Data */}
               <button
                 onClick={loadData}
-                className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1.5 sm:p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
                 title="রিফ্রেশ করুন"
               >
-                <RefreshCw size={16} className={isLoading ? "animate-spin text-amber-300" : ""} />
+                <RefreshCw size={15} className={isLoading ? "animate-spin text-amber-300" : ""} />
               </button>
 
               {/* User Avatar & Logout */}
-              <div className="flex items-center gap-2 pl-2 border-l border-white/20">
-                <div className="w-8 h-8 rounded-full bg-white text-[#5064df] flex items-center justify-center font-bold text-xs shadow">
+              <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-white/20 shrink-0">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white text-[#5064df] flex items-center justify-center font-bold text-[11px] sm:text-xs shadow shrink-0">
                   {user?.name ? user.name[0].toUpperCase() : "A"}
                 </div>
                 <div className="hidden lg:block text-left">
@@ -1056,10 +1056,10 @@ export default function AdminPage() {
                 </div>
                 <button
                   onClick={logout}
-                  className="p-1.5 rounded-lg text-white/80 hover:text-rose-200 hover:bg-rose-500/20 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg text-white/80 hover:text-rose-200 hover:bg-rose-500/20 transition-colors cursor-pointer shrink-0"
                   title="লগআউট"
                 >
-                  <LogOut size={16} />
+                  <LogOut size={15} />
                 </button>
               </div>
             </div>
@@ -1067,9 +1067,9 @@ export default function AdminPage() {
         </header>
 
         {/* Annex Subheader / Breadcrumb Bar */}
-        <div className="bg-white border-b border-slate-200/80 px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
-          <div>
-            <h1 className="text-lg sm:text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+        <div className="bg-white border-b border-slate-200/80 px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs w-full overflow-hidden">
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-xl font-black text-slate-800 tracking-tight flex items-center gap-2 flex-wrap break-words">
               {activeTab === "overview" && "Chartist Chart (ড্যাশবোর্ড ও সেলস ওভারভিউ)"}
               {activeTab === "products" && "প্রোডাক্ট পোস্ট ও স্টক ইনভেন্টরি"}
               {activeTab === "sellers" && "সেলার ও ভেন্ডর ম্যানেজমেন্ট হাব"}
@@ -1078,14 +1078,14 @@ export default function AdminPage() {
               {activeTab === "hotoffer" && "হট অফার ও রিয়েল-টাইম টাইমার"}
               {activeTab === "settings" && "শপ সেটিংস ও চার্জ কনফিগারেশন"}
             </h1>
-            <p className="text-[11px] text-slate-400 mt-0.5">
+            <p className="text-[11px] text-slate-400 mt-0.5 truncate sm:whitespace-normal">
               Old Rank Official Administration Console & E-Commerce Control Center
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs text-slate-400 font-medium shrink-0">
             <Link
               href="/"
-              className="inline-flex items-center gap-1 font-bold text-[#5064df] hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-200/60 transition-colors"
+              className="inline-flex items-center gap-1 font-bold text-[#5064df] hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 sm:px-2.5 py-1 rounded-lg border border-indigo-200/60 transition-colors"
               title="ওয়েবসাইট হোমপেজে যান"
             >
               <Home size={13} />
