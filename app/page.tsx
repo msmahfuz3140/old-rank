@@ -13,6 +13,7 @@ import PopUpProductCard from "@/components/product/PopUpProductCard";
 import PromoAdBanners from "@/components/home/PromoAdBanners";
 import HeroSlider from "@/components/home/HeroSlider";
 import HotDealsSection from "@/components/home/HotDealsSection";
+import ThreeDShowcase from "@/components/home/ThreeDShowcase";
 import { api } from "@/lib/api";
 
 export default async function HomePage() {
@@ -290,6 +291,9 @@ export default async function HomePage() {
           </div>
         </Link>
       </section>
+
+      {/* 9.8 Ultra-Professional 3D Interactive Animated Showcase */}
+      <ThreeDShowcase />
 
       {/* 10. Men's Fashion Showcase */}
       {fashionProducts.length > 0 && (

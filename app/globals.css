@@ -124,3 +124,127 @@ body {
   animation: popFloatGently 3.5s ease-in-out infinite;
 }
 
+/* ========================================================
+   3D Animated Interactive Showcase Keyframes & Utilities
+   ======================================================== */
+@keyframes orbit3D {
+  0% {
+    transform: rotateX(70deg) rotateZ(0deg);
+  }
+  100% {
+    transform: rotateX(70deg) rotateZ(360deg);
+  }
+}
+
+.animate-orbit-3d {
+  animation: orbit3D 20s linear infinite;
+  transform-style: preserve-3d;
+}
+
+@keyframes orbit3DReverse {
+  0% {
+    transform: rotateX(65deg) rotateZ(360deg);
+  }
+  100% {
+    transform: rotateX(65deg) rotateZ(0deg);
+  }
+}
+
+.animate-orbit-3d-reverse {
+  animation: orbit3DReverse 25s linear infinite;
+  transform-style: preserve-3d;
+}
+
+@keyframes float3DProduct {
+  0%, 100% {
+    transform: translateZ(60px) translateY(0px) rotateY(0deg);
+  }
+  50% {
+    transform: translateZ(75px) translateY(-14px) rotateY(3deg);
+  }
+}
+
+.animate-float-3d {
+  animation: float3DProduct 4.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes holographicShine {
+  0% {
+    background-position: -200% -200%;
+  }
+  100% {
+    background-position: 200% 200%;
+  }
+}
+
+.animate-holo-sheen {
+  background-size: 200% 200%;
+  animation: holographicShine 6s linear infinite;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.perspective-1200 {
+  perspective: 1200px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.perspective-1400 {
+  perspective: 1400px;
+}
+
+.perspective-2000 {
+  perspective: 2000px;
+}
+
+@keyframes pulsePin {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  70% {
+    transform: scale(1.18);
+    box-shadow: 0 0 0 14px rgba(245, 158, 11, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}
+
+.animate-pulse-pin {
+  animation: pulsePin 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes spotlightShimmer {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.08) rotate(4deg);
+  }
+}
+
+.animate-spotlight {
+  animation: spotlightShimmer 7s ease-in-out infinite;
+}
+
+.mask-reflection {
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.35) 0%, transparent 85%);
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.35) 0%, transparent 85%);
+}
+
+
+
