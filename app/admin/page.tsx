@@ -136,6 +136,18 @@ export default function AdminPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<IOrder | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Custom Confirmation Dialog Modal State (Replaces browser alert/confirm)
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    isDanger?: boolean;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
+  const [isConfirmLoading, setIsConfirmLoading] = useState(false);
+
   // Product Modals & Filters
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<IProduct | null>(null);
@@ -430,15 +442,28 @@ export default function AdminPage() {
     }
   };
 
-  const handleDeleteProduct = async (id: string, name: string) => {
-    if (!confirm(`আপনি কি নিশ্চিতভাবে "${name}" প্রোডাক্টটি ডিলিট করতে চান?`)) return;
-    try {
-      await api.deleteProduct(id);
-      setProducts(products.filter((p) => p._id !== id));
-      showToast(`"${name}" প্রোডাক্টটি সফলভাবে মুছে ফেলা হয়েছে।`);
-    } catch {
-      showToast("ডিলিট করা সম্ভব হয়নি।");
-    }
+  const handleDeleteProduct = (id: string, name: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "প্রোডাক্ট ডিলিট নিশ্চিতকরণ",
+      message: `আপনি কি নিশ্চিতভাবে "${name}" প্রোডাক্টটি শপ থেকে সম্পূর্ণ মুছে ফেলতে চান? এটি মুছে ফেললে ক্যাটালগে আর প্রদর্শিত হবে না।`,
+      confirmText: "হ্যাঁ, ডিলিট করুন",
+      cancelText: "বাতিল",
+      isDanger: true,
+      onConfirm: async () => {
+        setIsConfirmLoading(true);
+        try {
+          await api.deleteProduct(id);
+          setProducts((prev) => prev.filter((p) => p._id !== id));
+          showToast(`"${name}" প্রোডাক্টটি সফলভাবে মুছে ফেলা হয়েছে।`);
+        } catch {
+          showToast("ডিলিট করা সম্ভব হয়নি।");
+        } finally {
+          setIsConfirmLoading(false);
+          setConfirmModal(null);
+        }
+      },
+    });
   };
 
   const handleToggleHotDeal = async (product: IProduct) => {
@@ -521,15 +546,28 @@ export default function AdminPage() {
     }
   };
 
-  const handleDeleteSeller = async (vendorId: string, name: string) => {
-    if (!confirm(`আপনি কি "${name}" সেলার শপটি মুছে ফেলতে চান?`)) return;
-    try {
-      await api.deleteVendor(vendorId);
-      setVendors(vendors.filter((v) => v._id !== vendorId));
-      showToast(`সেলার "${name}" মুছে ফেলা হয়েছে।`);
-    } catch {
-      showToast("মুছে ফেলা সম্ভব হয়নি।");
-    }
+  const handleDeleteSeller = (vendorId: string, name: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "সেলার শপ মুছে ফেলার নিশ্চিতকরণ",
+      message: `আপনি কি নিশ্চিতভাবে "${name}" সেলার শপটি মুছে ফেলতে চান? এর ফলে সংশ্লিষ্ট ভেন্ডরের সকল মার্চেন্ট অ্যাক্সেস স্থায়ীভাবে বাতিল হবে।`,
+      confirmText: "হ্যাঁ, মুছে ফেলুন",
+      cancelText: "বাতিল",
+      isDanger: true,
+      onConfirm: async () => {
+        setIsConfirmLoading(true);
+        try {
+          await api.deleteVendor(vendorId);
+          setVendors((prev) => prev.filter((v) => v._id !== vendorId));
+          showToast(`সেলার "${name}" সফলভাবে মুছে ফেলা হয়েছে।`);
+        } catch {
+          showToast("মুছে ফেলা সম্ভব হয়নি।");
+        } finally {
+          setIsConfirmLoading(false);
+          setConfirmModal(null);
+        }
+      },
+    });
   };
 
   const handleSwitchToAdmin = () => {
@@ -2878,6 +2916,60 @@ export default function AdminPage() {
                 className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs cursor-pointer"
               >
                 বন্ধ করুন
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION DIALOG MODAL (Replaces native browser confirm/alert) */}
+      {confirmModal?.isOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 text-center space-y-4 animate-scaleUp">
+            <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-xs">
+              <Trash2 size={26} className="text-rose-600" />
+            </div>
+
+            <div>
+              <h3 className="font-black text-lg text-slate-900 tracking-tight">
+                {confirmModal.title}
+              </h3>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed px-1">
+                {confirmModal.message}
+              </p>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200/80 text-[11px] text-amber-800 font-medium text-left flex items-center gap-2">
+              <AlertCircle size={15} className="shrink-0 text-amber-600" />
+              <span>সতর্কতা: মুছে ফেলার পর এই তথ্য আর ফিরিয়ে আনা যাবে না।</span>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={isConfirmLoading}
+                onClick={() => setConfirmModal(null)}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {confirmModal.cancelText || "বাতিল"}
+              </button>
+              <button
+                type="button"
+                disabled={isConfirmLoading}
+                onClick={() => confirmModal.onConfirm()}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-xs shadow-md shadow-rose-600/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {isConfirmLoading ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>মুছে ফেলা হচ্ছে...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    <span>{confirmModal.confirmText || "মুছে ফেলুন"}</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

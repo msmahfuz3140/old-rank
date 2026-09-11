@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { X, Sparkles, ArrowRight, Tag } from "lucide-react";
+import { X, Sparkles, ArrowRight, Tag, Check, Copy } from "lucide-react";
 
 export default function PromoModal() {
   const [isOpen, setIsOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const hoursToWait = 3;
@@ -63,11 +64,24 @@ export default function PromoModal() {
             <button
               onClick={() => {
                 navigator.clipboard.writeText("SAVE10");
-                alert("কুপন কোড SAVE10 কপি হয়েছে!");
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2500);
               }}
-              className="bg-[#303d6e] hover:bg-indigo-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-sm active:scale-95"
+              className={`text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-sm active:scale-95 flex items-center gap-1.5 cursor-pointer ${
+                copied
+                  ? "bg-emerald-600 text-white"
+                  : "bg-[#303d6e] hover:bg-indigo-800 text-white"
+              }`}
             >
-              কপি করুন
+              {copied ? (
+                <>
+                  <Check size={14} /> কপি হয়েছে!
+                </>
+              ) : (
+                <>
+                  <Copy size={13} /> কপি করুন
+                </>
+              )}
             </button>
           </div>
 
