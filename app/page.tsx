@@ -5,7 +5,6 @@ import {
   RotateCcw,
   Headphones,
   ArrowRight,
-  Store,
   Sparkles,
   Gem,
   Clock,
@@ -15,10 +14,9 @@ import HotDealsSection from "@/components/home/HotDealsSection";
 import { api } from "@/lib/api";
 
 export default async function HomePage() {
-  const [products, categories, vendors] = await Promise.all([
+  const [products, categories] = await Promise.all([
     api.getProducts(),
     api.getCategories(),
-    api.getVendors(),
   ]);
 
   // Ensure Jewelry is always strictly the FIRST category
@@ -248,77 +246,7 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
-
-      {/* 6. Multi-Vendor / Verified Sellers Spotlight */}
-      <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-50 text-[#303d6e] flex items-center justify-center font-bold border border-indigo-100 shrink-0">
-              <Store size={17} />
-            </div>
-            <div>
-              <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
-                আমাদের ভেরিফাইড শপসমূহ
-              </h2>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
-                টপ-রেটেড বিশ্বস্ত জুয়েলারি বিক্রেতাদের অফিশিয়াল স্টোর
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/sellers"
-            className="text-xs sm:text-sm font-bold text-[#303d6e] hover:underline flex items-center gap-1 shrink-0"
-          >
-            সকল সেলার <ArrowRight size={14} />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-          {vendors.map((v) => (
-            <div
-              key={v._id}
-              className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-xs hover:shadow-lg transition-all overflow-hidden flex flex-col justify-between"
-            >
-              <div
-                className="h-24 sm:h-28 bg-cover bg-center relative"
-                style={{ backgroundImage: `url(${v.banner})` }}
-              >
-                <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />
-              </div>
-
-              <div className="px-4 pb-4 sm:px-6 sm:pb-6 pt-0 relative flex-1 flex flex-col justify-between">
-                <div className="flex items-end justify-between -mt-8 sm:-mt-10 mb-2 sm:mb-3">
-                  <img
-                    src={v.logo}
-                    alt={v.shopName}
-                    className="w-14 h-14 sm:w-18 sm:h-18 rounded-xl sm:rounded-2xl object-cover border-3 sm:border-4 border-white shadow-md bg-white shrink-0"
-                  />
-                  <span className="bg-emerald-50 text-emerald-700 text-[10px] sm:text-xs font-extrabold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-                    <ShieldCheck size={12} /> Verified Shop
-                  </span>
-                </div>
-
-                <div>
-                  <h3 className="text-sm sm:text-base font-extrabold text-slate-900 mb-1">{v.shopName}</h3>
-                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3 sm:mb-4">
-                    {v.description}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between pt-2.5 sm:pt-3 border-t border-slate-100 text-xs text-slate-600">
-                  <span className="font-semibold text-[11px] sm:text-xs">⭐ {v.rating} ({v.reviewCount} রিভিউ)</span>
-                  <Link
-                    href={`/shop/${v.slug}`}
-                    className="bg-[#303d6e] hover:bg-indigo-900 text-white font-bold px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl transition-colors text-xs"
-                  >
-                    শপ ভিজিট করুন
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
+
