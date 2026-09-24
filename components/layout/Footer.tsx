@@ -74,7 +74,7 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5 text-sm text-slate-400">
               <li><Link href="/order-track" className="hover:text-white transition-colors">অর্ডার ট্র্যাকিং (Track Order)</Link></li>
-              <li><Link href="/sellers" className="hover:text-white transition-colors">ভেরিফাইড শপস (Verified Sellers)</Link></li>
+              <li><Link href="/category/jewelry" className="hover:text-white transition-colors">জুয়েলারি কালেকশন (Jewelry)</Link></li>
               <li><Link href="/page/order-procedure" className="hover:text-white transition-colors">অর্ডার করার নিয়মাবলী</Link></li>
               <li><Link href="/page/delivery-rules" className="hover:text-white transition-colors">ডেলিভারি পলিসি ও চার্জ</Link></li>
               <li><Link href="/complaint" className="hover:text-white transition-colors">কমপ্লেইন বা অভিযোগ জানান</Link></li>

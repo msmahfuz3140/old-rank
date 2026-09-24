@@ -182,6 +182,13 @@ export default function LoginPage() {
         shopName,
       };
 
+      if (role === "admin") {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("oldrank_admin_logged", "true");
+          localStorage.setItem("oldrank_admin_email", input.includes("@") ? input : "niloy@gmail.com");
+        }
+      }
+
       login(authUser);
       setSuccessMsg(`স্বাগতম, ${authUser.name}! সফলভাবে লগইন হয়েছে।`);
 
