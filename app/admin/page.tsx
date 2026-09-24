@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Truck,
   TrendingUp,
+  TrendingDown,
   DollarSign,
   Search,
   ExternalLink,
@@ -23,6 +24,7 @@ import {
   Settings,
   ShoppingBag,
   ArrowUpRight,
+  ArrowRight,
   Printer,
   X,
   Flame,
@@ -91,7 +93,8 @@ export type AdminTab =
   | "incomplete"
   | "hotoffer"
   | "settings"
-  | "profile";
+  | "profile"
+  | "profitloss";
 
 interface NavItem {
   id: AdminTab;
@@ -765,16 +768,155 @@ export default function AdminPage() {
     });
   };
 
-    // Calculate dynamic Total Cost and Net Profit across real orders
+  // ================= PROFIT & LOSS REAL-TIME TIMEFRAME CALCULATOR =================
+  type ProfitLossTimeframe =
+    | "today"
+    | "yesterday"
+    | "last7days"
+    | "lastWeek"
+    | "last30days"
+    | "thisMonth"
+    | "all";
+
+  const [plFilter, setPlFilter] = useState<ProfitLossTimeframe>("all");
+
+  const getItemUnitCost = (item: any): number => {
+    if (item.costPrice && Number(item.costPrice) > 0) return Number(item.costPrice);
+    const matched = products.find((p) => p._id === item.productId || p.name === item.name);
+    if (matched?.costPrice && Number(matched.costPrice) > 0) return Number(matched.costPrice);
+    if (item.price && Number(item.price) > 0) return Math.round(Number(item.price) * 0.6);
+    return 0;
+  };
+
+  const getOrdersByTimeframe = (ordersList: IOrder[], timeframe: ProfitLossTimeframe) => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const yesterdayEnd = new Date(todayEnd);
+    yesterdayEnd.setDate(yesterdayEnd.getDate() - 1);
+
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const dayOfWeek = now.getDay() || 7;
+    const thisWeekStart = new Date(todayStart);
+    thisWeekStart.setDate(thisWeekStart.getDate() - (dayOfWeek - 1));
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    const lastWeekEnd = new Date(thisWeekStart);
+    lastWeekEnd.setMilliseconds(-1);
+
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+
+    return ordersList.filter((ord) => {
+      const orderDate = new Date(ord.createdAt);
+      if (isNaN(orderDate.getTime())) return true;
+
+      switch (timeframe) {
+        case "today":
+          return orderDate >= todayStart && orderDate <= todayEnd;
+        case "yesterday":
+          return orderDate >= yesterdayStart && orderDate <= yesterdayEnd;
+        case "last7days":
+          return orderDate >= sevenDaysAgo && orderDate <= now;
+        case "lastWeek":
+          return orderDate >= lastWeekStart && orderDate <= lastWeekEnd;
+        case "last30days":
+          return orderDate >= thirtyDaysAgo && orderDate <= now;
+        case "thisMonth":
+          return orderDate >= thisMonthStart && orderDate <= now;
+        case "all":
+        default:
+          return true;
+      }
+    });
+  };
+
+  const plOrders = useMemo(() => {
+    return getOrdersByTimeframe(orders, plFilter);
+  }, [orders, plFilter]);
+
+  const plMetrics = useMemo(() => {
+    let grossRevenue = 0;
+    let totalCogs = 0;
+    let totalDelivery = 0;
+    let totalDiscount = 0;
+    let validOrdersCount = 0;
+    let deliveredRevenue = 0;
+    let deliveredProfit = 0;
+
+    plOrders.forEach((ord) => {
+      if (ord.status === "cancelled") return;
+      validOrdersCount++;
+      const sale = Number(ord.grandTotal) || Number(ord.subtotal) || 0;
+      grossRevenue += sale;
+      totalDelivery += Number(ord.deliveryCharge) || 0;
+      totalDiscount += Number(ord.discount) || 0;
+
+      const orderCost =
+        ord.items?.reduce((iSum, item) => {
+          return iSum + getItemUnitCost(item) * (Number(item.quantity) || 1);
+        }, 0) || 0;
+
+      totalCogs += orderCost;
+
+      if (ord.status === "delivered") {
+        deliveredRevenue += sale;
+        deliveredProfit += (Number(ord.subtotal) || sale) - orderCost;
+      }
+    });
+
+    const netProfit = grossRevenue - totalCogs - totalDelivery;
+    const isNetProfit = netProfit >= 0;
+    const profitMargin = grossRevenue > 0 ? ((netProfit / grossRevenue) * 100).toFixed(1) : "0.0";
+    const avgProfitPerOrder = validOrdersCount > 0 ? Math.round(netProfit / validOrdersCount) : 0;
+    const avgOrderValue = validOrdersCount > 0 ? Math.round(grossRevenue / validOrdersCount) : 0;
+
+    return {
+      grossRevenue,
+      totalCogs,
+      totalDelivery,
+      totalDiscount,
+      netProfit,
+      isNetProfit,
+      profitMargin,
+      avgProfitPerOrder,
+      avgOrderValue,
+      totalOrdersCount: plOrders.length,
+      validOrdersCount,
+      deliveredRevenue,
+      deliveredProfit,
+    };
+  }, [plOrders, products]);
+
+  // Overall lifetime totalCost & netProfit for compatibility
   const totalCost = orders.reduce((sum, ord) => {
     const ordCost = ord.items?.reduce((itemSum, item) => {
-      const unitCost = Number(item.costPrice) || Number(products.find((p) => p._id === item.productId || p.name === item.name)?.costPrice) || 0;
-      return itemSum + unitCost * (Number(item.quantity) || 1);
+      return itemSum + getItemUnitCost(item) * (Number(item.quantity) || 1);
     }, 0) || 0;
     return sum + ordCost;
   }, 0);
 
   const totalNetProfit = Math.max(0, (stats.totalRevenue || 0) - totalCost);
+
+  const TIMEFRAME_OPTIONS: Array<{
+    id: ProfitLossTimeframe;
+    label: string;
+    shortLabel: string;
+    description: string;
+    icon: string;
+  }> = [
+    { id: "today", label: "আজ (Today)", shortLabel: "আজ", description: "আজকের লাইভ বিক্রয়", icon: "⚡" },
+    { id: "yesterday", label: "গতকাল (Yesterday)", shortLabel: "গতকাল", description: "গতকালের সমাপ্ত হিসাব", icon: "⏳" },
+    { id: "last7days", label: "গত ৭ দিন (7 Days)", shortLabel: "৭ দিন", description: "বিগত ৭ দিনের হিসাব", icon: "📅" },
+    { id: "lastWeek", label: "গত সপ্তাহ (Last Week)", shortLabel: "গত সপ্তাহ", description: "পূর্ববর্তী পুরো সপ্তাহ", icon: "🗓️" },
+    { id: "last30days", label: "গত ৩০ দিন (30 Days)", shortLabel: "৩০ দিন", description: "বিগত ৩০ দিনের হিসেব", icon: "📆" },
+    { id: "thisMonth", label: "এই মাস (This Month)", shortLabel: "এই মাস", description: "চলতি মাসের হিসাব", icon: "📊" },
+    { id: "all", label: "সকল সময় (All Time)", shortLabel: "সব সময়", description: "লাইফটাইম মোট লাভ-ক্ষতি", icon: "🌐" },
+  ];
 
 
   // Filtered Orders
@@ -877,6 +1019,21 @@ export default function AdminPage() {
           icon: Clock,
           badge: incompleteOrders.length,
           badgeColor: "bg-rose-50 text-rose-700 font-bold border border-rose-200/60",
+        },
+      ],
+    },
+    {
+      group: "FINANCE & PROFIT/LOSS",
+      items: [
+        {
+          id: "profitloss" as const,
+          label: "লাভ-ক্ষতির হিসাব ও মার্জিন",
+          subtitle: "রিয়েল-টাইম প্রফিট ও মার্জিন",
+          icon: TrendingUp,
+          badge: plMetrics.profitMargin !== "0.0" ? `${plMetrics.profitMargin}%` : "মার্জিন",
+          badgeColor: plMetrics.isNetProfit
+            ? "bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60"
+            : "bg-rose-50 text-rose-700 font-bold border border-rose-200/60",
         },
       ],
     },
@@ -1445,6 +1602,7 @@ export default function AdminPage() {
               {activeTab === "hotoffer" && "হট অফার ও রিয়েল-টাইম টাইমার"}
               {activeTab === "settings" && "শপ সেটিংস ও চার্জ কনফিগারেশন"}
               {activeTab === "profile" && "অ্যাডমিন প্রোফাইল ও সিকিউরিটি কন্ট্রোল সেন্টার"}
+              {activeTab === "profitloss" && "লাভ-ক্ষতি ও আর্থিক মার্জিন পূর্ণ বিবরণী"}
             </h1>
             <p className="text-[11px] text-slate-400 mt-0.5 truncate sm:whitespace-normal">
               Old Rank Official Administration Console & E-Commerce Control Center
@@ -1463,7 +1621,7 @@ export default function AdminPage() {
             <span>Admin</span>
             <span>/</span>
             <span className="text-[#5064df] font-bold">
-              {activeTab === "overview" ? "Chartist Chart" : activeTab === "profile" ? "Admin Profile" : activeTab}
+              {activeTab === "overview" ? "Chartist Chart" : activeTab === "profile" ? "Admin Profile" : activeTab === "profitloss" ? "Profit & Loss" : activeTab}
             </span>
           </div>
         </div>
@@ -1514,7 +1672,62 @@ export default function AdminPage() {
               {/* Card 4: Simple pie chart */}
               <CleanPieChart p1={33} p2={42} p3={25} />
             </div>
-                        {/* KPI Cards (Dynamic Real Database Tracking) */}
+            {/* Live Profit & Loss Timeframe Filter Bar */}
+            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 tracking-tight flex items-center gap-2">
+                    <TrendingUp size={16} className="text-emerald-600" />
+                    <span>লাভ-ক্ষতি ও আর্থিক মার্জিন বিশ্লেষণ (Live Profit & Loss)</span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    ফিল্টার নির্বাচন করে নির্ধারিত সময়সীমার নিট লাভ ও খরচ যাচাই করুন
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("profitloss")}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5064df] hover:underline cursor-pointer"
+                >
+                  <span>পূর্ণাঙ্গ অডিট টেবিল দেখুন</span>
+                  <ArrowRight size={13} />
+                </button>
+              </div>
+
+              {/* Timeframe pill filter buttons */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                {TIMEFRAME_OPTIONS.map((opt) => {
+                  const isActive = plFilter === opt.id;
+                  const countInOpt = getOrdersByTimeframe(orders, opt.id).length;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setPlFilter(opt.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                        isActive
+                          ? "bg-[#303d6e] text-white border-[#303d6e] shadow-xs"
+                          : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200/80"
+                      }`}
+                    >
+                      <span>{opt.icon}</span>
+                      <span>{opt.shortLabel}</span>
+                      <span
+                        className={`text-[9px] px-1 py-0.2 rounded-full font-black ${
+                          isActive
+                            ? "bg-amber-400 text-slate-950"
+                            : "bg-slate-200 text-slate-600"
+                        }`}
+                      >
+                        {countInOpt}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* KPI Cards (Dynamic Real Database Tracking with Live Timeframe) */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
                 <div className="flex items-center justify-between mb-3">
@@ -1523,48 +1736,72 @@ export default function AdminPage() {
                     <DollarSign size={18} />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-slate-900">৳ {stats.totalRevenue.toLocaleString()}</div>
+                <div className="text-2xl font-black text-slate-900">৳ {plMetrics.grossRevenue.toLocaleString()}</div>
                 <div className="flex items-center gap-1 text-[11px] text-blue-600 font-bold mt-2">
-                  <span>সর্বমোট সেলস</span>
+                  <span>{TIMEFRAME_OPTIONS.find((t) => t.id === plFilter)?.shortLabel}-এর বিক্রয়</span>
                 </div>
               </div>
 
               <div className="bg-white rounded-2xl p-5 border border-amber-200/80 bg-amber-50/20 shadow-xs">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-amber-800">মোট খরচ (ক্রয় ও ভাড়া)</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-800">মোট খরচ (COGS)</span>
                   <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
                     <CreditCard size={18} />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-amber-950">৳ {totalCost.toLocaleString()}</div>
+                <div className="text-2xl font-black text-amber-950">৳ {plMetrics.totalCogs.toLocaleString()}</div>
                 <div className="flex items-center gap-1 text-[11px] text-amber-700 font-semibold mt-2">
-                  <span>শুধু অ্যাডমিন দৃশ্যমান</span>
+                  <span>পণ্যের ক্রয় ও সোর্সিং ব্যয়</span>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl p-5 border border-emerald-200/80 bg-emerald-50/20 shadow-xs">
+              <div
+                className={`bg-white rounded-2xl p-5 border shadow-xs ${
+                  plMetrics.isNetProfit ? "border-emerald-200/80 bg-emerald-50/20" : "border-rose-200/80 bg-rose-50/20"
+                }`}
+              >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">মোট নিট লাভ</span>
-                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                    <TrendingUp size={18} />
+                  <span
+                    className={`text-xs font-bold uppercase tracking-wider ${
+                      plMetrics.isNetProfit ? "text-emerald-800" : "text-rose-800"
+                    }`}
+                  >
+                    {plMetrics.isNetProfit ? "মোট নিট লাভ" : "মোট নিট ক্ষতি"}
+                  </span>
+                  <div
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                      plMetrics.isNetProfit ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                    }`}
+                  >
+                    {plMetrics.isNetProfit ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
                   </div>
                 </div>
-                <div className="text-2xl font-black text-emerald-700">৳ {totalNetProfit.toLocaleString()}</div>
-                <div className="flex items-center gap-1 text-[11px] text-emerald-700 font-bold mt-2">
-                  <span>লাভ = বিক্রয় - খরচ</span>
+                <div
+                  className={`text-2xl font-black ${
+                    plMetrics.isNetProfit ? "text-emerald-700" : "text-rose-600"
+                  }`}
+                >
+                  ৳ {plMetrics.isNetProfit ? "+" : "-"}{Math.abs(plMetrics.netProfit).toLocaleString()}
+                </div>
+                <div
+                  className={`flex items-center gap-1 text-[11px] font-bold mt-2 ${
+                    plMetrics.isNetProfit ? "text-emerald-700" : "text-rose-700"
+                  }`}
+                >
+                  <span>মার্জিন: {plMetrics.profitMargin}%</span>
                 </div>
               </div>
 
               <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">মোট অর্ডার</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">ফিল্টারকৃত অর্ডার</span>
                   <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
                     <Package size={18} />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-slate-900">{stats.totalOrders} টি</div>
+                <div className="text-2xl font-black text-slate-900">{plMetrics.totalOrdersCount} টি</div>
                 <div className="flex items-center gap-1 text-[11px] text-slate-500 font-medium mt-2">
-                  <span>ডেলিভারি: {stats.deliveredOrders} টি</span>
+                  <span>মোট ডাটাবেজ: {orders.length} টি</span>
                 </div>
               </div>
 
@@ -3533,6 +3770,523 @@ export default function AdminPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+
+        {/* TAB 9: PROFIT & LOSS MASTER FINANCIAL STATEMENT */}
+        {activeTab === "profitloss" && (
+          <div className="space-y-6 animate-fadeIn pb-8">
+            {/* 1. Header Banner & Financial Audit Cover */}
+            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#064e3b] border border-emerald-900/40 p-6 sm:p-8 shadow-xl text-white">
+              <div className="absolute -right-16 -top-16 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -left-16 -bottom-16 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400">
+                      <TrendingUp size={22} />
+                    </div>
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                        <span>লাভ-ক্ষতি ও আর্থিক মার্জিন পূর্ণ বিবরণী</span>
+                        <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-400/40">
+                          লাইভ অডিট
+                        </span>
+                      </h2>
+                      <p className="text-xs text-emerald-200/90 font-medium">
+                        রিয়েল-টাইম বিক্রয়, ক্রয় ব্যয়, কুরিয়ার চার্জ এবং নিট মুনাফা বিশ্লেষণ
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-slate-300">
+                    <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-xl border border-white/10">
+                      <span>নির্বাচিত সময়:</span>
+                      <strong className="text-amber-300">
+                        {TIMEFRAME_OPTIONS.find((t) => t.id === plFilter)?.label}
+                      </strong>
+                    </span>
+                    <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-xl border border-white/10">
+                      <span>মোট অর্ডার:</span>
+                      <strong className="text-emerald-300">{plMetrics.totalOrdersCount} টি</strong>
+                    </span>
+                    <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-xl border border-white/10">
+                      <span>নিট মার্জিন:</span>
+                      <strong className={plMetrics.isNetProfit ? "text-emerald-300" : "text-rose-300"}>
+                        {plMetrics.profitMargin}%
+                      </strong>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Print & Refresh Buttons */}
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs flex items-center gap-2 border border-white/20 transition-all cursor-pointer shadow-sm active:scale-95"
+                    title="প্রিন্ট বা PDF হিসেবে সংরক্ষণ করুন"
+                  >
+                    <Printer size={15} />
+                    <span>স্টেটমেন্ট প্রিন্ট</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={loadData}
+                    className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
+                    title="ডাটাবেজ থেকে রিলোড করুন"
+                  >
+                    <RefreshCw size={15} className={isLoading ? "animate-spin" : ""} />
+                    <span>রিফ্রেশ</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Interactive Timeframe Filter Bar (৭টি অপশন) */}
+            <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/90 shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2.5">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <Clock size={14} className="text-[#303d6e]" />
+                  <span>সময়সীমা নির্বাচন করুন (Select Timeframe Filter):</span>
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  ফিল্টার ক্লিক করলেই লাভ-ক্ষতি তাৎক্ষণিক পরিবর্তন হবে
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                {TIMEFRAME_OPTIONS.map((opt) => {
+                  const isActive = plFilter === opt.id;
+                  const countInOpt = getOrdersByTimeframe(orders, opt.id).length;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setPlFilter(opt.id)}
+                      className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer border ${
+                        isActive
+                          ? "bg-[#303d6e] text-white border-[#303d6e] shadow-md shadow-indigo-950/20 scale-[1.02]"
+                          : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200/80"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span>{opt.icon}</span>
+                        <span>{opt.shortLabel}</span>
+                      </div>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                          isActive
+                            ? "bg-amber-400 text-slate-950"
+                            : "bg-slate-200 text-slate-600"
+                        }`}
+                      >
+                        {countInOpt} টি অর্ডার
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 3. 5 Core Financial Summary Metric Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+              {/* Card 1: Gross Sales Revenue */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs hover:border-indigo-300 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                    মোট বিক্রয় রেভিনিউ
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <DollarSign size={17} />
+                  </div>
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-slate-900">
+                  ৳ {plMetrics.grossRevenue.toLocaleString()}
+                </div>
+                <div className="flex items-center gap-1 text-[10px] text-blue-600 font-semibold mt-1.5">
+                  <span>গ্রাহকদের মোট ক্রয় মূল্য</span>
+                </div>
+              </div>
+
+              {/* Card 2: Cost of Goods Sold (COGS) */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-amber-200/80 bg-amber-50/15 shadow-2xs hover:border-amber-300 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block truncate">
+                    পণ্যের ক্রয় ও সোর্সিং খরচ
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <CreditCard size={17} />
+                  </div>
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-amber-950">
+                  ৳ {plMetrics.totalCogs.toLocaleString()}
+                </div>
+                <div className="flex items-center gap-1 text-[10px] text-amber-700 font-semibold mt-1.5">
+                  <span>পাইকারি বা তৈরির মোট ব্যয়</span>
+                </div>
+              </div>
+
+              {/* Card 3: Courier Delivery Charge */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-purple-200/80 bg-purple-50/15 shadow-2xs hover:border-purple-300 transition-all">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-purple-800 block truncate">
+                    কুরিয়ার ডেলিভারি চার্জ
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                    <Truck size={17} />
+                  </div>
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-purple-950">
+                  ৳ {plMetrics.totalDelivery.toLocaleString()}
+                </div>
+                <div className="flex items-center gap-1 text-[10px] text-purple-700 font-semibold mt-1.5">
+                  <span>শিপিং পার্টনারদের প্রদেয় চার্জ</span>
+                </div>
+              </div>
+
+              {/* Card 4: Net Profit or Net Loss */}
+              <div
+                className={`rounded-2xl p-4 sm:p-5 border shadow-2xs transition-all ${
+                  plMetrics.isNetProfit
+                    ? "bg-emerald-50/40 border-emerald-300 text-emerald-950"
+                    : "bg-rose-50/40 border-rose-300 text-rose-950"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span
+                    className={`text-[11px] font-bold uppercase tracking-wider block truncate ${
+                      plMetrics.isNetProfit ? "text-emerald-800" : "text-rose-800"
+                    }`}
+                  >
+                    {plMetrics.isNetProfit ? "মোট নিট লাভ (Net Profit)" : "মোট নিট ক্ষতি (Net Loss)"}
+                  </span>
+                  <div
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                      plMetrics.isNetProfit
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-rose-100 text-rose-700"
+                    }`}
+                  >
+                    {plMetrics.isNetProfit ? <TrendingUp size={17} /> : <TrendingDown size={17} />}
+                  </div>
+                </div>
+                <div
+                  className={`text-xl sm:text-2xl font-black ${
+                    plMetrics.isNetProfit ? "text-emerald-700" : "text-rose-600"
+                  }`}
+                >
+                  ৳ {plMetrics.isNetProfit ? "+" : "-"}
+                  {Math.abs(plMetrics.netProfit).toLocaleString()}
+                </div>
+                <div
+                  className={`flex items-center gap-1 text-[10px] font-bold mt-1.5 ${
+                    plMetrics.isNetProfit ? "text-emerald-700" : "text-rose-700"
+                  }`}
+                >
+                  <span>{plMetrics.isNetProfit ? "লাভ = বিক্রয় - ক্রয় - ডেলিভারি" : "খরচ বিক্রয়ের চেয়ে বেশি"}</span>
+                </div>
+              </div>
+
+              {/* Card 5: Net Profit Margin % */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs hover:border-slate-300 transition-all col-span-2 sm:col-span-2 lg:col-span-1">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                    নিট লাভের মার্জিন
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                    <Percent size={17} />
+                  </div>
+                </div>
+                <div
+                  className={`text-xl sm:text-2xl font-black ${
+                    Number(plMetrics.profitMargin) >= 30
+                      ? "text-emerald-600"
+                      : Number(plMetrics.profitMargin) > 0
+                      ? "text-amber-600"
+                      : "text-slate-600"
+                  }`}
+                >
+                  {plMetrics.profitMargin}%
+                </div>
+                <div className="flex items-center gap-1 text-[10px] text-slate-500 font-semibold mt-1.5">
+                  <span>
+                    {Number(plMetrics.profitMargin) >= 30
+                      ? "উচ্চ মুনাফা সম্পন্ন"
+                      : Number(plMetrics.profitMargin) > 0
+                      ? "স্বাভাবিক মুনাফা"
+                      : "কোনো মুনাফা নেই"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Visual Financial Split Bar (প্রতি ১০০ টাকার বণ্টন) */}
+            {plMetrics.grossRevenue > 0 && (
+              <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-black text-slate-800 flex items-center gap-2">
+                    <span>📊 বিক্রয়মূল্যের শতকরা বণ্টন (Revenue & Cost Split):</span>
+                  </span>
+                  <span className="text-slate-500 text-[11px]">
+                    মোট রাজস্ব: ৳{plMetrics.grossRevenue.toLocaleString()}
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full bg-slate-100 rounded-full h-3.5 flex overflow-hidden shadow-inner">
+                  {/* COGS Portion */}
+                  <div
+                    className="bg-amber-500 transition-all"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.round((plMetrics.totalCogs / plMetrics.grossRevenue) * 100)
+                      )}%`,
+                    }}
+                    title={`পণ্যের ক্রয় খরচ: ৳${plMetrics.totalCogs}`}
+                  />
+                  {/* Delivery Portion */}
+                  <div
+                    className="bg-purple-500 transition-all"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.round((plMetrics.totalDelivery / plMetrics.grossRevenue) * 100)
+                      )}%`,
+                    }}
+                    title={`ডেলিভারি খরচ: ৳${plMetrics.totalDelivery}`}
+                  />
+                  {/* Net Profit Portion */}
+                  {plMetrics.isNetProfit && (
+                    <div
+                      className="bg-emerald-500 transition-all"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          Math.round((plMetrics.netProfit / plMetrics.grossRevenue) * 100)
+                        )}%`,
+                      }}
+                      title={`নিট লাভ: ৳${plMetrics.netProfit}`}
+                    />
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between text-[11px] font-bold text-slate-600 pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    <span>
+                      পণ্যের ক্রয় খরচ:{" "}
+                      {Math.round((plMetrics.totalCogs / plMetrics.grossRevenue) * 100)}% (৳
+                      {plMetrics.totalCogs.toLocaleString()})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
+                    <span>
+                      কুরিয়ার শিপিং:{" "}
+                      {Math.round((plMetrics.totalDelivery / plMetrics.grossRevenue) * 100)}% (৳
+                      {plMetrics.totalDelivery.toLocaleString()})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <span className="text-emerald-700">
+                      নিট লাভ: {plMetrics.profitMargin}% (৳
+                      {plMetrics.netProfit.toLocaleString()})
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 5. Granular Order-by-Order Profit Breakdown Table */}
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xs overflow-hidden">
+              <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+                <div>
+                  <h3 className="font-black text-base text-slate-900 tracking-tight flex items-center gap-2">
+                    <Package size={18} className="text-[#303d6e]" />
+                    <span>অর্ডারভিত্তিক লাভ-ক্ষতি অডিট লগ (Order-by-Order Breakdown)</span>
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    নির্বাচিত সময়সীমা ({TIMEFRAME_OPTIONS.find((t) => t.id === plFilter)?.label})-এর প্রতিটি অর্ডারের সঠিক হিসাব
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold bg-indigo-50 text-[#5064df] px-3 py-1.5 rounded-xl border border-indigo-200/60">
+                    ফিল্টারকৃত মোট: {plOrders.length} টি অর্ডার
+                  </span>
+                </div>
+              </div>
+
+              {plOrders.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-600 font-black uppercase text-[10px] tracking-wider">
+                        <th className="py-3.5 px-4">ইনভয়েস ও তারিখ</th>
+                        <th className="py-3.5 px-4">গ্রাহকের নাম ও ফোন</th>
+                        <th className="py-3.5 px-4">আইটেম সংখ্যা</th>
+                        <th className="py-3.5 px-4 text-right">বিক্রয় মূল্য</th>
+                        <th className="py-3.5 px-4 text-right">ক্রয় খরচ (COGS)</th>
+                        <th className="py-3.5 px-4 text-right">ডেলিভারি</th>
+                        <th className="py-3.5 px-4 text-right">নিট লাভ / ক্ষতি</th>
+                        <th className="py-3.5 px-4 text-center">মার্জিন</th>
+                        <th className="py-3.5 px-4 text-center">স্ট্যাটাস</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium">
+                      {plOrders.map((ord, idx) => {
+                        const orderSale = Number(ord.grandTotal) || Number(ord.subtotal) || 0;
+                        const orderCost =
+                          ord.items?.reduce((iSum, item) => {
+                            return iSum + getItemUnitCost(item) * (Number(item.quantity) || 1);
+                          }, 0) || 0;
+                        const orderDelivery = Number(ord.deliveryCharge) || 0;
+                        const orderNet = (Number(ord.subtotal) || orderSale) - orderCost;
+                        const isOrderProfit = orderNet >= 0;
+                        const orderMargin =
+                          orderSale > 0 ? ((orderNet / orderSale) * 100).toFixed(1) : "0.0";
+
+                        const orderDate = new Date(ord.createdAt);
+                        const formattedDate = !isNaN(orderDate.getTime())
+                          ? orderDate.toLocaleDateString("bn-BD", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : "আজ";
+
+                        return (
+                          <tr
+                            key={ord._id || ord.invoiceId || idx}
+                            className="hover:bg-slate-50/80 transition-colors"
+                          >
+                            {/* Invoice & Date */}
+                            <td className="py-3.5 px-4">
+                              <span className="font-mono font-black text-slate-900 block">
+                                {ord.invoiceId}
+                              </span>
+                              <span className="text-[11px] text-slate-400 block mt-0.5">
+                                {formattedDate}
+                              </span>
+                            </td>
+
+                            {/* Customer */}
+                            <td className="py-3.5 px-4">
+                              <span className="font-bold text-slate-800 block">
+                                {ord.customer?.name || "গ্রাহক"}
+                              </span>
+                              <span className="text-[11px] text-slate-500 font-mono block">
+                                {ord.customer?.phone || "-"}
+                              </span>
+                            </td>
+
+                            {/* Items count */}
+                            <td className="py-3.5 px-4">
+                              <span className="font-bold text-slate-700">
+                                {ord.items?.length || 1} টি পণ্য
+                              </span>
+                            </td>
+
+                            {/* Sales Price */}
+                            <td className="py-3.5 px-4 text-right font-black text-slate-900">
+                              ৳ {orderSale.toLocaleString()}
+                            </td>
+
+                            {/* COGS Cost */}
+                            <td className="py-3.5 px-4 text-right font-bold text-amber-800">
+                              ৳ {orderCost.toLocaleString()}
+                            </td>
+
+                            {/* Delivery Charge */}
+                            <td className="py-3.5 px-4 text-right font-semibold text-purple-800">
+                              ৳ {orderDelivery.toLocaleString()}
+                            </td>
+
+                            {/* Net Profit / Loss */}
+                            <td className="py-3.5 px-4 text-right">
+                              <span
+                                className={`inline-block font-black text-xs px-2.5 py-1 rounded-lg ${
+                                  isOrderProfit
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : "bg-rose-100 text-rose-800"
+                                }`}
+                              >
+                                {isOrderProfit ? "+" : "-"}৳ {Math.abs(orderNet).toLocaleString()}
+                              </span>
+                            </td>
+
+                            {/* Margin % */}
+                            <td className="py-3.5 px-4 text-center">
+                              <span
+                                className={`text-[11px] font-black ${
+                                  Number(orderMargin) >= 30
+                                    ? "text-emerald-600"
+                                    : Number(orderMargin) > 0
+                                    ? "text-amber-600"
+                                    : "text-rose-600"
+                                }`}
+                              >
+                                {orderMargin}%
+                              </span>
+                            </td>
+
+                            {/* Status */}
+                            <td className="py-3.5 px-4 text-center">
+                              <span
+                                className={`inline-block text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                                  ord.status === "delivered"
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : ord.status === "pending"
+                                    ? "bg-amber-100 text-amber-800"
+                                    : ord.status === "cancelled"
+                                    ? "bg-rose-100 text-rose-800"
+                                    : "bg-blue-100 text-blue-800"
+                                }`}
+                              >
+                                {ord.status === "delivered"
+                                  ? "ডেলিভার্ড"
+                                  : ord.status === "pending"
+                                  ? "পেন্ডিং"
+                                  : ord.status === "cancelled"
+                                  ? "বাতিল"
+                                  : "প্রসেসিং"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-12 text-center space-y-3">
+                  <div className="w-16 h-16 rounded-3xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                    <TrendingUp size={28} />
+                  </div>
+                  <h4 className="text-base font-bold text-slate-800">
+                    এই সময়সীমার মধ্যে কোনো অর্ডার পাওয়া যায়নি
+                  </h4>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    {TIMEFRAME_OPTIONS.find((t) => t.id === plFilter)?.label} ফিল্টারের আওতায় কোনো অর্ডার ডাটাবেজে জমা নেই। অন্য কোনো সময়সীমা (যেমন: 'সকল সময়') নির্বাচন করে দেখুন।
+                  </p>
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setPlFilter("all")}
+                      className="bg-indigo-50 hover:bg-indigo-100 text-[#5064df] font-bold px-4 py-2 rounded-xl text-xs border border-indigo-200 cursor-pointer"
+                    >
+                      সকল সময় (All Time) দেখুন
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
