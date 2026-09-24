@@ -1,19 +1,17 @@
 import Link from "next/link";
 import {
-  Zap,
   Truck,
   ShieldCheck,
   RotateCcw,
   Headphones,
   ArrowRight,
   Store,
+  Sparkles,
+  Gem,
+  Clock,
 } from "lucide-react";
-import ProductCard from "@/components/product/ProductCard";
 import PopUpProductCard from "@/components/product/PopUpProductCard";
-import PromoAdBanners from "@/components/home/PromoAdBanners";
-import HeroSlider from "@/components/home/HeroSlider";
 import HotDealsSection from "@/components/home/HotDealsSection";
-import ThreeDShowcase from "@/components/home/ThreeDShowcase";
 import { api } from "@/lib/api";
 
 export default async function HomePage() {
@@ -24,27 +22,107 @@ export default async function HomePage() {
   ]);
 
   const hotDeals = products.filter((p) => p.isHotDeal);
-  const electronicsProducts = products.filter(
-    (p) => (typeof p.category === "object" ? p.category.slug : p.category) === "electronics"
-  );
-  const womenProducts = products.filter((p) => {
+  
+  // Jewelry items
+  const jewelryProducts = products.filter((p) => {
     const slug = typeof p.category === "object" ? p.category.slug : p.category;
-    return slug === "womens-fashion" || slug === "beauty-cosmetics";
+    return slug === "jewelry" || slug === "womens-fashion";
   });
-  const babyProducts = products.filter(
-    (p) => (typeof p.category === "object" ? p.category.slug : p.category) === "baby-kids"
-  );
-  const homeElectricProducts = products.filter(
-    (p) => (typeof p.category === "object" ? p.category.slug : p.category) === "home-appliances"
-  );
-  const fashionProducts = products.filter(
-    (p) => (typeof p.category === "object" ? p.category.slug : p.category) === "fashion"
-  );
+
+  const displayJewelry = jewelryProducts.length > 0 ? jewelryProducts : products;
 
   return (
-    <div className="space-y-8 sm:space-y-12 pb-16 bg-[#f8fafc]">
-      {/* 1. Ultra-Professional Animated Hero Slider */}
-      <HeroSlider />
+    <div className="space-y-8 sm:space-y-12 pb-16 bg-[#f8fafc] pt-4 sm:pt-6">
+      {/* 1. Category Section FIRST (As requested - Entering website shows Categories first) */}
+      <section id="categories" className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-5 sm:p-8 text-white shadow-xl mb-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <span className="inline-flex items-center gap-1.5 bg-amber-400 text-slate-950 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2">
+                <Sparkles size={13} /> এক্সক্লুসিভ কালেকশন
+              </span>
+              <h1 className="text-xl sm:text-3xl font-black tracking-tight leading-tight">
+                পছন্দের ক্যাটাগরি বেছে নিন
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
+                আমাদের প্রিমিয়াম জুয়েলারি কালেকশন এখন উন্মুক্ত! অন্যান্য ক্যাটাগরি শীঘ্রই আসছে।
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Link
+                href="/category/jewelry"
+                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-xl shadow-lg transition-transform flex items-center gap-1.5"
+              >
+                <Gem size={15} /> জুয়েলারি শপ
+              </Link>
+              <Link
+                href="/category/all"
+                className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm px-4 sm:px-5 py-2.5 rounded-xl transition-colors flex items-center gap-1"
+              >
+                সকল প্রোডাক্ট <ArrowRight size={14} />
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Categories Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-3 sm:gap-5">
+          {categories.map((cat) => {
+            const isComingSoon = cat.isComingSoon;
+
+            return (
+              <div key={cat._id} className="relative">
+                {isComingSoon ? (
+                  <div className="group relative bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs hover:border-slate-300 transition-all text-center flex flex-col items-center opacity-85 select-none">
+                    <span className="absolute top-3 right-3 bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-amber-200 shadow-2xs flex items-center gap-1">
+                      <Clock size={10} /> শীঘ্রই আসছে
+                    </span>
+
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-slate-100 mb-3 grayscale opacity-75 border border-slate-100">
+                      <img
+                        src={cat.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60"}
+                        alt={cat.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-700 line-clamp-1">
+                      {cat.name}
+                    </h3>
+                    <p className="text-[10px] text-amber-600 font-semibold mt-1">
+                      শীঘ্রই উন্মুক্ত করা হবে
+                    </p>
+                  </div>
+                ) : (
+                  <Link
+                    href={`/category/${cat.slug}`}
+                    className="group block relative bg-white rounded-2xl p-4 sm:p-5 border-2 border-indigo-500/30 hover:border-indigo-600 shadow-md hover:shadow-xl transition-all text-center flex flex-col items-center ring-2 ring-indigo-500/10"
+                  >
+                    <span className="absolute top-3 right-3 bg-emerald-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow-xs flex items-center gap-1 animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white"></span> ওপেন
+                    </span>
+
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-indigo-50 mb-3 group-hover:scale-105 transition-transform border border-indigo-100">
+                      <img
+                        src={cat.image || "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500&auto=format&fit=crop&q=80"}
+                        alt={cat.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <h3 className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-[#303d6e] transition-colors line-clamp-1">
+                      {cat.name}
+                    </h3>
+                    <p className="text-[10px] text-emerald-600 font-bold mt-1 flex items-center gap-1">
+                      কালেকশন দেখুন <ArrowRight size={10} />
+                    </p>
+                  </Link>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       {/* 2. Trust Badges / Value Proposition */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
@@ -64,8 +142,8 @@ export default async function HomePage() {
               <ShieldCheck size={20} className="sm:w-[22px] sm:h-[22px]" />
             </div>
             <div>
-              <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">১০০% আসল পণ্য</h4>
-              <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5">অফিশিয়াল ব্র্যান্ড ওয়ারেন্টি</p>
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">১০০% প্রিমিয়াম পণ্য</h4>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5">গুণগত মানের নিশ্চয়তা</p>
             </div>
           </div>
 
@@ -75,7 +153,7 @@ export default async function HomePage() {
             </div>
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">৭ দিনের রিটার্ন</h4>
-              <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5">সহজ রিফান্ড ও রিটার্ন</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5">সহজ রিটার্ন সুবিধা</p>
             </div>
           </div>
 
@@ -85,247 +163,80 @@ export default async function HomePage() {
             </div>
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">লাইভ সাপোর্ট</h4>
-              <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5">২৪/৭ হেল্পলাইন সার্ভিস</p>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 font-medium mt-0.5">২৪/৭ কাস্টমার সার্ভিস</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 3. Top Categories */}
-      <section id="categories" className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
+      {/* 3. Exclusive Jewelry Collection Showcase (Active Main Category) */}
+      <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div>
-            <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
-              পপুলার ক্যাটাগরি
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-amber-200">
+                <Gem size={12} /> রাজকীয় জুয়েলারি কালেকশন
+              </span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1.5">
+              প্রিমিয়াম জুয়েলারি ও অলংকার (Jewelry Collection)
             </h2>
-            <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">
-              আপনার পছন্দের ক্যাটাগরি থেকে ব্রাউজ করুন
+            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
+              ব্রাইডাল নেকলেস, পার্টি ইয়াররিংস, গোল্ড প্লেটেড চুড়ি ও কুন্দন আংটির এক্সক্লুসিভ কালেকশন
             </p>
           </div>
           <Link
-            href="/category/all"
-            className="text-xs sm:text-sm font-bold text-[#303d6e] hover:underline flex items-center gap-1"
+            href="/category/jewelry"
+            className="text-xs sm:text-sm font-bold text-[#303d6e] hover:text-indigo-900 flex items-center gap-1 shrink-0 self-start sm:self-auto bg-indigo-50 px-3.5 py-2 rounded-xl border border-indigo-100"
           >
-            সব ক্যাটাগরি <ArrowRight size={14} />
+            সব জুয়েলারি দেখুন <ArrowRight size={14} />
           </Link>
         </div>
 
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5 sm:gap-4">
-          {categories.map((cat) => (
-            <Link
-              key={cat._id}
-              href={`/category/${cat.slug}`}
-              className="group bg-white rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border border-slate-200/80 shadow-xs hover:shadow-lg hover:border-indigo-200 transition-all text-center flex flex-col items-center"
-            >
-              <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl overflow-hidden bg-slate-50 mb-2 sm:mb-3 group-hover:scale-105 transition-transform border border-slate-100">
-                <img
-                  src={cat.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60"}
-                  alt={cat.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <h3 className="text-[11px] sm:text-xs md:text-sm font-bold text-slate-800 group-hover:text-[#303d6e] transition-colors line-clamp-1">
-                {cat.name}
-              </h3>
-            </Link>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+          {displayJewelry.map((p, idx) => (
+            <PopUpProductCard key={p._id} product={p} index={idx} />
           ))}
         </div>
       </section>
 
-      {/* 4. Promotional Advertisement Banners */}
-      <PromoAdBanners />
-
-      {/* 5. Hot Deals Section (Live Real-Time Countdown or Offer Coming Soon) */}
+      {/* 4. Hot Deals Section */}
       <HotDealsSection products={products} hotDeals={hotDeals} />
 
-      {/* 6. Electronics Showcase */}
-      {electronicsProducts.length > 0 && (
-        <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <div>
-              <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
-                Electronics & Gaming Setup
-              </h2>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">
-                লেটেস্ট কম্পিউটার, এক্সেসরিজ ও মনিটর
-              </p>
-            </div>
-            <Link
-              href="/category/electronics"
-              className="text-xs sm:text-sm font-bold text-[#303d6e] hover:underline flex items-center gap-1 shrink-0"
-            >
-              সব দেখুন <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
-            {electronicsProducts.map((p, idx) => (
-              <PopUpProductCard key={p._id} product={p} index={idx} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 7. Women's Exclusive Fashion & Beauty */}
-      {womenProducts.length > 0 && (
-        <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-pink-600 bg-pink-50 px-2 py-0.5 rounded-full">
-                  Women's Exclusive
-                </span>
-              </div>
-              <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
-                মেয়েদের ফ্যাশন ও রূপচর্চা কালেকশন
-              </h2>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5 hidden xs:block">
-                আসল ঐতিহ্যবাহী জামদানি শাড়ি, পার্টি থ্রি-পিস, হ্যান্ডব্যাগ ও ব্রাইটনিং সিরাম
-              </p>
-            </div>
-            <Link
-              href="/category/womens-fashion"
-              className="text-xs sm:text-sm font-bold text-pink-600 hover:text-pink-700 flex items-center gap-1 shrink-0"
-            >
-              সব দেখুন <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
-            {womenProducts.map((p, idx) => (
-              <PopUpProductCard key={p._id} product={p} index={idx} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 8. Baby & Kids Care Collection */}
-      {babyProducts.length > 0 && (
-        <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                  Baby & Toddlers
-                </span>
-              </div>
-              <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
-                বেবি ও বাচ্চাদের কালেকশন
-              </h2>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5 hidden xs:block">
-                ১০০% অর্গানিক নরম সুতি রম্পার, ফিডার সেট, ফোল্ডিং স্ট্রোলার ও শিক্ষণীয় খেলনা
-              </p>
-            </div>
-            <Link
-              href="/category/baby-kids"
-              className="text-xs sm:text-sm font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 shrink-0"
-            >
-              সব দেখুন <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
-            {babyProducts.map((p, idx) => (
-              <PopUpProductCard key={p._id} product={p} index={idx} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 9. Smart Home & Kitchen Electric Appliances */}
-      {homeElectricProducts.length > 0 && (
-        <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                  Smart Home
-                </span>
-              </div>
-              <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
-                হোম ও কিচেন ইলেকট্রনিক্স
-              </h2>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5 hidden xs:block">
-                ডিজিটাল এয়ার ফ্রায়ার, মিক্সার ব্লেন্ডার, স্টিম আয়রন ও অটোমেটিক রোবট ক্লিনার
-              </p>
-            </div>
-            <Link
-              href="/category/home-appliances"
-              className="text-xs sm:text-sm font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 shrink-0"
-            >
-              সব দেখুন <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
-            {homeElectricProducts.map((p, idx) => (
-              <PopUpProductCard key={p._id} product={p} index={idx} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 9.5 Old Rank Official Clothing Brand Panoramic Banner */}
+      {/* 5. All Products Section (সকল প্রোডাক্ট) */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <Link
-          href="/category/all"
-          className="group block relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-black transition-all duration-300 hover:border-amber-400/40"
-        >
-          <img
-            src="/images/old-rank-banner.jpg"
-            alt="Old Rank Clothing Brand - Wear Your Rank"
-            className="w-full h-auto object-cover transform group-hover:scale-[1.01] transition-transform duration-700"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-4 sm:p-8">
-            <div>
-              <span className="text-amber-400 font-bold text-xs uppercase tracking-widest block">
-                Official Brand Showcase
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+                All Items
               </span>
-              <h3 className="text-white text-base sm:text-2xl font-black">
-                Old Rank Clothing — Wear Your Rank
-              </h3>
             </div>
-            <span className="inline-flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl shadow-xl transition-transform">
-              সব প্রোডাক্ট দেখুন <ArrowRight size={16} />
-            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
+              সকল প্রোডাক্ট (All Available Products)
+            </h2>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">
+              স্টকের সমস্ত প্রিমিয়াম প্রোডাক্ট একসাথে ব্রাউজ করুন
+            </p>
           </div>
-        </Link>
+          <Link
+            href="/category/all"
+            className="text-xs sm:text-sm font-bold text-[#303d6e] hover:underline flex items-center gap-1 shrink-0"
+          >
+            সব দেখুন <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+          {products.map((p, idx) => (
+            <PopUpProductCard key={p._id} product={p} index={idx} />
+          ))}
+        </div>
       </section>
 
-      {/* 9.8 Ultra-Professional 3D Interactive Animated Showcase */}
-      <ThreeDShowcase />
-
-      {/* 10. Men's Fashion Showcase */}
-      {fashionProducts.length > 0 && (
-        <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <div>
-              <h2 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
-                Trendy Men's Fashion
-              </h2>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-medium mt-0.5">
-                প্রিমিয়াম সুতি শার্ট ও স্ট্রেচ চিনো প্যান্ট কালেকশন
-              </p>
-            </div>
-            <Link
-              href="/category/fashion"
-              className="text-xs sm:text-sm font-bold text-[#303d6e] hover:underline flex items-center gap-1 shrink-0"
-            >
-              সব দেখুন <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
-            {fashionProducts.map((p, idx) => (
-              <PopUpProductCard key={p._id} product={p} index={idx} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 11. Multi-Vendor / Verified Sellers Spotlight */}
+      {/* 6. Multi-Vendor / Verified Sellers Spotlight */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2 sm:gap-2.5">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-indigo-50 text-[#303d6e] flex items-center justify-center font-bold border border-indigo-100 shrink-0">
               <Store size={17} />

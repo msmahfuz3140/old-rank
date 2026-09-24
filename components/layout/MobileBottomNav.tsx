@@ -76,13 +76,13 @@ export default function MobileBottomNav() {
         </Link>
       ) : (
         <Link
-          href="/login"
+          href="/admin"
           className={`flex flex-col items-center gap-1 text-[11px] font-medium transition-colors ${
-            pathname === "/login" ? "text-[#303d6e] font-bold" : "text-slate-500 hover:text-slate-800"
+            pathname === "/admin" ? "text-[#303d6e] font-bold" : "text-slate-500 hover:text-slate-800"
           }`}
         >
-          <User size={19} />
-          <span>{isLoggedIn ? "প্রোফাইল" : "লগইন"}</span>
+          <Crown size={19} />
+          <span>অ্যাডমিন</span>
         </Link>
       )}
     </nav>

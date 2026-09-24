@@ -53,10 +53,23 @@ export default function CategoryPage({
 async function CategoryProducts({ categorySlug }: { categorySlug: string }) {
   const products = await api.getProducts({ category: categorySlug });
 
-  if (products.length === 0) {
+  const currentCat = fallbackCategories.find((c) => c.slug === categorySlug);
+  if (currentCat?.isComingSoon || products.length === 0) {
     return (
-      <div className="text-center py-20 text-slate-400 text-sm">
-        এই ক্যাটাগরিতে বর্তমানে কোনো পণ্য পাওয়া যায়নি।
+      <div className="text-center py-20 px-4 bg-white rounded-3xl border border-slate-100 shadow-sm max-w-xl mx-auto space-y-4">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-2xl font-black">
+          ⏳
+        </div>
+        <h3 className="text-xl font-bold text-slate-900">শীঘ্রই আসছে (Coming Soon)</h3>
+        <p className="text-sm text-slate-500">
+          এই ক্যাটাগরির প্রিমিয়াম কালেকশন খুব শীঘ্রই যুক্ত করা হচ্ছে। আমাদের জুয়েলারি কালেকশন দেখতে ঘুরে আসুন!
+        </p>
+        <Link
+          href="/category/jewelry"
+          className="inline-flex items-center gap-2 bg-[#303d6e] hover:bg-indigo-900 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-md"
+        >
+          জুয়েলারি কালেকশন দেখুন
+        </Link>
       </div>
     );
   }

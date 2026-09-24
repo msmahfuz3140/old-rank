@@ -9,6 +9,10 @@ export default function PromoModal() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    // Check if promo modal is explicitly activated from Admin panel (OFF by default)
+    const isPromoActive = localStorage.getItem("oldrank_promo_active") === "true";
+    if (!isPromoActive) return;
+
     const hoursToWait = 3;
     const timeLimit = hoursToWait * 60 * 60 * 1000;
     const lastShown = localStorage.getItem("oldrank_promo_last_shown");

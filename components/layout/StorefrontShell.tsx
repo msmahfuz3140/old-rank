@@ -6,7 +6,6 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import PromoModal from "@/components/popups/PromoModal";
-import SocialProofPopup from "@/components/popups/SocialProofPopup";
 import QuickViewModal from "@/components/popups/QuickViewModal";
 import CartDrawer from "@/components/cart/CartDrawer";
 
@@ -28,7 +27,6 @@ export default function StorefrontShell({ children }: { children: React.ReactNod
 
       {/* Storefront Popups & Drawers */}
       <PromoModal />
-      <SocialProofPopup />
       <QuickViewModal />
       <CartDrawer />
     </>

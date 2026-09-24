@@ -122,12 +122,12 @@ export default function AdminPage() {
   const [products, setProducts] = useState<IProduct[]>([]);
   const [vendors, setVendors] = useState<IVendor[]>([]);
   const [stats, setStats] = useState({
-    totalRevenue: 48909,
-    totalOrders: 5,
-    pendingOrders: 1,
-    confirmedOrders: 1,
-    deliveredOrders: 2,
-    incompleteCount: 3,
+    totalRevenue: 0,
+    totalOrders: 0,
+    pendingOrders: 0,
+    confirmedOrders: 0,
+    deliveredOrders: 0,
+    incompleteCount: 0,
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -148,6 +148,98 @@ export default function AdminPage() {
   } | null>(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
 
+  // Master Admin Authentication Gate (Exclusive for Niloy - niloy@gmail.com / niloy3140)
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [adminAuthError, setAdminAuthError] = useState("");
+
+  // Change Admin Password state
+  const [changePasswordForm, setChangePasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  // Website Entry Promo Popup toggle state (Default: false / OFF)
+  const [isPromoPopupActive, setIsPromoPopupActive] = useState(false);
+
+  useEffect(() => {
+    // Check if admin is previously logged in
+    const isLoggedAdmin = localStorage.getItem("oldrank_admin_logged") === "true";
+    if (isLoggedAdmin) {
+      setIsAdminAuthenticated(true);
+      login({
+        id: "usr_niloy",
+        name: "Niloy (Admin)",
+        email: localStorage.getItem("oldrank_admin_email") || "niloy@gmail.com",
+        phone: "01700000000",
+        role: "admin",
+      });
+    }
+
+    // Check promo modal status
+    const promoActive = localStorage.getItem("oldrank_promo_active") === "true";
+    setIsPromoPopupActive(promoActive);
+  }, []);
+
+  const handleAdminLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminAuthError("");
+    const storedEmail = (localStorage.getItem("oldrank_admin_email") || "niloy@gmail.com").trim().toLowerCase();
+    const storedPass = localStorage.getItem("oldrank_admin_password") || "niloy3140";
+
+    if (adminEmail.trim().toLowerCase() === storedEmail && adminPassword === storedPass) {
+      localStorage.setItem("oldrank_admin_logged", "true");
+      setIsAdminAuthenticated(true);
+      login({
+        id: "usr_niloy",
+        name: "Niloy (Admin)",
+        email: storedEmail,
+        phone: "01700000000",
+        role: "admin",
+      });
+      showToast("👑 স্বাগতম নিলয়! অ্যাডমিন প্যানেলে সফলভাবে লগইন হয়েছে।");
+    } else {
+      setAdminAuthError("❌ ভুল ইমেইল বা পাসওয়ার্ড! অনুগ্রহ করে সঠিক অ্যাডমিন তথ্য প্রদান করুন।");
+    }
+  };
+
+  const handleAdminLogout = () => {
+    localStorage.removeItem("oldrank_admin_logged");
+    setIsAdminAuthenticated(false);
+    logout();
+    showToast("সফলভাবে লগআউট হয়েছেন।");
+  };
+
+  const handleChangeAdminPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    const storedPass = localStorage.getItem("oldrank_admin_password") || "niloy3140";
+    if (changePasswordForm.currentPassword !== storedPass) {
+      showToast("❌ বর্তমান পাসওয়ার্ড ভুল হয়েছে!");
+      return;
+    }
+    if (changePasswordForm.newPassword.length < 4) {
+      showToast("❌ নতুন পাসওয়ার্ড অন্তত ৪ অক্ষরের হতে হবে!");
+      return;
+    }
+    if (changePasswordForm.newPassword !== changePasswordForm.confirmPassword) {
+      showToast("❌ নতুন পাসওয়ার্ড দুটি মিলছে না!");
+      return;
+    }
+    localStorage.setItem("oldrank_admin_password", changePasswordForm.newPassword);
+    setChangePasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    showToast("🎉 অ্যাডমিন পাসওয়ার্ড সফলভাবে পরিবর্তিত হয়েছে!");
+  };
+
+  const handleTogglePromoPopup = (active: boolean) => {
+    localStorage.setItem("oldrank_promo_active", active ? "true" : "false");
+    setIsPromoPopupActive(active);
+    showToast(active ? "✅ ওয়েবসাইট এন্ট্রি অফার পপআপ চালু করা হয়েছে!" : "⏸️ অফার পপআপ বন্ধ রাখা হয়েছে!");
+  };
+
+
   // Product Modals & Filters
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<IProduct | null>(null);
@@ -162,6 +254,7 @@ export default function AdminPage() {
     categoryName: "Men's Fashion",
     vendor: "Old Rank Official",
     basePrice: "",
+    costPrice: "",
     oldPrice: "",
     stock: "50",
     isHotDeal: true,
@@ -384,6 +477,7 @@ export default function AdminPage() {
         },
         mainImage: productForm.mainImage || "/images/old-rank-banner.jpg",
         basePrice: base,
+        costPrice: Number(productForm.costPrice) || 0,
         oldPrice: old,
         discountPercentage: discount,
         sku: `OR-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -411,10 +505,11 @@ export default function AdminPage() {
       setProductForm({
         name: "",
         shortDescription: "",
-        category: "fashion",
-        categoryName: "Men's Fashion",
+        category: "jewelry",
+        categoryName: "জুয়েলারি ও অলংকার",
         vendor: "Old Rank Official",
         basePrice: "",
+        costPrice: "",
         oldPrice: "",
         stock: "50",
         isHotDeal: true,
@@ -570,16 +665,17 @@ export default function AdminPage() {
     });
   };
 
-  const handleSwitchToAdmin = () => {
-    login({
-      id: "usr_admin",
-      name: "Old Rank Admin",
-      phone: "01956016119",
-      email: "mdmahfuzulhaque3140@gmail.com",
-      role: "admin",
-    });
-    showToast("অ্যাডমিন মোড সক্রিয় হয়েছে!");
-  };
+    // Calculate dynamic Total Cost and Net Profit across real orders
+  const totalCost = orders.reduce((sum, ord) => {
+    const ordCost = ord.items?.reduce((itemSum, item) => {
+      const unitCost = Number(item.costPrice) || Number(products.find((p) => p._id === item.productId || p.name === item.name)?.costPrice) || 0;
+      return itemSum + unitCost * (Number(item.quantity) || 1);
+    }, 0) || 0;
+    return sum + ordCost;
+  }, 0);
+
+  const totalNetProfit = Math.max(0, (stats.totalRevenue || 0) - totalCost);
+
 
   // Filtered Orders
   const filteredOrders = orders.filter((o) => {
@@ -696,6 +792,107 @@ export default function AdminPage() {
       ],
     },
   ];
+
+  // ================= MASTER ADMIN LOGIN GATE =================
+  if (!isAdminAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-[#0f172a] to-indigo-950 flex items-center justify-center p-4">
+        {toastMessage && (
+          <div className="fixed top-5 right-5 z-50 bg-[#0f172a] text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-bold border border-indigo-400/40 animate-fade-in">
+            <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+        )}
+
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 sm:p-8 space-y-6 animate-scale-up">
+          <div className="text-center space-y-2">
+            <div className="w-16 h-16 rounded-2xl bg-[#303d6e] text-amber-400 flex items-center justify-center mx-auto shadow-lg border border-indigo-200">
+              <Crown size={32} />
+            </div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              Old Rank অ্যাডমিন পোর্টাল
+            </h1>
+            <p className="text-xs text-slate-500 font-medium">
+              অ্যাডমিন ছাড়া অন্য কারো জন্য এই প্যানেলে প্রবেশ সম্পূর্ণ নিষিদ্ধ।
+            </p>
+          </div>
+
+          {adminAuthError && (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3.5 text-xs text-rose-700 flex items-start gap-2.5">
+              <AlertCircle size={16} className="shrink-0 mt-0.5 text-rose-600" />
+              <span>{adminAuthError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleAdminLoginSubmit} className="space-y-4 text-xs">
+            <div>
+              <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px] tracking-wider">
+                অ্যাডমিন ইমেইল (Admin Email)
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  required
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder="niloy@gmail.com"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-xs"
+                />
+                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px] tracking-wider">
+                অ্যাডমিন পাসওয়ার্ড (Password)
+              </label>
+              <div className="relative">
+                <input
+                  type={showAdminPassword ? "text" : "password"}
+                  required
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-xs tracking-wider"
+                />
+                <ShieldCheck size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <button
+                  type="button"
+                  onClick={() => setShowAdminPassword(!showAdminPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <Eye size={16} />
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-[#303d6e] hover:bg-indigo-900 text-white font-black py-3.5 px-4 rounded-xl shadow-lg shadow-indigo-950/20 text-xs transition-all active:scale-[0.99] cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Crown size={15} className="text-amber-400" />
+              <span>লগইন করুন ও ড্যাশবোর্ডে প্রবেশ করুন</span>
+            </button>
+          </form>
+
+          <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-3 text-[11px] text-amber-900 space-y-1">
+            <p className="font-bold flex items-center gap-1">
+              <Zap size={13} className="text-amber-600" /> লগইন তথ্য:
+            </p>
+            <p>• ইমেইল: <strong className="font-mono">niloy@gmail.com</strong></p>
+            <p>• পাসওয়ার্ড: <strong className="font-mono">niloy3140</strong> (ভিতরে পরিবর্তনযোগ্য)</p>
+          </div>
+
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+            <span className="text-slate-400">Old Rank Security Gate</span>
+            <Link href="/" className="font-bold text-[#303d6e] hover:underline flex items-center gap-1">
+              <Home size={12} /> হোমপেজে ফিরুন
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f4f6fb] text-slate-800 font-sans flex w-full max-w-full overflow-x-hidden">
@@ -829,7 +1026,7 @@ export default function AdminPage() {
               </div>
               <button
                 type="button"
-                onClick={logout}
+                onClick={handleAdminLogout}
                 className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                 title="লগআউট"
               >
@@ -839,7 +1036,7 @@ export default function AdminPage() {
           ) : (
             <button
               type="button"
-              onClick={logout}
+              onClick={handleAdminLogout}
               className="w-full flex items-center justify-center p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
               title="লগআউট"
             >
@@ -951,7 +1148,7 @@ export default function AdminPage() {
                   <span className="text-[10px] text-slate-400 block truncate">HQ Authority</span>
                 </div>
               </div>
-              <button onClick={logout} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg">
+              <button onClick={handleAdminLogout} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg">
                 <LogOut size={16} />
               </button>
             </div>
@@ -1093,7 +1290,7 @@ export default function AdminPage() {
                   </span>
                 </div>
                 <button
-                  onClick={logout}
+                  onClick={handleAdminLogout}
                   className="p-1.5 rounded-lg text-white/80 hover:text-rose-200 hover:bg-rose-500/20 transition-colors cursor-pointer shrink-0"
                   title="লগআউট"
                 >
@@ -1153,21 +1350,6 @@ export default function AdminPage() {
                 রোল পরিবর্তন করুন →
               </Link>
             </div>
-          ) : !isLoggedIn || user?.role !== "admin" ? (
-            <div className="bg-indigo-50 border border-indigo-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-indigo-950 text-xs shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <Crown size={20} className="text-[#5064df] shrink-0" />
-                <span>
-                  <strong>ডেমো মোড নোটিশ:</strong> আপনি বর্তমানে সরাসরি ভিজিট করেছেন। পূর্ণ কন্ট্রোলের জন্য অ্যাডমিন মোড সক্রিয় করুন।
-                </span>
-              </div>
-              <button
-                onClick={handleSwitchToAdmin}
-                className="bg-[#5064df] hover:bg-[#3f51b5] text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-colors shrink-0 cursor-pointer"
-              >
-                <UserCheck size={14} /> ১-ক্লিকে অ্যাডমিন হিসেবে সক্রিয় হন
-              </button>
-            </div>
           ) : null}
 
         {/* TAB 1: OVERVIEW */}
@@ -1199,19 +1381,44 @@ export default function AdminPage() {
               {/* Card 4: Simple pie chart */}
               <CleanPieChart p1={33} p2={42} p3={25} />
             </div>
-            {/* KPI Cards */}
+                        {/* KPI Cards (Dynamic Real Database Tracking) */}
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">মোট বিক্রয়</span>
-                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                     <DollarSign size={18} />
                   </div>
                 </div>
                 <div className="text-2xl font-black text-slate-900">৳ {stats.totalRevenue.toLocaleString()}</div>
-                <div className="flex items-center gap-1 text-[11px] text-emerald-600 font-bold mt-2">
-                  <TrendingUp size={13} />
-                  <span>+18.4% গ্রোথ</span>
+                <div className="flex items-center gap-1 text-[11px] text-blue-600 font-bold mt-2">
+                  <span>সর্বমোট সেলস</span>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-5 border border-amber-200/80 bg-amber-50/20 shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-800">মোট খরচ (ক্রয় ও ভাড়া)</span>
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                    <CreditCard size={18} />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-amber-950">৳ {totalCost.toLocaleString()}</div>
+                <div className="flex items-center gap-1 text-[11px] text-amber-700 font-semibold mt-2">
+                  <span>শুধু অ্যাডমিন দৃশ্যমান</span>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-5 border border-emerald-200/80 bg-emerald-50/20 shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">মোট নিট লাভ</span>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                    <TrendingUp size={18} />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-emerald-700">৳ {totalNetProfit.toLocaleString()}</div>
+                <div className="flex items-center gap-1 text-[11px] text-emerald-700 font-bold mt-2">
+                  <span>লাভ = বিক্রয় - খরচ</span>
                 </div>
               </div>
 
@@ -1228,42 +1435,16 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">অ্যাক্টিভ সেলার</span>
-                  <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                    <Store size={18} />
-                  </div>
-                </div>
-                <div className="text-2xl font-black text-slate-900">{vendors.length} টি শপ</div>
-                <div className="flex items-center gap-1 text-[11px] text-amber-600 font-bold mt-2">
-                  <span>ভেরিফাইড পার্টনার</span>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+              <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs col-span-2 lg:col-span-1">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">লাইভ প্রোডাক্ট</span>
-                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
                     <ShoppingBag size={18} />
                   </div>
                 </div>
                 <div className="text-2xl font-black text-slate-900">{products.length} টি আইটেম</div>
-                <div className="flex items-center gap-1 text-[11px] text-blue-600 font-bold mt-2">
+                <div className="flex items-center gap-1 text-[11px] text-purple-600 font-bold mt-2">
                   <span>স্টক রানিং</span>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs col-span-2 lg:col-span-1">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">পরিত্যক্ত কার্ট</span>
-                  <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-                    <Flame size={18} />
-                  </div>
-                </div>
-                <div className="text-2xl font-black text-slate-900">{incompleteOrders.length} টি লিড</div>
-                <div className="flex items-center gap-1 text-[11px] text-rose-600 font-bold mt-2">
-                  <span>ফলো-আপ করুন</span>
                 </div>
               </div>
             </div>
@@ -1415,7 +1596,9 @@ export default function AdminPage() {
                       <th className="py-3 px-4">প্রোডাক্ট ও বিবরণ</th>
                       <th className="py-3 px-4">ক্যাটাগরি</th>
                       <th className="py-3 px-4">সেলার শপ</th>
-                      <th className="py-3 px-4">মূল্য ও ছাড়</th>
+                      <th className="py-3 px-4">বিক্রয় মূল্য</th>
+                      <th className="py-3 px-4">ক্রয় ও খরচ (অ্যাডমিন)</th>
+                      <th className="py-3 px-4">সম্ভাব্য লাভ</th>
                       <th className="py-3 px-4">স্টক</th>
                       <th className="py-3 px-4 text-center">হট ডিল</th>
                       <th className="py-3 px-4 text-center">অ্যাকশন</th>
@@ -1459,7 +1642,7 @@ export default function AdminPage() {
                             </span>
                           </td>
 
-                          <td className="py-3 px-4">
+                                                    <td className="py-3 px-4">
                             <span className="font-black text-slate-900 block text-xs">
                               ৳ {p.basePrice?.toLocaleString()}
                             </span>
@@ -1471,6 +1654,20 @@ export default function AdminPage() {
                                 </span>
                               </div>
                             )}
+                          </td>
+
+                          <td className="py-3 px-4">
+                            <span className="font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200/70 inline-block text-xs">
+                              ৳ {(p.costPrice || 0).toLocaleString()}
+                            </span>
+                            <span className="text-[9px] text-slate-400 block mt-0.5">ক্রয় + খরচ</span>
+                          </td>
+
+                          <td className="py-3 px-4">
+                            <span className="font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 inline-block text-xs">
+                              +৳ {Math.max(0, (p.basePrice || 0) - (p.costPrice || 0)).toLocaleString()}
+                            </span>
+                            <span className="text-[9px] text-slate-400 block mt-0.5">মার্জিন</span>
                           </td>
 
                           <td className="py-3 px-4">
@@ -1765,7 +1962,9 @@ export default function AdminPage() {
                     <th className="py-3 px-4">গ্রাহকের বিবরণ</th>
                     <th className="py-3 px-4">পণ্যসমূহ</th>
                     <th className="py-3 px-4">পেমেন্ট মেথড</th>
-                    <th className="py-3 px-4">সর্বমোট</th>
+                    <th className="py-3 px-4">বিক্রয় মূল্য</th>
+                    <th className="py-3 px-4">ক্রয় খরচ (অ্যাডমিন)</th>
+                    <th className="py-3 px-4">নিট লাভ</th>
                     <th className="py-3 px-4">অর্ডার স্ট্যাটাস</th>
                     <th className="py-3 px-4 text-center">ইনভয়েস</th>
                   </tr>
@@ -1817,8 +2016,43 @@ export default function AdminPage() {
                           </span>
                         </td>
 
-                        <td className="py-3.5 px-4 font-black text-slate-900 text-sm">
+                                                <td className="py-3.5 px-4 font-black text-slate-900 text-sm">
                           ৳ {ord.grandTotal?.toLocaleString()}
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          {(() => {
+                            const ordCost = ord.items?.reduce((sum, item) => {
+                              const unitCost = Number(item.costPrice) || Number(products.find((p) => p._id === item.productId || p.name === item.name)?.costPrice) || 0;
+                              return sum + unitCost * (Number(item.quantity) || 1);
+                            }, 0) || 0;
+                            return (
+                              <div>
+                                <span className="font-bold text-amber-900 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 text-xs inline-block">
+                                  ৳ {ordCost.toLocaleString()}
+                                </span>
+                                <span className="text-[10px] text-slate-400 block mt-0.5">পণ্য ক্রয় ও ভাড়া</span>
+                              </div>
+                            );
+                          })()}
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          {(() => {
+                            const ordCost = ord.items?.reduce((sum, item) => {
+                              const unitCost = Number(item.costPrice) || Number(products.find((p) => p._id === item.productId || p.name === item.name)?.costPrice) || 0;
+                              return sum + unitCost * (Number(item.quantity) || 1);
+                            }, 0) || 0;
+                            const profit = Math.max(0, (Number(ord.grandTotal) || 0) - (Number(ord.deliveryCharge) || 0) - ordCost);
+                            return (
+                              <div>
+                                <span className="font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 text-xs inline-block">
+                                  +৳ {profit.toLocaleString()}
+                                </span>
+                                <span className="text-[10px] text-emerald-600 font-bold block mt-0.5">লাভ</span>
+                              </div>
+                            );
+                          })()}
                         </td>
 
                         <td className="py-3.5 px-4">
@@ -1957,7 +2191,8 @@ export default function AdminPage() {
 
         {/* TAB 6: SETTINGS */}
         {activeTab === "settings" && (
-          <div className="max-w-2xl bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-6">
+          <div className="max-w-2xl space-y-6">
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-6">
             <div>
               <h3 className="text-base font-black text-slate-900 tracking-tight">পেমেন্ট, ডেলিভারি ও শপ কনফিগারেশন</h3>
               <p className="text-xs text-slate-400 mt-0.5">ক্যাশ অন ডেলিভারি, শিপিং চার্জ ও সাপোর্ট হটলাইন সেটিংস</p>
@@ -2017,10 +2252,120 @@ export default function AdminPage() {
               <button
                 type="button"
                 onClick={() => showToast("সেটিংস সফলভাবে সংরক্ষিত হয়েছে!")}
-                className="w-full mt-4 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black py-3 px-4 rounded-xl text-sm transition-all shadow-md cursor-pointer"
-              >
+                className="w-full mt-4 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black py-3 px-4 rounded-xl text-sm transition-all shadow-md cursor-pointer">
                 সংরক্ষণ করুন
               </button>
+            </div>
+          </div>
+
+            {/* Admin Security: Password Change Section */}
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
+              <div className="border-b border-slate-100 pb-3">
+                <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <ShieldCheck size={18} className="text-indigo-600" />
+                  <span>অ্যাডমিন পাসওয়ার্ড পরিবর্তন (Change Admin Password)</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  অ্যাডমিন অ্যাকাউন্টের নিরাপত্তা নিশ্চিত করতে নিয়মিত পাসওয়ার্ড আপডেট করুন
+                </p>
+              </div>
+
+              <form onSubmit={handleChangeAdminPassword} className="space-y-3.5 text-xs">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    বর্তমান পাসওয়ার্ড (Current Password) *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={changePasswordForm.currentPassword}
+                    onChange={(e) =>
+                      setChangePasswordForm({ ...changePasswordForm, currentPassword: e.target.value })
+                    }
+                    placeholder="বর্তমান পাসওয়ার্ড লিখুন"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-indigo-600"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      নতুন পাসওয়ার্ড (New Password) *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={changePasswordForm.newPassword}
+                      onChange={(e) =>
+                        setChangePasswordForm({ ...changePasswordForm, newPassword: e.target.value })
+                      }
+                      placeholder="কমপক্ষে ৪ অক্ষরের পাসওয়ার্ড"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-indigo-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      নতুন পাসওয়ার্ড নিশ্চিত করুন *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={changePasswordForm.confirmPassword}
+                      onChange={(e) =>
+                        setChangePasswordForm({ ...changePasswordForm, confirmPassword: e.target.value })
+                      }
+                      placeholder="পাসওয়ার্ড পুনরায় লিখুন"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-indigo-600"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="bg-[#303d6e] hover:bg-indigo-900 text-white font-black py-2.5 px-5 rounded-xl text-xs transition-all shadow cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check size={14} /> পাসওয়ার্ড আপডেট করুন
+                </button>
+              </form>
+            </div>
+
+            {/* Offer Popup Modal Toggle (Website Entry Event) */}
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
+              <div className="border-b border-slate-100 pb-3">
+                <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <Sparkles size={18} className="text-amber-500" />
+                  <span>ওয়েবসাইট এন্ট্রি অফার পপআপ (Website Entry Offer Modal)</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  গ্রাহক ওয়েবসাইটে প্রবেশ করলেই অফারের পপআপ ব্যানার দেখানো হবে কিনা তা এখান থেকে নিয়ন্ত্রণ করুন
+                </p>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <span className="font-bold text-slate-800 text-xs block">
+                    অফার পপআপ স্ট্যাটাস: {isPromoPopupActive ? "🟢 সক্রিয় (Active)" : "🔴 বন্ধ (Inactive)"}
+                  </span>
+                  <span className="text-[11px] text-slate-500 mt-0.5 block">
+                    {isPromoPopupActive
+                      ? "বর্তমানে ওয়েবসাইটে ঢুকলে কাস্টমারদের স্পেশাল মেগা অফার পপআপ দেখানো হচ্ছে।"
+                      : "পপআপ বর্তমানে বন্ধ রয়েছে। কাস্টমারদের সামনে কোনো অফার পপআপ আসবে না।"}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleTogglePromoPopup(!isPromoPopupActive)}
+                  className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+                    isPromoPopupActive
+                      ? "bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200"
+                      : "bg-emerald-600 text-white hover:bg-emerald-700 shadow"
+                  }`}
+                >
+                  {isPromoPopupActive ? "পপআপ বন্ধ করুন" : "পপআপ চালু করুন"}
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -2660,8 +3005,8 @@ export default function AdminPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">মূল্য (৳)</label>
+                                <div>
+                  <label className="block font-bold text-slate-700 mb-1">বিক্রয় মূল্য (৳)</label>
                   <input
                     type="number"
                     required
@@ -2670,6 +3015,22 @@ export default function AdminPage() {
                       setEditingProduct({ ...editingProduct, basePrice: Number(e.target.value) })
                     }
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    ক্রয় ও খরচ মূল্য (৳)
+                    <span className="text-[10px] text-amber-700 font-bold ml-1">(অ্যাডমিন)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={editingProduct.costPrice || ""}
+                    onChange={(e) =>
+                      setEditingProduct({ ...editingProduct, costPrice: Number(e.target.value) })
+                    }
+                    placeholder="পণ্য ক্রয় + গাড়িভাড়া/খরচ"
+                    className="w-full px-3 py-2 bg-amber-50/70 border border-amber-300 rounded-xl font-bold text-amber-950"
                   />
                 </div>
 

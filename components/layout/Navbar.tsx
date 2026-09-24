@@ -557,14 +557,14 @@ export default function Navbar() {
                 </div>
               ) : (
                 <Link
-                  href="/login"
+                  href="/admin"
                   className="flex items-center gap-2 py-2 px-3 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-slate-800 hover:text-[#303d6e] transition-all text-xs font-bold group"
-                  title="লগইন বা রেজিস্টার"
+                  title="অ্যাডমিন পোর্টাল"
                 >
                   <div className="w-6 h-6 rounded-md bg-[#303d6e]/10 text-[#303d6e] flex items-center justify-center group-hover:bg-[#303d6e] group-hover:text-white transition-colors">
-                    <User size={14} />
+                    <Crown size={14} />
                   </div>
-                  <span className="hidden sm:inline">লগইন</span>
+                  <span className="hidden sm:inline">অ্যাডমিন</span>
                 </Link>
               )}
             </div>

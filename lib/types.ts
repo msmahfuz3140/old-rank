@@ -32,6 +32,7 @@ export interface IProduct {
   mainImage: string;
   galleryImages?: string[];
   basePrice: number;
+  costPrice?: number;
   oldPrice?: number;
   discountPercentage?: number;
   sku: string;
@@ -53,6 +54,7 @@ export interface ICategory {
   icon?: string;
   image?: string;
   level: number;
+  isComingSoon?: boolean;
   subcategories?: Array<ICategory & { children?: ICategory[] }>;
 }
 
@@ -121,6 +123,7 @@ export interface IOrder {
     productId?: string;
     name: string;
     price: number;
+    costPrice?: number;
     quantity: number;
     image?: string;
     variantInfo?: string;
