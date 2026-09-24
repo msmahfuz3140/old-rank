@@ -835,7 +835,6 @@ export default function AdminPage() {
                   required
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="niloy@gmail.com"
                   className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-xs"
                 />
                 <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -852,7 +851,6 @@ export default function AdminPage() {
                   required
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
-                  placeholder="••••••••"
                   className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-xs tracking-wider"
                 />
                 <ShieldCheck size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -874,14 +872,6 @@ export default function AdminPage() {
               <span>লগইন করুন ও ড্যাশবোর্ডে প্রবেশ করুন</span>
             </button>
           </form>
-
-          <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-3 text-[11px] text-amber-900 space-y-1">
-            <p className="font-bold flex items-center gap-1">
-              <Zap size={13} className="text-amber-600" /> লগইন তথ্য:
-            </p>
-            <p>• ইমেইল: <strong className="font-mono">niloy@gmail.com</strong></p>
-            <p>• পাসওয়ার্ড: <strong className="font-mono">niloy3140</strong> (ভিতরে পরিবর্তনযোগ্য)</p>
-          </div>
 
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
             <span className="text-slate-400">Old Rank Security Gate</span>
