@@ -19,6 +19,7 @@ import {
   X,
   Layers,
   Gem,
+  User,
 } from "lucide-react";
 import { useCartStore, useAuthStore } from "@/lib/store";
 import { api } from "@/lib/api";
@@ -422,6 +423,15 @@ export default function Navbar() {
                       >
                         <Crown size={15} className="text-amber-600" />
                         <span>অ্যাডমিন ড্যাশবোর্ড</span>
+                      </Link>
+
+                      <Link
+                        href="/admin?tab=profile"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors font-semibold"
+                      >
+                        <User size={15} className="text-[#303d6e]" />
+                        <span>অ্যাডমিন প্রোফাইল ও পাসওয়ার্ড</span>
                       </Link>
 
                       <Link

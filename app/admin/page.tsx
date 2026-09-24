@@ -48,6 +48,17 @@ import {
   Bell,
   Mail,
   Home,
+  User,
+  Shield,
+  Key,
+  Lock,
+  EyeOff,
+  MapPin,
+  Calendar,
+  Smartphone,
+  Globe,
+  Award,
+  Copy,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { api, fallbackProducts, fallbackVendors } from "@/lib/api";
@@ -79,7 +90,8 @@ export type AdminTab =
   | "orders"
   | "incomplete"
   | "hotoffer"
-  | "settings";
+  | "settings"
+  | "profile";
 
 interface NavItem {
   id: AdminTab;
@@ -155,6 +167,24 @@ export default function AdminPage() {
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminAuthError, setAdminAuthError] = useState("");
 
+  // Admin Profile Information State
+  const [adminProfile, setAdminProfile] = useState({
+    name: "Niloy",
+    email: "niloy@gmail.com",
+    phone: "01956016119",
+    role: "Master Administrator & Store Owner",
+    designation: "চিফ এক্সিকিউটিভ ও সিস্টেম ওনার (HQ Control)",
+    address: "মিরপুর, ঢাকা - ১২১৬, বাংলাদেশ",
+    bio: "Old Rank এক্সক্লুসিভ জুয়েলারি ও ই-কমার্স প্ল্যাটফর্মের প্রধান নিয়ন্ত্রক ও ডেটাবেজ সুপার অ্যাডমিন।",
+  });
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Show/Hide password toggles for profile password manager
+  const [showProfileCurrentPass, setShowProfileCurrentPass] = useState(false);
+  const [showProfileNewPass, setShowProfileNewPass] = useState(false);
+  const [showProfileConfirmPass, setShowProfileConfirmPass] = useState(false);
+
   // Change Admin Password state
   const [changePasswordForm, setChangePasswordForm] = useState({
     currentPassword: "",
@@ -168,13 +198,28 @@ export default function AdminPage() {
   useEffect(() => {
     // Check if admin is previously logged in
     const isLoggedAdmin = localStorage.getItem("oldrank_admin_logged") === "true";
+    const storedName = localStorage.getItem("oldrank_admin_name") || "Niloy";
+    const storedEmail = localStorage.getItem("oldrank_admin_email") || "niloy@gmail.com";
+    const storedPhone = localStorage.getItem("oldrank_admin_phone") || "01956016119";
+    const storedAddress = localStorage.getItem("oldrank_admin_address") || "মিরপুর, ঢাকা - ১২১৬, বাংলাদেশ";
+    const storedBio = localStorage.getItem("oldrank_admin_bio") || "Old Rank এক্সক্লুসিভ জুয়েলারি ও ই-কমার্স প্ল্যাটফর্মের প্রধান নিয়ন্ত্রক ও ডেটাবেজ সুপার অ্যাডমিন।";
+
+    setAdminProfile((prev) => ({
+      ...prev,
+      name: storedName,
+      email: storedEmail,
+      phone: storedPhone,
+      address: storedAddress,
+      bio: storedBio,
+    }));
+
     if (isLoggedAdmin) {
       setIsAdminAuthenticated(true);
       login({
         id: "usr_niloy",
-        name: "Niloy (Admin)",
-        email: localStorage.getItem("oldrank_admin_email") || "niloy@gmail.com",
-        phone: "01700000000",
+        name: `${storedName} (Admin)`,
+        email: storedEmail,
+        phone: storedPhone,
         role: "admin",
       });
     }
@@ -182,6 +227,15 @@ export default function AdminPage() {
     // Check promo modal status
     const promoActive = localStorage.getItem("oldrank_promo_active") === "true";
     setIsPromoPopupActive(promoActive);
+
+    // Check tab query parameter
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get("tab") as AdminTab;
+      if (tabParam && ["overview", "products", "sellers", "orders", "incomplete", "hotoffer", "settings", "profile"].includes(tabParam)) {
+        setActiveTab(tabParam);
+      }
+    }
   }, []);
 
   const handleAdminLoginSubmit = (e: React.FormEvent) => {
@@ -189,15 +243,16 @@ export default function AdminPage() {
     setAdminAuthError("");
     const storedEmail = (localStorage.getItem("oldrank_admin_email") || "niloy@gmail.com").trim().toLowerCase();
     const storedPass = localStorage.getItem("oldrank_admin_password") || "niloy3140";
+    const storedName = localStorage.getItem("oldrank_admin_name") || "Niloy";
 
     if (adminEmail.trim().toLowerCase() === storedEmail && adminPassword === storedPass) {
       localStorage.setItem("oldrank_admin_logged", "true");
       setIsAdminAuthenticated(true);
       login({
         id: "usr_niloy",
-        name: "Niloy (Admin)",
+        name: `${storedName} (Admin)`,
         email: storedEmail,
-        phone: "01700000000",
+        phone: localStorage.getItem("oldrank_admin_phone") || "01956016119",
         role: "admin",
       });
       showToast("👑 স্বাগতম নিলয়! অ্যাডমিন প্যানেলে সফলভাবে লগইন হয়েছে।");
@@ -211,6 +266,51 @@ export default function AdminPage() {
     setIsAdminAuthenticated(false);
     logout();
     showToast("সফলভাবে লগআউট হয়েছেন।");
+  };
+
+  const handleSaveAdminProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminProfile.name.trim()) {
+      showToast("❌ অ্যাডমিনের নাম খালি রাখা যাবে না!");
+      return;
+    }
+    if (!adminProfile.email.trim() || !adminProfile.email.includes("@")) {
+      showToast("❌ অনুগ্রহ করে সঠিক ইমেইল প্রদান করুন!");
+      return;
+    }
+    setIsSavingProfile(true);
+    setTimeout(() => {
+      localStorage.setItem("oldrank_admin_name", adminProfile.name.trim());
+      localStorage.setItem("oldrank_admin_email", adminProfile.email.trim().toLowerCase());
+      localStorage.setItem("oldrank_admin_phone", adminProfile.phone.trim());
+      localStorage.setItem("oldrank_admin_address", adminProfile.address.trim());
+      localStorage.setItem("oldrank_admin_bio", adminProfile.bio.trim());
+
+      login({
+        id: "usr_niloy",
+        name: `${adminProfile.name.trim()} (Admin)`,
+        email: adminProfile.email.trim().toLowerCase(),
+        phone: adminProfile.phone.trim(),
+        role: "admin",
+      });
+
+      setIsSavingProfile(false);
+      setIsEditingProfile(false);
+      showToast("🎉 অ্যাডমিন প্রোফাইল সফলভাবে আপডেট হয়েছে!");
+    }, 400);
+  };
+
+  const getPasswordStrength = (pass: string) => {
+    if (!pass) return { score: 0, label: "প্রবেশ করাননি", color: "bg-slate-200", textColor: "text-slate-400", width: "0%" };
+    let score = 0;
+    if (pass.length >= 4) score += 1;
+    if (pass.length >= 7) score += 1;
+    if (/\d/.test(pass) && /[a-zA-Z]/.test(pass)) score += 1;
+    if (/[^a-zA-Z0-9]/.test(pass)) score += 1;
+
+    if (score <= 1) return { score: 1, label: "দুর্বল (Weak)", color: "bg-rose-500", textColor: "text-rose-600", width: "33%" };
+    if (score <= 2) return { score: 2, label: "মাঝারি (Medium)", color: "bg-amber-500", textColor: "text-amber-600", width: "66%" };
+    return { score: 3, label: "শক্তিশালী (Strong)", color: "bg-emerald-500", textColor: "text-emerald-600", width: "100%" };
   };
 
   const handleChangeAdminPassword = (e: React.FormEvent) => {
@@ -781,8 +881,16 @@ export default function AdminPage() {
       ],
     },
     {
-      group: "SYSTEM CONFIG",
+      group: "ADMIN & SECURITY",
       items: [
+        {
+          id: "profile" as const,
+          label: "অ্যাডমিন প্রোফাইল ও সিকিউরিটি",
+          subtitle: "ব্যক্তিগত তথ্য ও পাসওয়ার্ড",
+          icon: User,
+          badge: "HQ",
+          badgeColor: "bg-amber-100 text-amber-900 font-extrabold border border-amber-300",
+        },
         {
           id: "settings" as const,
           label: "শপ সেটিংস ও চার্জ",
@@ -1000,23 +1108,34 @@ export default function AdminPage() {
         {/* Sidebar Bottom Profile Card */}
         <div className="p-3 border-t border-slate-100 bg-slate-50/70">
           {!isSidebarCollapsed ? (
-            <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
+            <div
+              onClick={() => setActiveTab("profile")}
+              className={`flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
+                activeTab === "profile"
+                  ? "bg-indigo-50 border-indigo-200 text-indigo-900 shadow-xs"
+                  : "bg-white border-slate-200/80 shadow-2xs hover:bg-slate-50"
+              }`}
+              title="অ্যাডমিন প্রোফাইল ও সিকিউরিটি সেটিংস"
+            >
               <div className="flex items-center gap-2.5 truncate">
-                <div className="w-8 h-8 rounded-full bg-indigo-50 text-[#5064df] flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-100">
-                  {user?.role === "seller" ? <Store size={14} /> : <Crown size={14} />}
+                <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                  <Crown size={14} />
                 </div>
-                <div className="truncate">
+                <div className="truncate text-left">
                   <span className="text-xs font-bold text-slate-800 block truncate leading-tight">
-                    {user?.name || "Admin"}
+                    {adminProfile.name || "Niloy"}
                   </span>
                   <span className="text-[10px] text-emerald-600 font-semibold block truncate leading-tight">
-                    ● Online (HQ Authority)
+                    ● Online (সুপার অ্যাডমিন)
                   </span>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={handleAdminLogout}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAdminLogout();
+                }}
                 className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                 title="লগআউট"
               >
@@ -1128,17 +1247,31 @@ export default function AdminPage() {
               ))}
             </div>
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+            <div
+              onClick={() => {
+                setActiveTab("profile");
+                setIsMobileSidebarOpen(false);
+              }}
+              className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors"
+            >
               <div className="flex items-center gap-2 truncate">
-                <div className="w-8 h-8 rounded-full bg-indigo-50 text-[#5064df] flex items-center justify-center font-bold text-xs shrink-0 border border-indigo-100">
-                  {user?.role === "seller" ? <Store size={14} /> : <Crown size={14} />}
+                <div className="w-8 h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                  <Crown size={14} />
                 </div>
                 <div className="truncate">
-                  <span className="text-xs font-bold text-slate-800 block truncate">{user?.name || "Admin"}</span>
-                  <span className="text-[10px] text-slate-400 block truncate">HQ Authority</span>
+                  <span className="text-xs font-bold text-slate-800 block truncate">{adminProfile.name || "Niloy"}</span>
+                  <span className="text-[10px] text-emerald-600 font-semibold block truncate">● Online (সুপার অ্যাডমিন)</span>
                 </div>
               </div>
-              <button onClick={handleAdminLogout} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAdminLogout();
+                }}
+                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer"
+                title="লগআউট"
+              >
                 <LogOut size={16} />
               </button>
             </div>
@@ -1268,17 +1401,26 @@ export default function AdminPage() {
 
               {/* User Avatar & Logout */}
               <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-white/20 shrink-0">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white text-[#5064df] flex items-center justify-center font-bold text-[11px] sm:text-xs shadow shrink-0">
-                  {user?.name ? user.name[0].toUpperCase() : "A"}
-                </div>
-                <div className="hidden lg:block text-left">
-                  <span className="text-xs font-bold text-white block leading-tight truncate max-w-[100px]">
-                    {user?.name || "Admin"}
-                  </span>
-                  <span className="text-[10px] text-white/70 block leading-tight">
-                    HQ Authority
-                  </span>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("profile")}
+                  className={`flex items-center gap-1.5 sm:gap-2 p-1 rounded-xl transition-all cursor-pointer text-left ${
+                    activeTab === "profile" ? "bg-white/20 ring-1 ring-white/30" : "hover:bg-white/10"
+                  }`}
+                  title="অ্যাডমিন প্রোফাইল ও সিকিউরিটি হাব"
+                >
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-[11px] sm:text-xs shadow shrink-0">
+                    <Crown size={14} />
+                  </div>
+                  <div className="hidden lg:block text-left">
+                    <span className="text-xs font-bold text-white block leading-tight truncate max-w-[100px]">
+                      {adminProfile.name || "Niloy"}
+                    </span>
+                    <span className="text-[10px] text-amber-300 block leading-tight font-semibold">
+                      সুপার অ্যাডমিন
+                    </span>
+                  </div>
+                </button>
                 <button
                   onClick={handleAdminLogout}
                   className="p-1.5 rounded-lg text-white/80 hover:text-rose-200 hover:bg-rose-500/20 transition-colors cursor-pointer shrink-0"
@@ -1302,6 +1444,7 @@ export default function AdminPage() {
               {activeTab === "incomplete" && "ইনকমপ্লিট অর্ডার ও ড্রপ-অফ লিডস"}
               {activeTab === "hotoffer" && "হট অফার ও রিয়েল-টাইম টাইমার"}
               {activeTab === "settings" && "শপ সেটিংস ও চার্জ কনফিগারেশন"}
+              {activeTab === "profile" && "অ্যাডমিন প্রোফাইল ও সিকিউরিটি কন্ট্রোল সেন্টার"}
             </h1>
             <p className="text-[11px] text-slate-400 mt-0.5 truncate sm:whitespace-normal">
               Old Rank Official Administration Console & E-Commerce Control Center
@@ -1320,7 +1463,7 @@ export default function AdminPage() {
             <span>Admin</span>
             <span>/</span>
             <span className="text-[#5064df] font-bold">
-              {activeTab === "overview" ? "Chartist Chart" : activeTab}
+              {activeTab === "overview" ? "Chartist Chart" : activeTab === "profile" ? "Admin Profile" : activeTab}
             </span>
           </div>
         </div>
@@ -2679,6 +2822,721 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+
+        {/* TAB 8: ADMIN PROFILE & SECURITY MASTER CENTER */}
+        {activeTab === "profile" && (
+          <div className="space-y-6 animate-fadeIn pb-8">
+            {/* 1. Luxury Cover Banner & Super Admin Profile Header */}
+            <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#1e1b4b] border border-indigo-900/40 p-6 sm:p-8 shadow-xl text-white">
+              {/* Subtle background glow effect */}
+              <div className="absolute -right-16 -top-16 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -left-16 -bottom-16 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                  {/* Large Avatar with Gold Crown Badge */}
+                  <div className="relative shrink-0">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr from-amber-400 via-amber-500 to-amber-600 flex items-center justify-center text-slate-950 font-black text-3xl shadow-xl ring-4 ring-amber-400/30">
+                      <Crown size={38} className="text-slate-950 drop-shadow" />
+                    </div>
+                    <span
+                      className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-[#0f172a] flex items-center justify-center shadow"
+                      title="অ্যাডমিন সেশন লাইভ সক্রিয়"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                    </span>
+                  </div>
+
+                  {/* Admin Names & Verification Badges */}
+                  <div className="space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                        {adminProfile.name}
+                      </h2>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40 shadow-xs">
+                        <Crown size={12} /> সুপার অ্যাডমিন (HQ)
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                        ● অনলাইন সক্রিয়
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-indigo-200/90 font-medium flex items-center gap-2 flex-wrap">
+                      <span>{adminProfile.designation}</span>
+                      <span>•</span>
+                      <span>{adminProfile.email}</span>
+                      <span>•</span>
+                      <span>{adminProfile.phone}</span>
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-300">
+                      <span className="bg-white/10 px-2.5 py-1 rounded-xl border border-white/10 flex items-center gap-1">
+                        <Shield size={12} className="text-emerald-400" /> AES-256 Bit সিকিউর সেশন
+                      </span>
+                      <span className="bg-white/10 px-2.5 py-1 rounded-xl border border-white/10 flex items-center gap-1">
+                        <Globe size={12} className="text-amber-400" /> MongoDB Atlas লাইভ ডাটাবেজ
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Header Action Buttons */}
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingProfile(!isEditingProfile)}
+                    className="px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs flex items-center gap-2 border border-white/20 transition-all cursor-pointer shadow-sm active:scale-95"
+                  >
+                    <Edit3 size={14} className="text-amber-300" />
+                    <span>{isEditingProfile ? "সম্পাদনা বন্ধ করুন" : "প্রোফাইল এডিট করুন"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const passSection = document.getElementById("admin-password-section");
+                      if (passSection) {
+                        passSection.scrollIntoView({ behavior: "smooth" });
+                      }
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
+                  >
+                    <Key size={14} />
+                    <span>পাসওয়ার্ড পরিবর্তন</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleAdminLogout}
+                    className="p-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 transition-colors cursor-pointer"
+                    title="লগআউট করুন"
+                  >
+                    <LogOut size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Admin Quick KPI Metrics Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs flex items-center gap-3.5 hover:border-indigo-300 transition-all">
+                <div className="w-11 h-11 rounded-xl bg-indigo-50 text-[#5064df] flex items-center justify-center shrink-0 border border-indigo-100">
+                  <ShoppingBag size={20} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                    জুয়েলারি প্রোডাক্টস
+                  </span>
+                  <p className="text-lg sm:text-xl font-black text-slate-900 mt-0.5">
+                    {products.length} <span className="text-xs font-semibold text-slate-500">টি লাইভ</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs flex items-center gap-3.5 hover:border-emerald-300 transition-all">
+                <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
+                  <Package size={20} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                    সর্বমোট কাস্টমার অর্ডার
+                  </span>
+                  <p className="text-lg sm:text-xl font-black text-slate-900 mt-0.5">
+                    {orders.length} <span className="text-xs font-semibold text-slate-500">টি প্রসেসড</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs flex items-center gap-3.5 hover:border-amber-300 transition-all">
+                <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100">
+                  <DollarSign size={20} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                    সর্বমোট সেলস ভলিউম
+                  </span>
+                  <p className="text-lg sm:text-xl font-black text-slate-900 mt-0.5">
+                    ৳{stats.totalRevenue.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs flex items-center gap-3.5 hover:border-purple-300 transition-all">
+                <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100">
+                  <Store size={20} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block truncate">
+                    রেজিস্টার্ড ভেন্ডর হাব
+                  </span>
+                  <p className="text-lg sm:text-xl font-black text-slate-900 mt-0.5">
+                    {vendors.length} <span className="text-xs font-semibold text-slate-500">টি পার্টনার</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Main 2-Column Grid Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column: Personal Information & System Authority (Col-span 7) */}
+              <div className="lg:col-span-7 space-y-6">
+                {/* Card A: Admin Profile Details Form */}
+                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-[#5064df] flex items-center justify-center">
+                        <User size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black text-slate-900 tracking-tight">
+                          অ্যাডমিন ব্যক্তিগত ও যোগাযোগের তথ্য
+                        </h3>
+                        <p className="text-xs text-slate-400">
+                          সুপার অ্যাডমিনের পরিচয় ও অফিসিয়াল প্রোফাইল বিস্তারিত
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingProfile(!isEditingProfile)}
+                      className="text-xs font-bold text-[#5064df] hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Edit3 size={13} />
+                      <span>{isEditingProfile ? "ক্যানসেল" : "এডিট করুন"}</span>
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSaveAdminProfile} className="space-y-4 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Name */}
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px] tracking-wider">
+                          অ্যাডমিন পূর্ণ নাম (Full Name) *
+                        </label>
+                        {isEditingProfile ? (
+                          <input
+                            type="text"
+                            required
+                            value={adminProfile.name}
+                            onChange={(e) =>
+                              setAdminProfile({ ...adminProfile, name: e.target.value })
+                            }
+                            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+                          />
+                        ) : (
+                          <div className="px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-900 flex items-center justify-between">
+                            <span>{adminProfile.name}</span>
+                            <span className="text-[10px] font-extrabold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full">
+                              HQ Owner
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Designation */}
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px] tracking-wider">
+                          অফিসিয়াল পদবী (Designation)
+                        </label>
+                        {isEditingProfile ? (
+                          <input
+                            type="text"
+                            value={adminProfile.designation}
+                            onChange={(e) =>
+                              setAdminProfile({ ...adminProfile, designation: e.target.value })
+                            }
+                            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+                          />
+                        ) : (
+                          <div className="px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-900">
+                            {adminProfile.designation}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Official Email */}
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px] tracking-wider">
+                          অফিসিয়াল ইমেইল (Admin Email) *
+                        </label>
+                        {isEditingProfile ? (
+                          <input
+                            type="email"
+                            required
+                            value={adminProfile.email}
+                            onChange={(e) =>
+                              setAdminProfile({ ...adminProfile, email: e.target.value })
+                            }
+                            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+                          />
+                        ) : (
+                          <div className="px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-900 flex items-center justify-between">
+                            <span className="truncate">{adminProfile.email}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(adminProfile.email);
+                                showToast("📋 ইমেইল কপি করা হয়েছে!");
+                              }}
+                              className="text-slate-400 hover:text-indigo-600 p-1 cursor-pointer"
+                              title="কপি করুন"
+                            >
+                              <Copy size={13} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Official Phone */}
+                      <div>
+                        <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px] tracking-wider">
+                          অ্যাডমিন ফোন নম্বর (Phone)
+                        </label>
+                        {isEditingProfile ? (
+                          <input
+                            type="text"
+                            value={adminProfile.phone}
+                            onChange={(e) =>
+                              setAdminProfile({ ...adminProfile, phone: e.target.value })
+                            }
+                            className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+                          />
+                        ) : (
+                          <div className="px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 font-bold text-slate-900 flex items-center justify-between">
+                            <span>{adminProfile.phone}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(adminProfile.phone);
+                                showToast("📋 ফোন নম্বর কপি করা হয়েছে!");
+                              }}
+                              className="text-slate-400 hover:text-indigo-600 p-1 cursor-pointer"
+                              title="কপি করুন"
+                            >
+                              <Copy size={13} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Address & HQ */}
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px] tracking-wider">
+                        অফিসিয়াল ঠিকানা ও লোকেশন (HQ Address)
+                      </label>
+                      {isEditingProfile ? (
+                        <input
+                          type="text"
+                          value={adminProfile.address}
+                          onChange={(e) =>
+                            setAdminProfile({ ...adminProfile, address: e.target.value })
+                          }
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+                        />
+                      ) : (
+                        <div className="px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-200 font-semibold text-slate-800 flex items-center gap-2">
+                          <MapPin size={15} className="text-rose-500 shrink-0" />
+                          <span>{adminProfile.address}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bio / Description */}
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px] tracking-wider">
+                        অ্যাডমিন পরিচিতি ও নোট (About Bio)
+                      </label>
+                      {isEditingProfile ? (
+                        <textarea
+                          rows={3}
+                          value={adminProfile.bio}
+                          onChange={(e) =>
+                            setAdminProfile({ ...adminProfile, bio: e.target.value })
+                          }
+                          className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-medium focus:ring-2 focus:ring-indigo-600 focus:outline-none"
+                        />
+                      ) : (
+                        <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 leading-relaxed">
+                          {adminProfile.bio}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Save Button when in editing mode */}
+                    {isEditingProfile && (
+                      <div className="pt-2 flex items-center gap-3">
+                        <button
+                          type="submit"
+                          disabled={isSavingProfile}
+                          className="bg-[#303d6e] hover:bg-indigo-900 text-white font-black py-2.5 px-6 rounded-xl text-xs transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-2 disabled:opacity-50"
+                        >
+                          {isSavingProfile ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span>সংরক্ষণ হচ্ছে...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Check size={14} />
+                              <span>প্রোফাইল তথ্য সংরক্ষণ করুন</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingProfile(false)}
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+                        >
+                          বাতিল করুন
+                        </button>
+                      </div>
+                    )}
+                  </form>
+                </div>
+
+                {/* Card B: Master Permissions & Access Matrix */}
+                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/90 shadow-2xs space-y-4">
+                  <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+                        <ShieldCheck size={18} className="text-emerald-600" />
+                        <span>সিস্টেম পারমিশন ও এক্সেস প্রিভিলেজ</span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        সুপার অ্যাডমিন অ্যাকাউন্টের সম্পূর্ণ নিয়ন্ত্রণ ও এক্সেস ক্ষমতা
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      আনলিমিটেড এক্সেস
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-start gap-2.5">
+                      <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-slate-900">ক্লাউড ডাটাবেজ এক্সেস</p>
+                        <p className="text-[11px] text-slate-500">
+                          MongoDB Atlas ক্লাস্টার সরাসরি রিড, রাইট ও অটো সিঙ্ক
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-start gap-2.5">
+                      <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-slate-900">প্রোডাক্ট ও ইনভেন্টরি কন্ট্রোল</p>
+                        <p className="text-[11px] text-slate-500">
+                          জুয়েলারি পোস্ট, স্টক আপডেট ও স্থায়ী রিমুভ করার অধিকার
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-start gap-2.5">
+                      <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-slate-900">অর্ডার ও ইনভয়েস ম্যানেজমেন্ট</p>
+                        <p className="text-[11px] text-slate-500">
+                          কাস্টমার ডেলিভারি স্ট্যাটাস পরিবর্তন ও প্রিন্ট ইনভয়েস
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-start gap-2.5">
+                      <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-slate-900">সেলার ও ভেন্ডর অথরাইজেশন</p>
+                        <p className="text-[11px] text-slate-500">
+                          নতুন মার্চেন্ট দোকান যাচাই, এক্টিভেশন ও সাসপেন্ড
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-start gap-2.5">
+                      <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-slate-900">হট অফার ও লাইভ টাইমার</p>
+                        <p className="text-[11px] text-slate-500">
+                          হোমপেজের ধামাকা অফার কাউন্টডাউন চালু বা বন্ধ রাখা
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-start gap-2.5">
+                      <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-slate-900">পাসওয়ার্ড ও সিকিউরিটি গেট</p>
+                        <p className="text-[11px] text-slate-500">
+                          অ্যাডমিন মাস্টার পাসওয়ার্ড পরিবর্তন ও সেশন লকআউট
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Password Change & Account Security (Col-span 5) */}
+              <div className="lg:col-span-5 space-y-6">
+                {/* Card C: Change Password Form (Prominent & Luxury) */}
+                <div
+                  id="admin-password-section"
+                  className="bg-white rounded-3xl p-6 sm:p-7 border border-amber-200/80 shadow-md space-y-5 relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
+
+                  <div className="border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                        <Lock size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+                          <span>অ্যাডমিন পাসওয়ার্ড পরিবর্তন</span>
+                          <span className="text-[9px] font-extrabold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">
+                            সিকিউর
+                          </span>
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          আপনার অ্যাডমিন অ্যাকাউন্টের গোপনীয় পাসওয়ার্ড পরিবর্তন করুন
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleChangeAdminPassword} className="space-y-4 text-xs">
+                    {/* Current Password */}
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px] tracking-wider">
+                        বর্তমান পাসওয়ার্ড (Current Password) *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showProfileCurrentPass ? "text" : "password"}
+                          required
+                          value={changePasswordForm.currentPassword}
+                          onChange={(e) =>
+                            setChangePasswordForm({
+                              ...changePasswordForm,
+                              currentPassword: e.target.value,
+                            })
+                          }
+                          placeholder="বর্তমান পাসওয়ার্ডটি লিখুন"
+                          className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none text-xs"
+                        />
+                        <Key size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <button
+                          type="button"
+                          onClick={() => setShowProfileCurrentPass(!showProfileCurrentPass)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showProfileCurrentPass ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* New Password */}
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px] tracking-wider">
+                        নতুন পাসওয়ার্ড (New Password) *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showProfileNewPass ? "text" : "password"}
+                          required
+                          value={changePasswordForm.newPassword}
+                          onChange={(e) =>
+                            setChangePasswordForm({
+                              ...changePasswordForm,
+                              newPassword: e.target.value,
+                            })
+                          }
+                          placeholder="কমপক্ষে ৪ অক্ষরের নতুন পাসওয়ার্ড"
+                          className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none text-xs"
+                        />
+                        <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <button
+                          type="button"
+                          onClick={() => setShowProfileNewPass(!showProfileNewPass)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showProfileNewPass ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+
+                      {/* Password Strength Indicator */}
+                      {changePasswordForm.newPassword && (
+                        <div className="mt-2 space-y-1">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="font-semibold text-slate-500">পাসওয়ার্ড শক্তি:</span>
+                            <span
+                              className={`font-black ${
+                                getPasswordStrength(changePasswordForm.newPassword).textColor
+                              }`}
+                            >
+                              {getPasswordStrength(changePasswordForm.newPassword).label}
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-300 ${
+                                getPasswordStrength(changePasswordForm.newPassword).color
+                              }`}
+                              style={{
+                                width: getPasswordStrength(changePasswordForm.newPassword).width,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Confirm New Password */}
+                    <div>
+                      <label className="block font-bold text-slate-700 mb-1.5 uppercase text-[10px] tracking-wider">
+                        নতুন পাসওয়ার্ড নিশ্চিত করুন (Confirm Password) *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showProfileConfirmPass ? "text" : "password"}
+                          required
+                          value={changePasswordForm.confirmPassword}
+                          onChange={(e) =>
+                            setChangePasswordForm({
+                              ...changePasswordForm,
+                              confirmPassword: e.target.value,
+                            })
+                          }
+                          placeholder="নতুন পাসওয়ার্ডটি পুনরায় লিখুন"
+                          className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:ring-2 focus:ring-amber-500 focus:outline-none text-xs"
+                        />
+                        <ShieldCheck size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <button
+                          type="button"
+                          onClick={() => setShowProfileConfirmPass(!showProfileConfirmPass)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                        >
+                          {showProfileConfirmPass ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
+
+                      {/* Password Match Status */}
+                      {changePasswordForm.confirmPassword && (
+                        <div className="mt-1 text-[11px] font-bold">
+                          {changePasswordForm.newPassword === changePasswordForm.confirmPassword ? (
+                            <span className="text-emerald-600 flex items-center gap-1">
+                              ✓ পাসওয়ার্ড দুটি মিলেছে
+                            </span>
+                          ) : (
+                            <span className="text-rose-500 flex items-center gap-1">
+                              ✕ পাসওয়ার্ড দুটি মিলছে না
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Submit Buttons */}
+                    <div className="pt-2 flex items-center gap-3">
+                      <button
+                        type="submit"
+                        className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 active:scale-98 transition-transform cursor-pointer"
+                      >
+                        <Check size={15} />
+                        <span>পাসওয়ার্ড আপডেট করুন</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setChangePasswordForm({
+                            currentPassword: "",
+                            newPassword: "",
+                            confirmPassword: "",
+                          })
+                        }
+                        className="px-3.5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold transition-colors cursor-pointer"
+                        title="ফর্ম রিসেট"
+                      >
+                        ক্লিয়ার
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                {/* Card D: Active Session & Security Overview */}
+                <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-2xs space-y-4">
+                  <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-black text-sm text-slate-900 flex items-center gap-2">
+                        <Smartphone size={16} className="text-indigo-600" />
+                        <span>বর্তমান সেশন ও ডিভাইস নিরাপত্তা</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        অ্যাকাউন্টে সংযুক্ত ডিভাইস ও লাইভ নিরাপত্তা লগ
+                      </p>
+                    </div>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  </div>
+
+                  <div className="space-y-2.5 text-xs">
+                    <div className="p-3 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-white text-[#5064df] flex items-center justify-center font-bold text-xs shadow-xs">
+                          💻
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900">Chrome (Windows 11)</p>
+                          <p className="text-[10px] text-slate-500">বর্তমান সক্রিয় সেশন • ঢাকা, বাংলাদেশ</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                        Active Now
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-white text-slate-600 flex items-center justify-center font-bold text-xs shadow-xs">
+                          🛡️
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900">নিরাপত্তা এনক্রিপশন</p>
+                          <p className="text-[10px] text-slate-500">TLS 1.3 / HTTPS End-to-End Secure</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
+                        Verified
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => showToast("🔄 সকল সক্রিয় সেশন রিফ্রেশ করা হয়েছে!")}
+                      className="text-xs font-bold text-[#5064df] hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw size={13} />
+                      <span>সেশন রিফ্রেশ করুন</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleAdminLogout}
+                      className="text-xs font-bold text-rose-600 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <LogOut size={13} />
+                      <span>লগআউট করুন</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         </main>
       </div>
 
