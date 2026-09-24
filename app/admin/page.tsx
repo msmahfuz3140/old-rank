@@ -60,16 +60,16 @@ import {
   CleanPieChart,
 } from "@/components/admin/AnnexCharts";
 
-// Preset clothing & accessories images for 1-click rapid posting
+// Preset luxury jewelry images for 1-click rapid posting
 const PRESET_GALLERY_IMAGES = [
-  { label: "Old Rank Official Banner", url: "/images/old-rank-banner.jpg" },
-  { label: "Oversized Black T-Shirt", url: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80" },
-  { label: "Streetwear Premium Hoodie", url: "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=800&auto=format&fit=crop&q=80" },
-  { label: "Vintage Denim Jacket", url: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=800&auto=format&fit=crop&q=80" },
-  { label: "Slim Fit Stretch Chino", url: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=800&auto=format&fit=crop&q=80" },
-  { label: "Premium Oxford Cotton Shirt", url: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop&q=80" },
-  { label: "Luxury Smartwatch Series 9", url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80" },
-  { label: "Gaming Desktop Setup", url: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=800&auto=format&fit=crop&q=80" },
+  { label: "Bridal Choker Necklace Set", url: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop&q=80" },
+  { label: "Royal Emerald Drop Earrings", url: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop&q=80" },
+  { label: "Antique Kundan Floral Ring", url: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800&auto=format&fit=crop&q=80" },
+  { label: "Gold Plated Textured Bangles", url: "https://images.unsplash.com/photo-1611591475152-473549605898?w=800&auto=format&fit=crop&q=80" },
+  { label: "Pearl & Ruby Statement Necklace", url: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&auto=format&fit=crop&q=80" },
+  { label: "Traditional Matte Gold Jhumka", url: "https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&auto=format&fit=crop&q=80" },
+  { label: "Diamond-Cut CZ Tennis Bracelet", url: "https://images.unsplash.com/photo-1611591475152-473549605898?w=800&auto=format&fit=crop&q=80" },
+  { label: "Old Rank Official Store Banner", url: "/images/old-rank-banner.jpg" },
 ];
 
 export type AdminTab =
@@ -250,18 +250,18 @@ export default function AdminPage() {
   const [productForm, setProductForm] = useState({
     name: "",
     shortDescription: "",
-    category: "fashion",
-    categoryName: "Men's Fashion",
-    vendor: "Old Rank Official",
+    category: "jewelry",
+    categoryName: "জুয়েলারি ও অলংকার",
+    vendor: "Old Rank Jewelry",
     basePrice: "",
     costPrice: "",
     oldPrice: "",
     stock: "50",
     isHotDeal: true,
     isFeatured: true,
-    mainImage: "/images/old-rank-banner.jpg",
-    selectedSizes: ["M", "L", "XL"],
-    colorName: "Jet Black",
+    mainImage: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop&q=80",
+    selectedSizes: ["Free Size"],
+    colorName: "Gold Polish",
   });
 
   // Seller Modals & Filters

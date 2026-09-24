@@ -21,6 +21,7 @@ import {
   ArrowRight,
   X,
   Layers,
+  Gem,
 } from "lucide-react";
 import { useCartStore, useAuthStore } from "@/lib/store";
 import { api } from "@/lib/api";
@@ -187,10 +188,11 @@ export default function Navbar() {
             </Link>
 
             <Link
-              href="/category/all"
-              className="px-2.5 py-2 rounded-xl hover:text-[#303d6e] hover:bg-slate-100 transition-colors"
+              href="/category/jewelry"
+              className="px-2.5 py-2 rounded-xl text-[#303d6e] hover:bg-slate-100 transition-colors flex items-center gap-1.5 font-bold"
             >
-              সকল প্রোডাক্ট
+              <Gem size={14} className="text-amber-500" />
+              <span>জুয়েলারি শপ</span>
             </Link>
 
             {/* Categories Dropdown in Navbar */}
@@ -218,7 +220,7 @@ export default function Navbar() {
               </button>
 
               {isCategoryOpen && (
-                <div className="absolute left-0 top-full mt-2 w-60 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 py-2 animate-fadeIn">
+                <div className="absolute left-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 py-2 animate-fadeIn">
                   <div className="px-3.5 py-2 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     <span>ক্যাটাগরি তালিকা</span>
                     <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
@@ -226,24 +228,32 @@ export default function Navbar() {
                     </span>
                   </div>
                   <div className="max-h-80 overflow-y-auto py-1">
-                    <Link
-                      href="/category/all"
-                      onClick={() => setIsCategoryOpen(false)}
-                      className="flex items-center justify-between px-4 py-2 text-xs font-bold text-[#303d6e] hover:bg-indigo-50 transition-colors border-b border-slate-50"
-                    >
-                      <span>সব প্রডাক্ট একসাথে</span>
-                      <ArrowRight size={13} />
-                    </Link>
-                    {categories.map((cat) => (
-                      <Link
-                        key={cat._id}
-                        href={`/category/${cat.slug}`}
-                        onClick={() => setIsCategoryOpen(false)}
-                        className="flex items-center justify-between px-4 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-[#303d6e] font-semibold transition-colors"
-                      >
-                        <span>{cat.name}</span>
-                        <span className="text-slate-400 text-xs">›</span>
-                      </Link>
+                    {categories
+                      .slice()
+                      .sort((a, b) => (a.slug === "jewelry" ? -1 : b.slug === "jewelry" ? 1 : 0))
+                      .map((cat) => (
+                        cat.isComingSoon ? (
+                          <div
+                            key={cat._id}
+                            className="flex items-center justify-between px-4 py-2 text-xs text-slate-400 font-medium cursor-not-allowed select-none opacity-75"
+                          >
+                            <span>{cat.name}</span>
+                            <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded">Coming Soon</span>
+                          </div>
+                        ) : (
+                          <Link
+                            key={cat._id}
+                            href={`/category/${cat.slug}`}
+                            onClick={() => setIsCategoryOpen(false)}
+                            className="flex items-center justify-between px-4 py-2 text-xs text-slate-800 hover:bg-indigo-50 hover:text-[#303d6e] font-bold transition-colors"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              {cat.name}
+                            </span>
+                            <span className="text-emerald-600 text-[10px] font-bold">ওপেন ›</span>
+                          </Link>
+                        )
                     ))}
                   </div>
                 </div>
@@ -700,11 +710,14 @@ export default function Navbar() {
                   </Link>
 
                   <Link
-                    href="/category/all"
+                    href="/category/jewelry"
                     onClick={() => setIsMobileDrawerOpen(false)}
                     className="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-800 hover:bg-slate-100 transition-colors font-bold"
                   >
-                    <span>সকল প্রোডাক্ট</span>
+                    <span className="flex items-center gap-2">
+                      <Gem size={15} className="text-amber-500" />
+                      <span>জুয়েলারি শপ</span>
+                    </span>
                     <ArrowRight size={13} className="text-slate-400" />
                   </Link>
 
