@@ -240,10 +240,122 @@ export default function CheckoutForm() {
   return (
     <form onSubmit={handleSubmitOrder} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Delivery & Payment Details */}
+        {/* Main Column: Order Summary (Top), Shipping & Billing (Under it), and Payment */}
         <div className="lg:col-span-7 space-y-6">
 
-          {/* Card 1: Customer & Shipping Information */}
+          {/* Card 1: অর্ডার সামারি (পণ্য তালিকা ও কোয়ান্টিটি) - উপরে প্রথম সেকশন */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
+            <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-[#303d6e] flex items-center justify-center font-bold">
+                  <Tag size={20} />
+                </div>
+                <div>
+                  <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>অর্ডার সামারি ({activeItems.length} টি পণ্য)</span>
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    নির্বাচিত পণ্যের তালিকা ও পরিমাণ যাচাই করুন
+                  </p>
+                </div>
+              </div>
+              {directBuyItem && (
+                <span className="text-[11px] font-bold text-amber-800 bg-amber-100 px-3 py-1 rounded-full border border-amber-200">
+                  সরাসরি বাই
+                </span>
+              )}
+            </div>
+
+            {/* Cart Item Previews with Quantity Controls */}
+            <div className="space-y-3.5 divide-y divide-slate-100">
+              {activeItems.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <p className="text-xs font-semibold">আপনার অর্ডার তালিকায় কোনো পণ্য নেই</p>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/shop")}
+                    className="mt-2 text-xs font-bold text-[#303d6e] hover:underline"
+                  >
+                    শপ থেকে পণ্য নির্বাচন করুন →
+                  </button>
+                </div>
+              ) : (
+                activeItems.map((item) => (
+                  <div
+                    key={`${item.productId}-${item.variantInfo || ""}`}
+                    className="pt-3.5 first:pt-0 flex items-center justify-between gap-3 text-xs sm:text-sm"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-white shadow-2xs">
+                        <ProductImage
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          showText={false}
+                          iconSize={16}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-800 truncate leading-tight">
+                          {item.name}
+                        </p>
+                        {item.variantInfo && (
+                          <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">
+                            {item.variantInfo}
+                          </p>
+                        )}
+                        <div className="text-xs font-extrabold text-[#303d6e] mt-1">
+                          ৳ {item.price.toLocaleString()} × {item.quantity} ={" "}
+                          <span className="text-slate-900 font-black">
+                            ৳ {(item.price * item.quantity).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Quantity Adjustment (+ / -) & Delete Button */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateItemQuantity(item.productId, item.quantity - 1, item.variantInfo)}
+                          className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 hover:text-slate-900 font-black transition-colors cursor-pointer text-sm"
+                          title="পরিমাণ কমান"
+                          aria-label="Decrease quantity"
+                        >
+                          -
+                        </button>
+                        <span className="w-7 text-center font-black text-slate-900 text-xs sm:text-sm">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateItemQuantity(item.productId, item.quantity + 1, item.variantInfo)}
+                          className="w-7 h-7 flex items-center justify-center text-slate-600 hover:bg-slate-200 hover:text-slate-900 font-black transition-colors cursor-pointer text-sm"
+                          title="পরিমাণ বাড়ান"
+                          aria-label="Increase quantity"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(item.productId, item.variantInfo)}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        title="মুছে ফেলুন"
+                        aria-label="Remove item"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Card 2: শিপিং এবং বিলিং তথ্য - অর্ডার সামারির নিচে */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
             <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
               <div className="w-10 h-10 rounded-xl bg-indigo-50 text-[#303d6e] flex items-center justify-center font-bold">
@@ -367,7 +479,7 @@ export default function CheckoutForm() {
             </div>
           </div>
 
-          {/* Card 2: Payment Method Selection */}
+          {/* Card 3: পেমেন্ট পদ্ধতি (Payment Method Selection) */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
             <div className="flex items-center gap-3 pb-4 mb-6 border-b border-slate-100">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
@@ -405,108 +517,20 @@ export default function CheckoutForm() {
           </div>
         </div>
 
-        {/* Right Column: Order Summary & Placement */}
+        {/* Right Column: মূল্য তালিকা ও অর্ডার নিশ্চিতকরণ বাটন */}
         <div className="lg:col-span-5 sticky top-24 space-y-6">
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-extrabold text-slate-900 pb-3 mb-4 border-b border-slate-100 flex items-center justify-between">
-              <span>অর্ডার সামারি ({activeItems.length} টি পণ্য)</span>
-              {directBuyItem && (
-                <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
-                  সরাসরি বাই
-                </span>
-              )}
-            </h3>
-
-            {/* Cart Item Previews with Quantity Controls */}
-            <div className="max-h-80 overflow-y-auto space-y-3 mb-6 pr-1 divide-y divide-slate-100">
-              {activeItems.length === 0 ? (
-                <div className="text-center py-8 text-slate-400">
-                  <p className="text-xs font-semibold">আপনার অর্ডার তালিকায় কোনো পণ্য নেই</p>
-                  <button
-                    type="button"
-                    onClick={() => router.push("/shop")}
-                    className="mt-2 text-xs font-bold text-[#303d6e] hover:underline"
-                  >
-                    শপ থেকে পণ্য নির্বাচন করুন →
-                  </button>
-                </div>
-              ) : (
-                activeItems.map((item) => (
-                  <div
-                    key={`${item.productId}-${item.variantInfo || ""}`}
-                    className="pt-2.5 first:pt-0 flex items-center justify-between gap-2.5 text-xs"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-white shadow-2xs">
-                        <ProductImage
-                          src={item.image}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                          showText={false}
-                          iconSize={14}
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-slate-800 truncate leading-tight">
-                          {item.name}
-                        </p>
-                        {item.variantInfo && (
-                          <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
-                            {item.variantInfo}
-                          </p>
-                        )}
-                        <div className="text-[11px] font-extrabold text-[#303d6e] mt-1">
-                          ৳ {item.price.toLocaleString()} × {item.quantity} ={" "}
-                          <span className="text-slate-900 font-black">
-                            ৳ {(item.price * item.quantity).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Quantity Adjustment (+ / -) & Delete Button */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50 shadow-2xs">
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateItemQuantity(item.productId, item.quantity - 1, item.variantInfo)}
-                          className="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-slate-200 hover:text-slate-900 font-black transition-colors cursor-pointer text-xs"
-                          title="পরিমাণ কমান"
-                          aria-label="Decrease quantity"
-                        >
-                          -
-                        </button>
-                        <span className="w-6 text-center font-black text-slate-900 text-xs">
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateItemQuantity(item.productId, item.quantity + 1, item.variantInfo)}
-                          className="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-slate-200 hover:text-slate-900 font-black transition-colors cursor-pointer text-xs"
-                          title="পরিমাণ বাড়ান"
-                          aria-label="Increase quantity"
-                        >
-                          +
-                        </button>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(item.productId, item.variantInfo)}
-                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
-                        title="মুছে ফেলুন"
-                        aria-label="Remove item"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+              <h3 className="text-lg font-extrabold text-slate-900">
+                মূল্য তালিকা ও অর্ডার নিশ্চিতকরণ
+              </h3>
+              <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">
+                {activeItems.length} টি পণ্য
+              </span>
             </div>
 
             {/* Coupon Code Section */}
-            <div className="mb-6 pt-4 border-t border-slate-100">
+            <div className="mb-6 pt-1">
               <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase tracking-wide">
                 কুপন কোড
               </label>
