@@ -45,6 +45,25 @@ export interface IProduct {
   rating: number;
   reviewCount: number;
   tags?: string[];
+  isActive?: boolean;
+}
+
+export interface IAdminStats {
+  totalRevenue: number;
+  totalSales: number;
+  totalCost: number;
+  netProfit: number;
+  pendingRevenue: number;
+  confirmedRevenue: number;
+  totalOrders: number;
+  pendingOrders: number;
+  confirmedOrders: number;
+  processingOrders?: number;
+  shippedOrders?: number;
+  deliveredOrders: number;
+  cancelledOrders?: number;
+  incompleteCount: number;
+  activeProductsCount: number;
 }
 
 export interface ICategory {

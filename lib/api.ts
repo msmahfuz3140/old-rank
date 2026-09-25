@@ -1,4 +1,4 @@
-import { ICategory, IProduct, IVendor, IDeliveryZone } from "./types";
+import { ICategory, IProduct, IVendor, IDeliveryZone, IAdminStats } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
@@ -597,14 +597,7 @@ export const api = {
     }
   },
 
-  async getAdminStats(): Promise<{
-    totalRevenue: number;
-    totalOrders: number;
-    pendingOrders: number;
-    confirmedOrders: number;
-    deliveredOrders: number;
-    incompleteCount: number;
-  }> {
+  async getAdminStats(): Promise<IAdminStats> {
     try {
       const res = await fetch(`${API_BASE}/orders/admin/stats`, { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch stats");
@@ -613,11 +606,17 @@ export const api = {
     } catch {
       return {
         totalRevenue: 0,
+        totalSales: 0,
+        totalCost: 0,
+        netProfit: 0,
+        pendingRevenue: 0,
+        confirmedRevenue: 0,
         totalOrders: 0,
         pendingOrders: 0,
         confirmedOrders: 0,
         deliveredOrders: 0,
         incompleteCount: 0,
+        activeProductsCount: 0,
       };
     }
   },

@@ -138,11 +138,17 @@ export default function AdminPage() {
   const [vendors, setVendors] = useState<IVendor[]>([]);
   const [stats, setStats] = useState({
     totalRevenue: 0,
+    totalSales: 0,
+    totalCost: 0,
+    netProfit: 0,
+    pendingRevenue: 0,
+    confirmedRevenue: 0,
     totalOrders: 0,
     pendingOrders: 0,
     confirmedOrders: 0,
     deliveredOrders: 0,
     incompleteCount: 0,
+    activeProductsCount: 0,
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -857,30 +863,35 @@ export default function AdminPage() {
 
     let pendingOrdersCount = 0;
     let pendingPotentialRevenue = 0;
+    let confirmedOrdersCount = 0;
+    let confirmedRevenue = 0;
 
     plOrders.forEach((ord) => {
       if (ord.status === "cancelled") return;
 
-      // Pending orders stay waiting and are NOT added to business calculations until admin confirms
-      if (ord.status === "pending") {
-        pendingOrdersCount++;
-        pendingPotentialRevenue += Number(ord.grandTotal) || Number(ord.subtotal) || 0;
-        return;
-      }
-
-      // ONLY confirmed, processing, shipped, delivered orders count in real business calculations
-      validOrdersCount++;
       const sale = Number(ord.grandTotal) || Number(ord.subtotal) || 0;
-      grossRevenue += sale;
-      totalDelivery += Number(ord.deliveryCharge) || 0;
-      totalDiscount += Number(ord.discount) || 0;
+      const orderDelivery = Number(ord.deliveryCharge) || 0;
+      const orderDiscount = Number(ord.discount) || 0;
 
       const orderCost =
         ord.items?.reduce((iSum, item) => {
           return iSum + getItemUnitCost(item) * (Number(item.quantity) || 1);
         }, 0) || 0;
 
+      // Real live transaction accounting for all active orders
+      grossRevenue += sale;
       totalCogs += orderCost;
+      totalDelivery += orderDelivery;
+      totalDiscount += orderDiscount;
+      validOrdersCount++;
+
+      if (ord.status === "pending") {
+        pendingOrdersCount++;
+        pendingPotentialRevenue += sale;
+      } else {
+        confirmedOrdersCount++;
+        confirmedRevenue += sale;
+      }
 
       if (ord.status === "delivered") {
         deliveredRevenue += sale;
@@ -910,12 +921,14 @@ export default function AdminPage() {
       deliveredProfit,
       pendingOrdersCount,
       pendingPotentialRevenue,
+      confirmedOrdersCount,
+      confirmedRevenue,
     };
   }, [plOrders, products]);
 
-  // Overall lifetime totalCost & netProfit for compatibility (strictly excludes pending and cancelled)
+  // Overall lifetime totalCost & netProfit for compatibility from all live orders
   const totalCost = orders
-    .filter((ord) => ["confirmed", "processing", "shipped", "delivered"].includes(ord.status))
+    .filter((ord) => ord.status !== "cancelled")
     .reduce((sum, ord) => {
       const ordCost = ord.items?.reduce((itemSum, item) => {
         return itemSum + getItemUnitCost(item) * (Number(item.quantity) || 1);
@@ -923,7 +936,7 @@ export default function AdminPage() {
       return sum + ordCost;
     }, 0);
 
-  const totalNetProfit = Math.max(0, (stats.totalRevenue || 0) - totalCost);
+  const totalNetProfit = Math.max(0, (stats.totalRevenue || plMetrics.grossRevenue || 0) - totalCost);
 
   const TIMEFRAME_OPTIONS: Array<{
     id: ProfitLossTimeframe;
@@ -1673,27 +1686,35 @@ export default function AdminPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Card 1: Overlapping bars on mobile */}
               <SalesBarChart
-                marketplaceTotal={stats.totalRevenue || 0}
-                lastWeekTotal={Math.round((stats.totalRevenue || 0) * 0.26)}
-                lastMonthTotal={Math.round((stats.totalRevenue || 0) * 0.82)}
+                marketplaceTotal={stats.totalRevenue || plMetrics.grossRevenue || 0}
+                lastWeekTotal={getOrdersByTimeframe(orders, "last7days").reduce((sum, o) => sum + (Number(o.grandTotal) || 0), 0)}
+                lastMonthTotal={getOrdersByTimeframe(orders, "thisMonth").reduce((sum, o) => sum + (Number(o.grandTotal) || 0), 0)}
+                orders={orders}
               />
 
               {/* Card 2: Stacked bar chart */}
               <StackedBarChart
-                deliveredCount={stats.deliveredOrders || 0}
-                processingCount={orders.filter((o) => o.status === "processing" || o.status === "shipped").length || 0}
-                pendingCount={orders.filter((o) => o.status === "pending").length || 0}
+                deliveredCount={orders.filter((o) => o.status === "delivered").length}
+                processingCount={orders.filter((o) => o.status === "processing" || o.status === "shipped" || o.status === "confirmed").length}
+                pendingCount={orders.filter((o) => o.status === "pending").length}
+                orders={orders}
               />
 
               {/* Card 3: Animating a Donut with Svg.animate */}
               <DonutWheelChart
-                cat1={products.length || 0}
-                cat2={vendors.length || 0}
-                cat3={stats.totalOrders || 0}
+                cat1={products.filter((p) => p.isActive !== false).length}
+                cat2={vendors.length || 1}
+                cat3={orders.length}
+                products={products}
               />
 
               {/* Card 4: Simple pie chart */}
-              <CleanPieChart p1={33} p2={42} p3={25} />
+              <CleanPieChart
+                deliveredCount={orders.filter((o) => o.status === "delivered").length}
+                confirmedCount={orders.filter((o) => o.status === "confirmed" || o.status === "processing" || o.status === "shipped").length}
+                pendingCount={orders.filter((o) => o.status === "pending").length}
+                totalCount={orders.length}
+              />
             </div>
             {/* Live Profit & Loss Timeframe Filter Bar */}
             <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-2xs space-y-3">
@@ -1854,9 +1875,9 @@ export default function AdminPage() {
                     <ShoppingBag size={18} />
                   </div>
                 </div>
-                <div className="text-2xl font-black text-slate-900">{products.length} টি আইটেম</div>
+                <div className="text-2xl font-black text-slate-900">{products.filter((p) => p.isActive !== false).length} টি আইটেম</div>
                 <div className="flex items-center gap-1 text-[11px] text-purple-600 font-bold mt-2">
-                  <span>স্টক রানিং</span>
+                  <span>ডাটাবেজে সক্রিয় পণ্য</span>
                 </div>
               </div>
             </div>
@@ -1982,11 +2003,14 @@ export default function AdminPage() {
                   className="py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-amber-500"
                 >
                   <option value="all">সব ক্যাটাগরি</option>
+                  <option value="jewelry">জুয়েলারি ও অলংকার</option>
                   <option value="fashion">Men's Fashion</option>
-                  <option value="electronics">Electronics</option>
                   <option value="womens-fashion">Women's Fashion</option>
+                  <option value="electronics">Electronics & Gadgets</option>
                   <option value="baby-kids">Baby & Kids</option>
                   <option value="home-appliances">Home & Kitchen</option>
+                  <option value="beauty-cosmetics">Beauty & Cosmetics</option>
+                  <option value="smart-watch">Smart Watch</option>
                 </select>
 
                 <button

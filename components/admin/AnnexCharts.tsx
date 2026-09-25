@@ -6,30 +6,49 @@ import React, { useState } from "react";
 // 1. OVERLAPPING BARS ON MOBILE / SALES TREND
 // ==========================================
 export function SalesBarChart({
-  marketplaceTotal = 365400,
-  lastWeekTotal = 95400,
-  lastMonthTotal = 846200,
+  marketplaceTotal = 0,
+  lastWeekTotal = 0,
+  lastMonthTotal = 0,
+  orders = [],
 }: {
   marketplaceTotal?: number;
   lastWeekTotal?: number;
   lastMonthTotal?: number;
+  orders?: any[];
 }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const months = [
-    { name: "Jan", bar1: 52, bar2: 35, val: "৳ ৬২,০০০" },
-    { name: "Feb", bar1: 38, bar2: 45, val: "৳ ৫৪,০০০" },
-    { name: "Mar", bar1: 65, bar2: 50, val: "৳ ৭৮,০০০" },
-    { name: "Apr", bar1: 82, bar2: 60, val: "৳ ৯৮,০০০" },
-    { name: "May", bar1: 48, bar2: 70, val: "৳ ৬৫,০০০" },
-    { name: "Jun", bar1: 95, bar2: 80, val: "৳ ১,২০,০০০" },
-    { name: "Jul", bar1: 58, bar2: 42, val: "৳ ৭২,০০০" },
-    { name: "Aug", bar1: 74, bar2: 66, val: "৳ ৮৯,০০০" },
-    { name: "Sep", bar1: 100, bar2: 85, val: "৳ ১,৩৫,০০০" },
-    { name: "Oct", bar1: 86, bar2: 75, val: "৳ ১,০৫,০০০" },
-    { name: "Nov", bar1: 68, bar2: 55, val: "৳ ৮৪,০০০" },
-    { name: "Dec", bar1: 90, bar2: 78, val: "৳ ১,১৫,০০০" },
-  ];
+  const currentYear = new Date().getFullYear();
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  // Calculate real live monthly breakdown from orders
+  const monthlyData = monthNames.map((name, index) => {
+    let sales = 0;
+    let cost = 0;
+    if (orders && Array.isArray(orders)) {
+      orders.forEach((ord) => {
+        if (ord.status === "cancelled") return;
+        const d = new Date(ord.createdAt);
+        if (!isNaN(d.getTime()) && d.getFullYear() === currentYear && d.getMonth() === index) {
+          sales += Number(ord.grandTotal) || Number(ord.subtotal) || 0;
+          if (ord.items && Array.isArray(ord.items)) {
+            ord.items.forEach((item: any) => {
+              cost += (Number(item.costPrice) || 0) * (Number(item.quantity) || 1);
+            });
+          }
+        }
+      });
+    }
+    return { name, sales, cost };
+  });
+
+  const maxMonthSale = Math.max(...monthlyData.map((m) => m.sales), 1);
+  const months = monthlyData.map((m) => ({
+    name: m.name,
+    bar1: m.sales > 0 ? Math.max(12, Math.round((m.sales / maxMonthSale) * 100)) : 4,
+    bar2: m.cost > 0 ? Math.max(10, Math.round((m.cost / maxMonthSale) * 100)) : 2,
+    val: m.sales > 0 ? `৳ ${m.sales.toLocaleString()}` : "৳ ০",
+  }));
 
   return (
     <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col justify-between h-full">
@@ -37,10 +56,10 @@ export function SalesBarChart({
         {/* Header */}
         <div className="border-b border-slate-100 pb-3 mb-4">
           <h3 className="font-bold text-sm text-slate-800 tracking-tight">
-            Overlapping bars on mobile (মাসভিত্তিক সেলস ও রেভিনিউ)
+            মাসভিত্তিক লাইভ বিক্রয় ও ব্যয় (Monthly Live Sales Trend)
           </h3>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            This example makes use of label interpolation and the seriesBarDistance property that allows you to make bars overlap over each other.
+            ডাটাবেজে সংরক্ষিত কাস্টমার অর্ডারের রিয়েল-টাইম মাসিক বিক্রয় ও ক্রয়মূল্যের গ্রাফ
           </p>
         </div>
 
@@ -48,26 +67,26 @@ export function SalesBarChart({
         <div className="grid grid-cols-3 gap-2 text-center py-2 mb-4 bg-slate-50/70 rounded-xl border border-slate-100">
           <div>
             <span className="block text-lg sm:text-xl font-black text-slate-800">
-              {marketplaceTotal > 1000 ? `৳ ${(marketplaceTotal / 100).toFixed(0)}` : marketplaceTotal}
+              ৳ {Number(marketplaceTotal || 0).toLocaleString()}
             </span>
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Marketplace
+              মোট লাইভ বিক্রয়
             </span>
           </div>
           <div className="border-x border-slate-200">
             <span className="block text-lg sm:text-xl font-black text-slate-800">
-              {lastWeekTotal > 1000 ? `৳ ${(lastWeekTotal / 100).toFixed(0)}` : lastWeekTotal}
+              ৳ {Number(lastWeekTotal || 0).toLocaleString()}
             </span>
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Last week
+              বিগত ৭ দিন
             </span>
           </div>
           <div>
             <span className="block text-lg sm:text-xl font-black text-slate-800">
-              {lastMonthTotal > 1000 ? `৳ ${(lastMonthTotal / 100).toFixed(0)}` : lastMonthTotal}
+              ৳ {Number(lastMonthTotal || 0).toLocaleString()}
             </span>
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Last Month
+              চলতি মাস
             </span>
           </div>
         </div>
@@ -77,11 +96,11 @@ export function SalesBarChart({
       <div className="relative pt-2">
         {/* Y Axis Legend */}
         <div className="flex items-center justify-between text-[9px] text-slate-400 font-mono mb-1 px-1">
-          <span>10k</span>
-          <span>7.5k</span>
-          <span>5.0k</span>
-          <span>2.5k</span>
-          <span>0</span>
+          <span>৳ {maxMonthSale > 1 ? maxMonthSale.toLocaleString() : "10k"}</span>
+          <span>৳ {maxMonthSale > 1 ? Math.round(maxMonthSale * 0.75).toLocaleString() : "7.5k"}</span>
+          <span>৳ {maxMonthSale > 1 ? Math.round(maxMonthSale * 0.5).toLocaleString() : "5.0k"}</span>
+          <span>৳ {maxMonthSale > 1 ? Math.round(maxMonthSale * 0.25).toLocaleString() : "2.5k"}</span>
+          <span>০</span>
         </div>
 
         {/* Chart SVG */}
@@ -141,11 +160,11 @@ export function SalesBarChart({
         <div className="flex items-center justify-center gap-4 text-[10px] text-slate-500 pt-2 border-t border-slate-100">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-xs bg-[#5064df]" />
-            <span>মার্কেটপ্লেস সেলস</span>
+            <span>বিক্রয় রেভিনিউ</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-xs bg-[#38bdf8]" />
-            <span>সেলার ভেন্ডর রেভিনিউ</span>
+            <span>সোর্সিং ব্যয় (COGS)</span>
           </div>
         </div>
       </div>
@@ -157,24 +176,51 @@ export function SalesBarChart({
 // 2. STACKED BAR CHART / ORDER FULFILLMENT
 // ==========================================
 export function StackedBarChart({
-  deliveredCount = 3654,
-  processingCount = 954,
-  pendingCount = 8462,
+  deliveredCount = 0,
+  processingCount = 0,
+  pendingCount = 0,
+  orders = [],
 }: {
   deliveredCount?: number;
   processingCount?: number;
   pendingCount?: number;
+  orders?: any[];
 }) {
-  const quarters = [
-    { name: "Q1", s1: 45, s2: 30, s3: 20 },
-    { name: "Q2", s1: 70, s2: 40, s3: 35 },
-    { name: "Q3", s1: 85, s2: 45, s3: 40 },
-    { name: "Q4", s1: 95, s2: 50, s3: 45 },
-    { name: "Q5", s1: 110, s2: 60, s3: 50 },
-    { name: "Q6", s1: 90, s2: 45, s3: 38 },
+  const totalCount = (deliveredCount || 0) + (processingCount || 0) + (pendingCount || 0);
+
+  // Group real live orders by quarter
+  const currentYear = new Date().getFullYear();
+  const qData = [
+    { name: "Q1", s1: 0, s2: 0, s3: 0 },
+    { name: "Q2", s1: 0, s2: 0, s3: 0 },
+    { name: "Q3", s1: 0, s2: 0, s3: 0 },
+    { name: "Q4", s1: 0, s2: 0, s3: 0 },
   ];
 
-  const maxVal = 230;
+  if (orders && Array.isArray(orders)) {
+    orders.forEach((ord) => {
+      if (ord.status === "cancelled") return;
+      const d = new Date(ord.createdAt);
+      if (!isNaN(d.getTime()) && d.getFullYear() === currentYear) {
+        const qIndex = Math.floor(d.getMonth() / 3);
+        if (qIndex >= 0 && qIndex < 4) {
+          if (ord.status === "delivered") qData[qIndex].s1++;
+          else if (["confirmed", "processing", "shipped"].includes(ord.status)) qData[qIndex].s2++;
+          else qData[qIndex].s3++;
+        }
+      }
+    });
+  }
+
+  // If no quarter data yet, show overall breakdown in current quarter
+  const currentQ = Math.floor(new Date().getMonth() / 3);
+  if (qData.every((q) => q.s1 === 0 && q.s2 === 0 && q.s3 === 0)) {
+    qData[currentQ].s1 = deliveredCount || 0;
+    qData[currentQ].s2 = processingCount || 0;
+    qData[currentQ].s3 = pendingCount || 0;
+  }
+
+  const maxVal = Math.max(...qData.map((q) => q.s1 + q.s2 + q.s3), 5);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col justify-between h-full">
@@ -182,37 +228,37 @@ export function StackedBarChart({
         {/* Header */}
         <div className="border-b border-slate-100 pb-3 mb-4">
           <h3 className="font-bold text-sm text-slate-800 tracking-tight">
-            Stacked bar chart (অর্ডার স্ট্যাক ও পাইপলাইন)
+            অর্ডার স্ট্যাটাস ও ডেলিভারি পাইপলাইন (Order Pipeline)
           </h3>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            You can also set your bar chart to stack the series bars on top of each other easily by using the stackBars property in your configuration.
+            ডাটাবেজে রক্ষিত সকল লাইভ অর্ডারের বর্তমান অবস্থা এবং কোয়ার্টার অনুযায়ী বণ্টন
           </p>
         </div>
 
         {/* 3 Metric Headers matching Annex */}
         <div className="grid grid-cols-3 gap-2 text-center py-2 mb-4 bg-slate-50/70 rounded-xl border border-slate-100">
           <div>
-            <span className="block text-lg sm:text-xl font-black text-slate-800">
+            <span className="block text-lg sm:text-xl font-black text-emerald-600">
               {deliveredCount}
             </span>
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Marketplace
+              ডেলিভার্ড
             </span>
           </div>
           <div className="border-x border-slate-200">
-            <span className="block text-lg sm:text-xl font-black text-slate-800">
+            <span className="block text-lg sm:text-xl font-black text-[#5064df]">
               {processingCount}
             </span>
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Last week
+              প্রসেসিং / কনফার্মড
             </span>
           </div>
           <div>
-            <span className="block text-lg sm:text-xl font-black text-slate-800">
+            <span className="block text-lg sm:text-xl font-black text-amber-500">
               {pendingCount}
             </span>
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Last Month
+              পেন্ডিং অর্ডার
             </span>
           </div>
         </div>
@@ -222,11 +268,11 @@ export function StackedBarChart({
       <div className="relative pt-2">
         {/* Y Axis Legend */}
         <div className="flex items-center justify-between text-[9px] text-slate-400 font-mono mb-1 px-1">
-          <span>200k</span>
-          <span>150k</span>
-          <span>100k</span>
-          <span>50k</span>
-          <span>0k</span>
+          <span>{maxVal}</span>
+          <span>{Math.round(maxVal * 0.75)}</span>
+          <span>{Math.round(maxVal * 0.5)}</span>
+          <span>{Math.round(maxVal * 0.25)}</span>
+          <span>0</span>
         </div>
 
         {/* Chart SVG */}
@@ -242,7 +288,7 @@ export function StackedBarChart({
 
           {/* Stacked Bars Container */}
           <div className="relative w-full h-full flex items-end justify-around px-2 z-10 pb-5">
-            {quarters.map((q, idx) => {
+            {qData.map((q, idx) => {
               const h1 = (q.s1 / maxVal) * 100;
               const h2 = (q.s2 / maxVal) * 100;
               const h3 = (q.s3 / maxVal) * 100;
@@ -308,15 +354,16 @@ export function StackedBarChart({
 // 3. ANIMATING A DONUT WITH SVG / CATEGORY RADIAL
 // ==========================================
 export function DonutWheelChart({
-  cat1 = 3654,
-  cat2 = 954,
-  cat3 = 8462,
+  cat1 = 0,
+  cat2 = 1,
+  cat3 = 0,
+  products = [],
 }: {
   cat1?: number;
   cat2?: number;
   cat3?: number;
+  products?: any[];
 }) {
-  // 24 segments around the circle, exactly matching the Annex Donut screenshot
   const segmentColors = [
     "#ef4444", "#f87171", "#fb923c", "#f97316", "#ea580c",
     "#facc15", "#eab308", "#ca8a04", "#fbbf24", "#34d399",
@@ -331,10 +378,10 @@ export function DonutWheelChart({
         {/* Header */}
         <div className="border-b border-slate-100 pb-3 mb-4">
           <h3 className="font-bold text-sm text-slate-800 tracking-tight">
-            Animating a Donut with Svg.animate (ক্যাটাগরি ডিস্ট্রিবিউশন)
+            ক্যাটালগ ও ডাটাবেজ ডিস্ট্রিবিউশন (Database Catalog Radial)
           </h3>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Although it'd be also possible to achieve this animation with CSS, with some minor suboptimal things, here's an example of how to animate donut charts using Chartist.Svg.animate and SMIL.
+            সরাসরি MongoDB-তে সংরক্ষিত সক্রিয় পণ্য, অফিসিয়াল ভেন্ডর এবং মোট অর্ডারের অনুপাত
           </p>
         </div>
 
@@ -345,7 +392,7 @@ export function DonutWheelChart({
               {cat1}
             </span>
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Marketplace
+              সক্রিয় পণ্য
             </span>
           </div>
           <div className="border-x border-slate-200">
@@ -353,7 +400,7 @@ export function DonutWheelChart({
               {cat2}
             </span>
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Last week
+              ভেন্ডর হাব
             </span>
           </div>
           <div>
@@ -361,7 +408,7 @@ export function DonutWheelChart({
               {cat3}
             </span>
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Last Month
+              মোট লাইভ অর্ডার
             </span>
           </div>
         </div>
@@ -403,28 +450,28 @@ export function DonutWheelChart({
 
           {/* Center Hub */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <span className="text-xl font-black text-slate-800">100%</span>
-            <span className="text-[9px] font-bold text-slate-400 uppercase">Live Stock</span>
+            <span className="text-xl font-black text-slate-800">{cat1} টি</span>
+            <span className="text-[9px] font-bold text-emerald-600 uppercase">MongoDB Live</span>
           </div>
         </div>
 
         {/* Legend */}
         <div className="flex flex-wrap items-center justify-center gap-3 text-[10px] text-slate-500 pt-3 border-t border-slate-100 w-full mt-2">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-            <span>পাঞ্জাবি ও কুর্তা</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+            <span>জুয়েলারি ও অলংকার</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-            <span>টি-শার্ট ও শার্ট</span>
+            <span>প্রিমিয়াম স্টক</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
-            <span>ডেনিম ও প্যান্ট</span>
+            <span>ভেরিফাইড ভেন্ডর</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
-            <span>ঘড়ি ও এক্সেসরিজ</span>
+            <span>সরাসরি ডাটাবেজ</span>
           </div>
         </div>
       </div>
@@ -433,54 +480,71 @@ export function DonutWheelChart({
 }
 
 // ==========================================
-// 4. SIMPLE PIE CHART / PAYMENT & RETENTION
+// 4. SIMPLE PIE CHART / LIVE ORDER RATIO
 // ==========================================
 export function CleanPieChart({
-  p1 = 33,
-  p2 = 42,
-  p3 = 25,
+  deliveredCount = 0,
+  confirmedCount = 0,
+  pendingCount = 0,
+  totalCount = 0,
 }: {
+  deliveredCount?: number;
+  confirmedCount?: number;
+  pendingCount?: number;
+  totalCount?: number;
   p1?: number;
   p2?: number;
   p3?: number;
 }) {
+  const sum = (deliveredCount || 0) + (confirmedCount || 0) + (pendingCount || 0);
+  const baseTotal = totalCount > 0 ? totalCount : Math.max(sum, 1);
+
+  const pDelivered = Math.round(((deliveredCount || 0) / baseTotal) * 100);
+  const pConfirmed = Math.round(((confirmedCount || 0) / baseTotal) * 100);
+  const pPending = sum > 0 ? Math.max(0, 100 - pDelivered - pConfirmed) : 100;
+
+  // Circle perimeter = 2 * PI * 25 ≈ 157.08
+  const dash1 = (pDelivered / 100) * 157.08;
+  const dash2 = (pConfirmed / 100) * 157.08;
+  const dash3 = (pPending / 100) * 157.08;
+
   return (
     <div className="bg-white rounded-xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col justify-between h-full">
       <div>
         {/* Header */}
         <div className="border-b border-slate-100 pb-3 mb-4">
           <h3 className="font-bold text-sm text-slate-800 tracking-tight">
-            Simple pie chart (কাস্টমার ও পেমেন্ট অনুপাত)
+            লাইভ অর্ডার স্ট্যাটাস বণ্টন (Order Status Ratio)
           </h3>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            A very simple pie chart with label interpolation to show percentage instead of the actual data series value.
+            ডাটাবেজে রক্ষিত মোট {baseTotal} টি অর্ডারের শতাংশভিত্তিক স্ট্যাটাস
           </p>
         </div>
 
         {/* 3 Metric Headers matching Annex */}
         <div className="grid grid-cols-3 gap-2 text-center py-2 mb-4 bg-slate-50/70 rounded-xl border border-slate-100">
           <div>
-            <span className="block text-lg sm:text-xl font-black text-slate-800">
-              {p1}%
+            <span className="block text-lg sm:text-xl font-black text-emerald-600">
+              {pDelivered}%
             </span>
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Marketplace
+              ডেলিভার্ড
             </span>
           </div>
           <div className="border-x border-slate-200">
-            <span className="block text-lg sm:text-xl font-black text-slate-800">
-              {p2}%
+            <span className="block text-lg sm:text-xl font-black text-[#5064df]">
+              {pConfirmed}%
             </span>
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Last week
+              কনফার্মড
             </span>
           </div>
           <div>
-            <span className="block text-lg sm:text-xl font-black text-slate-800">
-              {p3}%
+            <span className="block text-lg sm:text-xl font-black text-amber-500">
+              {pPending}%
             </span>
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Last Month
+              পেন্ডিং
             </span>
           </div>
         </div>
@@ -490,20 +554,19 @@ export function CleanPieChart({
       <div className="flex flex-col items-center justify-center py-4">
         <div className="relative w-44 h-44 sm:w-48 sm:h-48 flex items-center justify-center">
           <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-            {/* Slice 1: Dark Navy (33%) -> Path from 0 to 33% (118.8 deg) */}
-            {/* Using SVG circle dasharray for pixel-perfect standard Pie */}
+            {/* Slice 1: Emerald (Delivered) */}
             <circle
               cx="50"
               cy="50"
               r="25"
               fill="transparent"
-              stroke="#0f172a"
+              stroke="#10b981"
               strokeWidth="50"
-              strokeDasharray="51.84 157.08"
+              strokeDasharray={`${dash1} 157.08`}
               strokeDashoffset="0"
               className="hover:opacity-90 transition-opacity cursor-pointer"
             />
-            {/* Slice 2: Indigo (42%) -> Next 42% */}
+            {/* Slice 2: Indigo (Confirmed/Processing) */}
             <circle
               cx="50"
               cy="50"
@@ -511,11 +574,11 @@ export function CleanPieChart({
               fill="transparent"
               stroke="#5064df"
               strokeWidth="50"
-              strokeDasharray="65.97 157.08"
-              strokeDashoffset="-51.84"
+              strokeDasharray={`${dash2} 157.08`}
+              strokeDashoffset={`-${dash1}`}
               className="hover:opacity-90 transition-opacity cursor-pointer"
             />
-            {/* Slice 3: Amber/Gold (25%) -> Next 25% */}
+            {/* Slice 3: Amber (Pending) */}
             <circle
               cx="50"
               cy="50"
@@ -523,25 +586,16 @@ export function CleanPieChart({
               fill="transparent"
               stroke="#f59e0b"
               strokeWidth="50"
-              strokeDasharray="39.27 157.08"
-              strokeDashoffset="-117.81"
+              strokeDasharray={`${dash3} 157.08`}
+              strokeDashoffset={`-${dash1 + dash2}`}
               className="hover:opacity-90 transition-opacity cursor-pointer"
             />
           </svg>
 
           {/* Direct Percentage Labels placed over the slices matching Annex screenshot */}
-          <div className="absolute inset-0 pointer-events-none">
-            {/* 33% label over navy top-left */}
-            <span className="absolute top-[28%] left-[26%] text-white text-xs font-black drop-shadow">
-              33%
-            </span>
-            {/* 42% label over indigo right */}
-            <span className="absolute top-[38%] right-[24%] text-white text-xs font-black drop-shadow">
-              42%
-            </span>
-            {/* 25% label over amber bottom */}
-            <span className="absolute bottom-[20%] left-[42%] text-slate-900 text-xs font-black drop-shadow">
-              25%
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <span className="text-sm font-black text-slate-900 bg-white/90 px-2 py-0.5 rounded-full shadow-xs">
+              {baseTotal} Orders
             </span>
           </div>
         </div>
@@ -549,16 +603,16 @@ export function CleanPieChart({
         {/* Legend */}
         <div className="flex items-center justify-center gap-4 text-[10px] text-slate-500 pt-3 border-t border-slate-100 w-full mt-2">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#0f172a]" />
-            <span>রিটার্নিং কাস্টমার (৩৩%)</span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />
+            <span>ডেলিভার্ড ({pDelivered}%)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#5064df]" />
-            <span>ক্যাশ অন ডেলিভারি (৪২%)</span>
+            <span>কনফার্মড ({pConfirmed}%)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
-            <span>নতুন ভিজিটর (২৫%)</span>
+            <span>পেন্ডিং ({pPending}%)</span>
           </div>
         </div>
       </div>
