@@ -18,12 +18,6 @@ import { useCartStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { IDeliveryZone } from "@/lib/types";
 import ProductImage from "@/components/product/ProductImage";
-import {
-  BANGLADESH_DIVISIONS,
-  BANGLADESH_64_DISTRICTS,
-  getDistrictsByDivision,
-  findDistrict,
-} from "@/lib/districts";
 
 export default function CheckoutForm() {
   const router = useRouter();
@@ -64,17 +58,19 @@ export default function CheckoutForm() {
     }
   };
 
-  // Form State
+  // Form State - matching screenshot
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [altPhone, setAltPhone] = useState("");
+  const [deliveryArea, setDeliveryArea] = useState<"inside" | "outside">("inside");
   const [address, setAddress] = useState("");
-  const [division, setDivision] = useState("All");
-  const [district, setDistrict] = useState("Dhaka (ঢাকা)");
   const [orderNote, setOrderNote] = useState("");
-
-  // Delivery & Zones
-  const [deliveryZones, setDeliveryZones] = useState<IDeliveryZone[]>([]);
   const [deliveryCharge, setDeliveryCharge] = useState(60);
+
+  const handleDeliveryAreaChange = (area: "inside" | "outside") => {
+    setDeliveryArea(area);
+    setDeliveryCharge(area === "inside" ? 60 : 120);
+  };
 
   // Payment Selection (Cash on Delivery Only)
   const paymentMethod = "cod";
@@ -89,67 +85,19 @@ export default function CheckoutForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Load Delivery Zones
-  useEffect(() => {
-    api.getDeliveryZones().then((zones) => {
-      setDeliveryZones(zones);
-    });
-  }, []);
-
-  // Recalculate shipping charge when district changes
-  useEffect(() => {
-    const matchedZone = deliveryZones.find(
-      (z) =>
-        z.district.toLowerCase() === district.toLowerCase() ||
-        district.toLowerCase().includes(z.district.toLowerCase())
-    );
-    if (matchedZone) {
-      setDeliveryCharge(matchedZone.deliveryCharge);
-    } else {
-      const found = findDistrict(district);
-      if (found) {
-        setDeliveryCharge(found.deliveryCharge);
-      } else {
-        setDeliveryCharge(district.toLowerCase().includes("dhaka") ? 60 : 120);
-      }
-    }
-  }, [district, division, deliveryZones]);
-
-  const handleDivisionChange = (newDivision: string) => {
-    setDivision(newDivision);
-    if (newDivision === "All") {
-      return;
-    }
-    const dists = getDistrictsByDivision(newDivision);
-    if (dists.length > 0) {
-      setDistrict(dists[0].name);
-      setDeliveryCharge(dists[0].deliveryCharge);
-    }
-  };
-
-  const handleDistrictChange = (newDistrictName: string) => {
-    setDistrict(newDistrictName);
-    const found = findDistrict(newDistrictName);
-    if (found) {
-      if (division !== "All" && found.division !== division) {
-        setDivision(found.division);
-      }
-      setDeliveryCharge(found.deliveryCharge);
-    }
-  };
-
   // Debounced Auto-Save Incomplete Order Lead (Abandoned Cart recovery)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
-    if (phone.length >= 10 && activeItems.length > 0) {
+    const cleanedPhone = phone.replace(/\s+/g, "").replace(/^\+88/, "");
+    if (cleanedPhone.length >= 10 && activeItems.length > 0) {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(() => {
         api.saveIncompleteOrder({
-          phone,
+          phone: cleanedPhone,
           name,
           address,
-          division,
-          district,
+          division: deliveryArea === "inside" ? "Dhaka" : "Outside Dhaka",
+          district: deliveryArea === "inside" ? "ঢাকার মধ্যে (Inside Dhaka)" : "ঢাকার বাইরে (Outside Dhaka)",
           items: activeItems.map((i) => ({
             productId: i.productId,
             name: i.name,
@@ -165,7 +113,7 @@ export default function CheckoutForm() {
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
-  }, [phone, name, address, division, district, activeItems, subtotal, deliveryCharge]);
+  }, [phone, name, address, deliveryArea, activeItems, subtotal, deliveryCharge]);
 
   // Coupon Submission
   const handleApplyCoupon = async () => {
@@ -193,17 +141,26 @@ export default function CheckoutForm() {
     setErrorMessage("");
 
     try {
-      const finalPhone = phone.trim() || "01712345678";
+      const finalPhone = phone.trim().replace(/^\+88/, "") || "01712345678";
       const finalName = name.trim() || "সম্মানিত গ্রাহক";
       const finalAddress = address.trim() || "মিরপুর ১০, ঢাকা ১২১৬ (অনলাইন অর্ডার)";
+      const finalDivision = deliveryArea === "inside" ? "Dhaka" : "Outside Dhaka";
+      const finalDistrict =
+        deliveryArea === "inside" ? "ঢাকার মধ্যে (Inside Dhaka)" : "ঢাকার বাইরে (Outside Dhaka)";
+      const combinedNotes = [
+        altPhone.trim() ? `বিকল্প ফোন: ${altPhone.trim()}` : "",
+        orderNote.trim() ? orderNote.trim() : "",
+      ]
+        .filter(Boolean)
+        .join(" | ");
 
       const orderData = {
         name: finalName,
         phone: finalPhone,
         address: finalAddress,
-        division,
-        district,
-        note: orderNote,
+        division: finalDivision,
+        district: finalDistrict,
+        note: combinedNotes || undefined,
         items: activeItems.map((i) => ({
           productId: i.productId,
           name: i.name,
@@ -256,12 +213,13 @@ export default function CheckoutForm() {
       return;
     }
 
-    if (!/^01[3-9]\d{8}$/.test(phone.replace(/\s+/g, ""))) {
+    const cleanedPhone = phone.replace(/\s+/g, "").replace(/^\+88/, "");
+    if (!/^01[3-9]\d{8}$/.test(cleanedPhone)) {
       setErrorMessage("অনুগ্রহ করে সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 017xxxxxxxx)");
       return;
     }
 
-    if (!address.trim() || address.trim().length < 5) {
+    if (!address.trim() || address.trim().length < 3) {
       setErrorMessage("অনুগ্রহ করে আপনার সম্পূর্ণ ডেলিভারি ঠিকানা প্রদান করুন।");
       return;
     }
@@ -404,116 +362,144 @@ export default function CheckoutForm() {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 sm:space-y-5">
+              {/* ১. নাম */}
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase">
-                  আপনার সম্পূর্ণ নাম <span className="text-red-500">*</span>
+                <label className="text-sm font-bold text-slate-800 block mb-1.5">
+                  নাম <span className="text-[#e11d48] font-bold">*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="যেমন: মো: কামরুল হাসান"
+                  placeholder="Your name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#303d6e] focus:bg-white transition-all"
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-all"
                 />
               </div>
 
+              {/* ২. ফোন নম্বর */}
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase">
-                  মোবাইল নম্বর <span className="text-red-500">*</span>
+                <label className="text-sm font-bold text-slate-800 block mb-1.5">
+                  ফোন নম্বর <span className="text-[#e11d48] font-bold">*</span>
                 </label>
-                <input
-                  type="tel"
-                  required
-                  maxLength={11}
-                  placeholder="017xxxxxxxx"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#303d6e] focus:bg-white transition-all font-mono"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase">
-                    বিভাগ (Division) <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={division}
-                    onChange={(e) => handleDivisionChange(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#303d6e] focus:bg-white font-medium"
-                  >
-                    {BANGLADESH_DIVISIONS.map((div) => (
-                      <option key={div.id} value={div.id}>
-                        {div.nameBn} ({div.nameEn})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase">
-                      জেলা (৬৪টি জেলা) <span className="text-red-500">*</span>
-                    </label>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      সারা বাংলাদেশ
-                    </span>
+                <div className="flex border border-slate-200 rounded-lg overflow-hidden focus-within:ring-1 focus-within:ring-slate-400 focus-within:border-slate-400 transition-all bg-white">
+                  <div className="flex items-center gap-1.5 px-3 py-3 bg-white border-r border-slate-200 text-slate-700 select-none text-xs sm:text-sm font-medium shrink-0">
+                    <svg className="w-5 h-3.5 rounded-2xs" viewBox="0 0 20 12">
+                      <rect width="20" height="12" fill="#006a4e" />
+                      <circle cx="9" cy="6" r="4" fill="#f42a41" />
+                    </svg>
+                    <span>+88</span>
+                    <span className="text-[10px] text-slate-400">▼</span>
                   </div>
-                  <select
-                    value={district}
-                    onChange={(e) => handleDistrictChange(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#303d6e] focus:bg-white font-medium"
-                  >
-                    {division === "All" ? (
-                      BANGLADESH_DIVISIONS.filter((div) => div.id !== "All").map((div) => {
-                        const divDistricts = getDistrictsByDivision(div.id);
-                        return (
-                          <optgroup key={div.id} label={`${div.nameBn} বিভাগ (${divDistricts.length}টি জেলা)`}>
-                            {divDistricts.map((d) => (
-                              <option key={d.id} value={d.name}>
-                                {d.name}
-                              </option>
-                            ))}
-                          </optgroup>
-                        );
-                      })
-                    ) : (
-                      getDistrictsByDivision(division).map((d) => (
-                        <option key={d.id} value={d.name}>
-                          {d.name}
-                        </option>
-                      ))
-                    )}
-                  </select>
+                  <input
+                    type="tel"
+                    required
+                    maxLength={11}
+                    placeholder="01xxxxxxxxx"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="flex-1 px-4 py-3 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none font-mono"
+                  />
                 </div>
               </div>
 
+              {/* ৩. বিকল্প ফোন নম্বর */}
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase">
-                  সম্পূর্ণ ঠিকানা (বাসা নং, রোড, এলাকা) <span className="text-red-500">*</span>
+                <label className="text-sm font-bold text-slate-800 block mb-1.5">
+                  বিকল্প ফোন নম্বর
+                </label>
+                <div className="flex border border-slate-200 rounded-lg overflow-hidden focus-within:ring-1 focus-within:ring-slate-400 focus-within:border-slate-400 transition-all bg-white">
+                  <div className="flex items-center px-4 py-3 bg-slate-100/90 border-r border-slate-200 text-slate-700 select-none text-xs sm:text-sm font-semibold shrink-0">
+                    +88
+                  </div>
+                  <input
+                    type="tel"
+                    maxLength={11}
+                    placeholder="01XXXXXXXXX"
+                    value={altPhone}
+                    onChange={(e) => setAltPhone(e.target.value)}
+                    className="flex-1 px-4 py-3 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* ৪. ডেলিভারি এরিয়া সিলেক্ট করুন */}
+              <div>
+                <label className="text-sm font-bold text-slate-800 block mb-2">
+                  ডেলিভারি এরিয়া সিলেক্ট করুন <span className="text-[#e11d48] font-bold">*</span>
+                </label>
+                <div className="space-y-3">
+                  {/* ঢাকার মধ্যে */}
+                  <div
+                    onClick={() => handleDeliveryAreaChange("inside")}
+                    className={`p-3.5 sm:p-4 rounded-lg border cursor-pointer transition-all flex items-center gap-3.5 select-none ${
+                      deliveryArea === "inside"
+                        ? "border-[#16a34a] bg-white ring-1 ring-[#16a34a]"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-center shrink-0">
+                      {deliveryArea === "inside" ? (
+                        <div className="w-5 h-5 rounded-full border-2 border-[#16a34a] flex items-center justify-center">
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#16a34a]" />
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-slate-300" />
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-sm sm:text-base font-bold text-slate-900 block leading-tight">
+                        ঢাকার মধ্যে
+                      </span>
+                      <span className="text-xs text-slate-500 mt-0.5 block">
+                        (Inside Dhaka)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* ঢাকার বাইরে */}
+                  <div
+                    onClick={() => handleDeliveryAreaChange("outside")}
+                    className={`p-3.5 sm:p-4 rounded-lg border cursor-pointer transition-all flex items-center gap-3.5 select-none ${
+                      deliveryArea === "outside"
+                        ? "border-[#16a34a] bg-white ring-1 ring-[#16a34a]"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <div className="flex items-center justify-center shrink-0">
+                      {deliveryArea === "outside" ? (
+                        <div className="w-5 h-5 rounded-full border-2 border-[#16a34a] flex items-center justify-center">
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#16a34a]" />
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 rounded-full border-2 border-slate-300" />
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-sm sm:text-base font-bold text-slate-900 block leading-tight">
+                        ঢাকার বাইরে
+                      </span>
+                      <span className="text-xs text-slate-500 mt-0.5 block">
+                        (Outside Dhaka)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ৫. ঠিকানা */}
+              <div>
+                <label className="text-sm font-bold text-slate-800 block mb-1.5">
+                  ঠিকানা <span className="text-[#e11d48] font-bold">*</span>
                 </label>
                 <textarea
                   required
-                  rows={2}
-                  placeholder="যেমন: বাসা ১২, রোড ৪, ব্লক সি, ধানমন্ডি"
+                  rows={3}
+                  placeholder="Your Address"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#303d6e] focus:bg-white transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase">
-                  ডেলিভারি নোট (ঐচ্ছিক)
-                </label>
-                <input
-                  type="text"
-                  placeholder="ডেলিভারি সম্পর্কে বিশেষ কিছু বলার থাকলে লিখুন..."
-                  value={orderNote}
-                  onChange={(e) => setOrderNote(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#303d6e]"
+                  className="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-400 focus:border-slate-400 transition-all"
                 />
               </div>
             </div>
@@ -609,7 +595,7 @@ export default function CheckoutForm() {
                 <span className="font-bold text-slate-900">৳ {subtotal.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>ডেলিভারি চার্জ</span>
+                <span>ডেলিভারি চার্জ ({deliveryArea === "inside" ? "ঢাকার মধ্যে" : "ঢাকার বাইরে"})</span>
                 <span className="font-bold text-slate-900">৳ {deliveryCharge.toLocaleString()}</span>
               </div>
               {discountAmount > 0 && (
@@ -620,7 +606,7 @@ export default function CheckoutForm() {
               )}
               <div className="flex justify-between text-base sm:text-lg font-black text-slate-900 pt-3 border-t border-slate-200">
                 <span>সর্বমোট পরিশোধযোগ্য</span>
-                <span className="text-[#303d6e]">৳ {grandTotal.toLocaleString()}</span>
+                <span className="text-[#e11d48]">৳ {grandTotal.toLocaleString()}</span>
               </div>
             </div>
 
@@ -636,13 +622,13 @@ export default function CheckoutForm() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full mt-6 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-xl bg-[#303d6e] hover:bg-indigo-900 shadow-indigo-950/20 transition-all hover:scale-[1.01] active:scale-98 disabled:opacity-50 cursor-pointer"
+              className="w-full mt-6 text-white font-black py-4 px-6 rounded-2xl text-base flex items-center justify-center gap-2 shadow-xl bg-[#e11d48] hover:bg-rose-700 shadow-rose-950/20 transition-all hover:scale-[1.01] active:scale-98 disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
                 <span>প্রসেসিং হচ্ছে...</span>
               ) : (
                 <>
-                  <span>অর্ডার নিশ্চিত করুন (Cash on Delivery)</span>
+                  <span>প্রোডাক্টটি ক্রয় করুন (Cash on Delivery)</span>
                   <ArrowRight size={18} />
                 </>
               )}
