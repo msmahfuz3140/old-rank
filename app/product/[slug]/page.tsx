@@ -27,6 +27,8 @@ export default function ProductDetailPage({
   const resolvedParams = use(params);
   const router = useRouter();
   const addItem = useCartStore((state) => state.addItem);
+  const setDirectBuyItem = useCartStore((state) => state.setDirectBuyItem);
+  const closeCartDrawer = useCartStore((state) => state.closeCartDrawer);
 
   const [product, setProduct] = useState<IProduct | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<IProduct[]>([]);
@@ -83,12 +85,29 @@ export default function ProductDetailPage({
         colorName: activeVariant?.colorName,
         sizeName: activeVariant?.sizeName,
       },
-      quantity
+      quantity,
+      false,
+      true
     );
   };
 
   const handleOrderNow = () => {
-    handleAddToCart();
+    closeCartDrawer();
+    setDirectBuyItem(
+      {
+        productId: product._id,
+        name: product.name,
+        image: product.mainImage,
+        price: currentPrice,
+        slug: product.slug,
+        variantInfo: activeVariant
+          ? `${activeVariant.colorName || ""} ${activeVariant.sizeName || ""}`.trim()
+          : undefined,
+        colorName: activeVariant?.colorName,
+        sizeName: activeVariant?.sizeName,
+      },
+      quantity
+    );
     router.push("/checkout");
   };
 

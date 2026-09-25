@@ -396,8 +396,8 @@ export const fallbackDeliveryZones: IDeliveryZone[] = [
   { division: "Mymensingh", district: "Mymensingh City", deliveryCharge: 120, estimatedDelivery: "2-3 Days" },
 ];
 
-// Fast fetch helper with 800ms timeout to prevent any server hang
-async function fetchFast(url: string, options: RequestInit = {}, timeoutMs: number = 800): Promise<Response> {
+// Robust fetch helper with 6000ms timeout for live database connection
+async function fetchFast(url: string, options: RequestInit = {}, timeoutMs: number = 6000): Promise<Response> {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -421,7 +421,7 @@ export const api = {
       if (params?.search) query.set("search", params.search);
       if (params?.isHotDeal) query.set("isHotDeal", "true");
 
-      const res = await fetchFast(`${API_BASE}/products?${query.toString()}`, { cache: "no-store" }, 800);
+      const res = await fetchFast(`${API_BASE}/products?${query.toString()}`, { cache: "no-store" }, 6000);
       if (!res.ok) throw new Error("Failed to fetch products");
       const json = await res.json();
       return json.data || fallbackProducts;
@@ -443,7 +443,7 @@ export const api = {
 
   async getProductBySlug(slug: string): Promise<{ product: IProduct; relatedProducts: IProduct[] }> {
     try {
-      const res = await fetchFast(`${API_BASE}/products/slug/${slug}`, { cache: "no-store" }, 800);
+      const res = await fetchFast(`${API_BASE}/products/slug/${slug}`, { cache: "no-store" }, 6000);
       if (!res.ok) throw new Error("Failed to fetch product");
       const json = await res.json();
       return json.data;
@@ -456,7 +456,7 @@ export const api = {
 
   async getCategories(): Promise<ICategory[]> {
     try {
-      const res = await fetchFast(`${API_BASE}/products/categories`, { cache: "no-store" }, 800);
+      const res = await fetchFast(`${API_BASE}/products/categories`, { cache: "no-store" }, 6000);
       if (!res.ok) throw new Error("Failed to fetch categories");
       const json = await res.json();
       return json.data || fallbackCategories;
@@ -467,7 +467,7 @@ export const api = {
 
   async getDeliveryZones(): Promise<IDeliveryZone[]> {
     try {
-      const res = await fetchFast(`${API_BASE}/delivery/zones`, { cache: "no-store" }, 800);
+      const res = await fetchFast(`${API_BASE}/delivery/zones`, { cache: "no-store" }, 6000);
       if (!res.ok) throw new Error("Failed to fetch zones");
       const json = await res.json();
       return json.data?.raw || fallbackDeliveryZones;
@@ -478,7 +478,7 @@ export const api = {
 
   async getVendors(): Promise<IVendor[]> {
     try {
-      const res = await fetchFast(`${API_BASE}/vendors`, { cache: "no-store" }, 800);
+      const res = await fetchFast(`${API_BASE}/vendors`, { cache: "no-store" }, 6000);
       if (!res.ok) throw new Error("Failed to fetch vendors");
       const json = await res.json();
       return json.data || fallbackVendors;

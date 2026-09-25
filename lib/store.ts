@@ -1,16 +1,40 @@
 import { create } from "zustand";
 import { ICartItem, IProduct, IUser } from "./types";
 
+export interface CartToastData {
+  show: boolean;
+  message: string;
+  item?: {
+    name: string;
+    image: string;
+    price: number;
+    quantity: number;
+    variantInfo?: string;
+  };
+}
+
 interface CartStore {
   items: ICartItem[];
   isCartDrawerOpen: boolean;
-  addItem: (item: Omit<ICartItem, "quantity">, quantity?: number) => void;
+  toast: CartToastData | null;
+  directBuyItem: ICartItem | null;
+  setDirectBuyItem: (item: Omit<ICartItem, "quantity">, quantity?: number) => void;
+  clearDirectBuyItem: () => void;
+  updateDirectBuyQuantity: (quantity: number) => void;
+  addItem: (
+    item: Omit<ICartItem, "quantity">,
+    quantity?: number,
+    openDrawer?: boolean,
+    notify?: boolean
+  ) => void;
   removeItem: (productId: string, variantInfo?: string) => void;
   updateQuantity: (productId: string, quantity: number, variantInfo?: string) => void;
   clearCart: () => void;
   openCartDrawer: () => void;
   closeCartDrawer: () => void;
   toggleCartDrawer: () => void;
+  showToast: (message: string, item?: CartToastData["item"]) => void;
+  hideToast: () => void;
   getSubtotal: () => number;
   getTotalItems: () => number;
 }
@@ -18,24 +42,76 @@ interface CartStore {
 export const useCartStore = create<CartStore>((set, get) => ({
   items: [],
   isCartDrawerOpen: false,
+  toast: null,
+  directBuyItem: null,
 
-  addItem: (item, quantity = 1) => {
+  setDirectBuyItem: (item, quantity = 1) => {
+    set({
+      directBuyItem: { ...item, quantity },
+      isCartDrawerOpen: false,
+    });
+  },
+
+  clearDirectBuyItem: () => {
+    set({ directBuyItem: null });
+  },
+
+  updateDirectBuyQuantity: (quantity: number) => {
+    if (quantity <= 0) {
+      set({ directBuyItem: null });
+    } else {
+      set((state) => ({
+        directBuyItem: state.directBuyItem ? { ...state.directBuyItem, quantity } : null,
+      }));
+    }
+  },
+
+  addItem: (item, quantity = 1, openDrawer = false, notify = true) => {
     set((state) => {
       const existingIndex = state.items.findIndex(
         (i) => i.productId === item.productId && i.variantInfo === item.variantInfo
       );
 
+      let updated: ICartItem[];
       if (existingIndex > -1) {
-        const updated = [...state.items];
+        updated = [...state.items];
         updated[existingIndex].quantity += quantity;
-        return { items: updated, isCartDrawerOpen: true };
+      } else {
+        updated = [...state.items, { ...item, quantity }];
       }
 
       return {
-        items: [...state.items, { ...item, quantity }],
-        isCartDrawerOpen: true,
+        items: updated,
+        isCartDrawerOpen: openDrawer ? true : false,
+        toast: notify
+          ? {
+              show: true,
+              message: "পণ্যটি সফলভাবে কার্টে যোগ হয়েছে!",
+              item: {
+                name: item.name,
+                image: item.image,
+                price: item.price,
+                quantity,
+                variantInfo: item.variantInfo,
+              },
+            }
+          : state.toast,
       };
     });
+  },
+
+  showToast: (message, item) => {
+    set({
+      toast: {
+        show: true,
+        message,
+        item,
+      },
+    });
+  },
+
+  hideToast: () => {
+    set({ toast: null });
   },
 
   removeItem: (productId, variantInfo) => {

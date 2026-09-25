@@ -10,6 +10,8 @@ export default function QuickViewModal() {
   const router = useRouter();
   const { isOpen, product, closeQuickView } = useQuickViewStore();
   const addItem = useCartStore((state) => state.addItem);
+  const setDirectBuyItem = useCartStore((state) => state.setDirectBuyItem);
+  const closeCartDrawer = useCartStore((state) => state.closeCartDrawer);
 
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -37,13 +39,31 @@ export default function QuickViewModal() {
         colorName: activeVariant?.colorName,
         sizeName: activeVariant?.sizeName,
       },
-      quantity
+      quantity,
+      false,
+      true
     );
     closeQuickView();
   };
 
   const handleOrderNow = () => {
-    handleAddToCart();
+    closeCartDrawer();
+    setDirectBuyItem(
+      {
+        productId: product._id,
+        name: product.name,
+        image: product.mainImage,
+        price: currentPrice,
+        slug: product.slug,
+        variantInfo: activeVariant
+          ? `${activeVariant.colorName || ""} ${activeVariant.sizeName || ""}`.trim()
+          : undefined,
+        colorName: activeVariant?.colorName,
+        sizeName: activeVariant?.sizeName,
+      },
+      quantity
+    );
+    closeQuickView();
     router.push("/checkout");
   };
 

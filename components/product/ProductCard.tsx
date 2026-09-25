@@ -14,34 +14,45 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const router = useRouter();
   const addItem = useCartStore((state) => state.addItem);
+  const setDirectBuyItem = useCartStore((state) => state.setDirectBuyItem);
+  const closeCartDrawer = useCartStore((state) => state.closeCartDrawer);
   const openQuickView = useQuickViewStore((state) => state.openQuickView);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
-    addItem({
-      productId: product._id,
-      name: product.name,
-      image: product.mainImage,
-      price: product.basePrice,
-      slug: product.slug,
-      variantInfo: product.variants?.[0]
-        ? `${product.variants[0].colorName || ""} ${product.variants[0].sizeName || ""}`.trim()
-        : undefined,
-    });
+    addItem(
+      {
+        productId: product._id,
+        name: product.name,
+        image: product.mainImage,
+        price: product.basePrice,
+        slug: product.slug,
+        variantInfo: product.variants?.[0]
+          ? `${product.variants[0].colorName || ""} ${product.variants[0].sizeName || ""}`.trim()
+          : undefined,
+      },
+      1,
+      false,
+      true
+    );
   };
 
   const handleOrderNow = (e: React.MouseEvent) => {
     e.preventDefault();
-    addItem({
-      productId: product._id,
-      name: product.name,
-      image: product.mainImage,
-      price: product.basePrice,
-      slug: product.slug,
-      variantInfo: product.variants?.[0]
-        ? `${product.variants[0].colorName || ""} ${product.variants[0].sizeName || ""}`.trim()
-        : undefined,
-    });
+    closeCartDrawer();
+    setDirectBuyItem(
+      {
+        productId: product._id,
+        name: product.name,
+        image: product.mainImage,
+        price: product.basePrice,
+        slug: product.slug,
+        variantInfo: product.variants?.[0]
+          ? `${product.variants[0].colorName || ""} ${product.variants[0].sizeName || ""}`.trim()
+          : undefined,
+      },
+      1
+    );
     router.push("/checkout");
   };
 

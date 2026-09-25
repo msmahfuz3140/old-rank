@@ -527,7 +527,13 @@ export default function AdminPage() {
       setOrders((prev) =>
         prev.map((ord) => (ord.invoiceId === invoiceId ? { ...ord, status: newStatus as any } : ord))
       );
-      showToast(`অর্ডার ${invoiceId} এর স্ট্যাটাস '${newStatus}' এ পরিবর্তন করা হয়েছে।`);
+      // Immediately refresh live server stats so revenue and metrics update
+      api.getAdminStats().then(setStats).catch(() => {});
+      if (newStatus === "confirmed") {
+        showToast(`🎉 অর্ডার ${invoiceId} কনফার্ম করা হয়েছে এবং মূল হিসাবে যুক্ত করা হয়েছে!`);
+      } else {
+        showToast(`অর্ডার ${invoiceId} এর স্ট্যাটাস '${newStatus}' এ পরিবর্তন করা হয়েছে।`);
+      }
     } catch {
       showToast("স্ট্যাটাস পরিবর্তন করা সম্ভব হয়নি।");
     }
@@ -543,7 +549,8 @@ export default function AdminPage() {
             : ord
         )
       );
-      showToast(`ইনভয়েস ${invoiceId} এর TrxID সফলভাবে ভেরিফাই করা হয়েছে!`);
+      api.getAdminStats().then(setStats).catch(() => {});
+      showToast(`ইনভয়েস ${invoiceId} এর পেমেন্ট ভেরিফাই হয়েছে ও কনফার্ম হিসাবে যুক্ত হয়েছে!`);
     } catch {
       showToast("ভেরিফিকেশন সম্পন্ন হয়নি।");
     }
@@ -848,8 +855,20 @@ export default function AdminPage() {
     let deliveredRevenue = 0;
     let deliveredProfit = 0;
 
+    let pendingOrdersCount = 0;
+    let pendingPotentialRevenue = 0;
+
     plOrders.forEach((ord) => {
       if (ord.status === "cancelled") return;
+
+      // Pending orders stay waiting and are NOT added to business calculations until admin confirms
+      if (ord.status === "pending") {
+        pendingOrdersCount++;
+        pendingPotentialRevenue += Number(ord.grandTotal) || Number(ord.subtotal) || 0;
+        return;
+      }
+
+      // ONLY confirmed, processing, shipped, delivered orders count in real business calculations
       validOrdersCount++;
       const sale = Number(ord.grandTotal) || Number(ord.subtotal) || 0;
       grossRevenue += sale;
@@ -889,16 +908,20 @@ export default function AdminPage() {
       validOrdersCount,
       deliveredRevenue,
       deliveredProfit,
+      pendingOrdersCount,
+      pendingPotentialRevenue,
     };
   }, [plOrders, products]);
 
-  // Overall lifetime totalCost & netProfit for compatibility
-  const totalCost = orders.reduce((sum, ord) => {
-    const ordCost = ord.items?.reduce((itemSum, item) => {
-      return itemSum + getItemUnitCost(item) * (Number(item.quantity) || 1);
-    }, 0) || 0;
-    return sum + ordCost;
-  }, 0);
+  // Overall lifetime totalCost & netProfit for compatibility (strictly excludes pending and cancelled)
+  const totalCost = orders
+    .filter((ord) => ["confirmed", "processing", "shipped", "delivered"].includes(ord.status))
+    .reduce((sum, ord) => {
+      const ordCost = ord.items?.reduce((itemSum, item) => {
+        return itemSum + getItemUnitCost(item) * (Number(item.quantity) || 1);
+      }, 0) || 0;
+      return sum + ordCost;
+    }, 0);
 
   const totalNetProfit = Math.max(0, (stats.totalRevenue || 0) - totalCost);
 
@@ -1650,23 +1673,23 @@ export default function AdminPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Card 1: Overlapping bars on mobile */}
               <SalesBarChart
-                marketplaceTotal={stats.totalRevenue || 365400}
-                lastWeekTotal={Math.round((stats.totalRevenue || 365400) * 0.26)}
-                lastMonthTotal={Math.round((stats.totalRevenue || 365400) * 0.82)}
+                marketplaceTotal={stats.totalRevenue || 0}
+                lastWeekTotal={Math.round((stats.totalRevenue || 0) * 0.26)}
+                lastMonthTotal={Math.round((stats.totalRevenue || 0) * 0.82)}
               />
 
               {/* Card 2: Stacked bar chart */}
               <StackedBarChart
-                deliveredCount={stats.deliveredOrders || 3654}
-                processingCount={orders.filter((o) => o.status === "processing" || o.status === "shipped").length || 954}
-                pendingCount={orders.filter((o) => o.status === "pending").length || 8462}
+                deliveredCount={stats.deliveredOrders || 0}
+                processingCount={orders.filter((o) => o.status === "processing" || o.status === "shipped").length || 0}
+                pendingCount={orders.filter((o) => o.status === "pending").length || 0}
               />
 
               {/* Card 3: Animating a Donut with Svg.animate */}
               <DonutWheelChart
-                cat1={products.length || 3654}
-                cat2={vendors.length || 954}
-                cat3={stats.totalOrders || 8462}
+                cat1={products.length || 0}
+                cat2={vendors.length || 0}
+                cat3={stats.totalOrders || 0}
               />
 
               {/* Card 4: Simple pie chart */}
@@ -1725,6 +1748,25 @@ export default function AdminPage() {
                   );
                 })}
               </div>
+
+              {/* Pending Orders Notice Banner */}
+              {plMetrics.pendingOrdersCount > 0 && (
+                <div className="bg-amber-50/90 border border-amber-200/90 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-amber-900">
+                    <Clock size={15} className="text-amber-600 shrink-0" />
+                    <span>
+                      <strong>{plMetrics.pendingOrdersCount} টি পেন্ডিং অর্ডার</strong> (সম্ভাব্য বিক্রয় ৳ {plMetrics.pendingPotentialRevenue.toLocaleString()}) — আপনার নির্দেশ অনুযায়ী এগুলো এখনও হিসাবে যোগ হয়নি। অর্ডার কনফার্ম করলেই মূল হিসাবে যুক্ত হবে।
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("orders")}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 hover:text-amber-950 underline shrink-0 cursor-pointer"
+                  >
+                    <span>অর্ডার কনফার্ম করুন →</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* KPI Cards (Dynamic Real Database Tracking with Live Timeframe) */}
@@ -2414,37 +2456,74 @@ export default function AdminPage() {
                               return sum + unitCost * (Number(item.quantity) || 1);
                             }, 0) || 0;
                             const profit = Math.max(0, (Number(ord.grandTotal) || 0) - (Number(ord.deliveryCharge) || 0) - ordCost);
+
+                            if (ord.status === "pending") {
+                              return (
+                                <div>
+                                  <span className="font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 text-xs inline-block">
+                                    সম্ভাব্য ৳ {profit.toLocaleString()}
+                                  </span>
+                                  <span className="text-[10px] text-amber-600 font-semibold block mt-0.5">⏳ কনফার্মের অপেক্ষায়</span>
+                                </div>
+                              );
+                            }
+
+                            if (ord.status === "cancelled") {
+                              return (
+                                <div>
+                                  <span className="font-medium text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 text-xs inline-block">
+                                    ৳ 0
+                                  </span>
+                                  <span className="text-[10px] text-rose-500 font-semibold block mt-0.5">বাতিল (বাদ)</span>
+                                </div>
+                              );
+                            }
+
                             return (
                               <div>
                                 <span className="font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 text-xs inline-block">
                                   +৳ {profit.toLocaleString()}
                                 </span>
-                                <span className="text-[10px] text-emerald-600 font-bold block mt-0.5">লাভ</span>
+                                <span className="text-[10px] text-emerald-600 font-bold block mt-0.5">লাভ (হিসাবে যুক্ত)</span>
                               </div>
                             );
                           })()}
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <select
-                            value={ord.status}
-                            onChange={(e) => handleStatusChange(ord.invoiceId, e.target.value)}
-                            className={`px-2 py-1 rounded-lg text-xs font-bold border focus:outline-none focus:ring-1 cursor-pointer ${
-                              ord.status === "delivered"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                : ord.status === "confirmed"
-                                ? "bg-blue-50 text-blue-700 border-blue-200"
-                                : ord.status === "shipped"
-                                ? "bg-purple-50 text-purple-700 border-purple-200"
-                                : "bg-amber-50 text-amber-700 border-amber-200"
-                            }`}
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="shipped">Shipped</option>
-                            <option value="delivered">Delivered</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={ord.status}
+                              onChange={(e) => handleStatusChange(ord.invoiceId, e.target.value)}
+                              className={`px-2 py-1 rounded-lg text-xs font-bold border focus:outline-none focus:ring-1 cursor-pointer ${
+                                ord.status === "delivered"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                  : ord.status === "confirmed"
+                                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  : ord.status === "shipped"
+                                  ? "bg-purple-50 text-purple-700 border-purple-200"
+                                  : "bg-amber-50 text-amber-700 border-amber-200"
+                              }`}
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="confirmed">Confirmed</option>
+                              <option value="shipped">Shipped</option>
+                              <option value="delivered">Delivered</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+
+                            {ord.status === "pending" && (
+                              <button
+                                type="button"
+                                onClick={() => handleStatusChange(ord.invoiceId, "confirmed")}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs cursor-pointer transition-all shrink-0"
+                                title="অর্ডার কনফার্ম করে লাভ-ক্ষতি ও মূল হিসাবে যোগ করুন"
+                              >
+                                <CheckCircle2 size={12} />
+                                <span>কনফার্ম</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
 
                         <td className="py-3.5 px-4 text-center">
@@ -3893,6 +3972,32 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {/* Pending Notice in Profit & Loss Tab */}
+            {plMetrics.pendingOrdersCount > 0 && (
+              <div className="bg-amber-50/90 border border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+                <div className="flex items-center gap-2.5 text-amber-900">
+                  <div className="w-8 h-8 rounded-xl bg-amber-200/80 text-amber-800 flex items-center justify-center shrink-0">
+                    <Clock size={16} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-amber-950">
+                      {plMetrics.pendingOrdersCount} টি অর্ডার এখনও পেন্ডিং (সম্ভাব্য বিক্রয় ৳ {plMetrics.pendingPotentialRevenue.toLocaleString()})
+                    </p>
+                    <p className="text-[11px] text-amber-700 mt-0.5">
+                      আপনার চাওয়া অনুযায়ী এগুলো পেন্ডিং অবস্থায় রয়েছে এবং হিসাবে যোগ হয়নি। আপনি অর্ডার কনফার্ম করলেই এগুলো মোট বিক্রয় ও নিট লাভে যোগ হবে।
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("orders")}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 cursor-pointer shadow-xs transition-colors"
+                >
+                  <span>পেন্ডিং অর্ডার কনফার্ম করুন →</span>
+                </button>
+              </div>
+            )}
+
             {/* 3. 5 Core Financial Summary Metric Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
               {/* Card 1: Gross Sales Revenue */}
@@ -4211,53 +4316,94 @@ export default function AdminPage() {
 
                             {/* Net Profit / Loss */}
                             <td className="py-3.5 px-4 text-right">
-                              <span
-                                className={`inline-block font-black text-xs px-2.5 py-1 rounded-lg ${
-                                  isOrderProfit
-                                    ? "bg-emerald-100 text-emerald-800"
-                                    : "bg-rose-100 text-rose-800"
-                                }`}
-                              >
-                                {isOrderProfit ? "+" : "-"}৳ {Math.abs(orderNet).toLocaleString()}
-                              </span>
+                              {ord.status === "pending" ? (
+                                <div>
+                                  <span className="inline-block font-bold text-xs px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-200">
+                                    সম্ভাব্য ৳ {Math.abs(orderNet).toLocaleString()}
+                                  </span>
+                                  <span className="text-[10px] text-amber-700 font-semibold block mt-0.5">
+                                    ⏳ কনফার্মের অপেক্ষায়
+                                  </span>
+                                </div>
+                              ) : ord.status === "cancelled" ? (
+                                <div>
+                                  <span className="inline-block font-medium text-xs px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500">
+                                    ৳ 0
+                                  </span>
+                                  <span className="text-[10px] text-rose-500 font-semibold block mt-0.5">
+                                    বাতিল (হিসাবে নেই)
+                                  </span>
+                                </div>
+                              ) : (
+                                <div>
+                                  <span
+                                    className={`inline-block font-black text-xs px-2.5 py-1 rounded-lg ${
+                                      isOrderProfit
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : "bg-rose-100 text-rose-800"
+                                    }`}
+                                  >
+                                    {isOrderProfit ? "+" : "-"}৳ {Math.abs(orderNet).toLocaleString()}
+                                  </span>
+                                  <span className="text-[10px] text-emerald-600 font-bold block mt-0.5">
+                                    হিসাবে যুক্ত
+                                  </span>
+                                </div>
+                              )}
                             </td>
 
                             {/* Margin % */}
                             <td className="py-3.5 px-4 text-center">
                               <span
                                 className={`text-[11px] font-black ${
-                                  Number(orderMargin) >= 30
+                                  ord.status === "pending"
+                                    ? "text-amber-600"
+                                    : Number(orderMargin) >= 30
                                     ? "text-emerald-600"
                                     : Number(orderMargin) > 0
                                     ? "text-amber-600"
                                     : "text-rose-600"
                                 }`}
                               >
-                                {orderMargin}%
+                                {orderMargin}% {ord.status === "pending" && <span className="text-[9px] block text-amber-600 font-normal">(সম্ভাব্য)</span>}
                               </span>
                             </td>
 
                             {/* Status */}
                             <td className="py-3.5 px-4 text-center">
-                              <span
-                                className={`inline-block text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
-                                  ord.status === "delivered"
-                                    ? "bg-emerald-100 text-emerald-800"
+                              <div className="flex flex-col items-center gap-1.5">
+                                <span
+                                  className={`inline-block text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                                    ord.status === "delivered"
+                                      ? "bg-emerald-100 text-emerald-800"
+                                      : ord.status === "pending"
+                                      ? "bg-amber-100 text-amber-800"
+                                      : ord.status === "cancelled"
+                                      ? "bg-rose-100 text-rose-800"
+                                      : "bg-blue-100 text-blue-800"
+                                  }`}
+                                >
+                                  {ord.status === "delivered"
+                                    ? "ডেলিভার্ড"
                                     : ord.status === "pending"
-                                    ? "bg-amber-100 text-amber-800"
+                                    ? "পেন্ডিং"
                                     : ord.status === "cancelled"
-                                    ? "bg-rose-100 text-rose-800"
-                                    : "bg-blue-100 text-blue-800"
-                                }`}
-                              >
-                                {ord.status === "delivered"
-                                  ? "ডেলিভার্ড"
-                                  : ord.status === "pending"
-                                  ? "পেন্ডিং"
-                                  : ord.status === "cancelled"
-                                  ? "বাতিল"
-                                  : "প্রসেসিং"}
-                              </span>
+                                    ? "বাতিল"
+                                    : "প্রসেসিং"}
+                                </span>
+
+                                {ord.status === "pending" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStatusChange(ord.invoiceId, "confirmed")}
+                                    className="px-2 py-0.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] cursor-pointer transition-colors shadow-2xs flex items-center gap-0.5"
+                                    title="অর্ডার কনফার্ম করে হিসাবে যোগ করুন"
+                                  >
+                                    <CheckCircle2 size={10} />
+                                    <span>কনফার্ম</span>
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );

@@ -10,6 +10,7 @@ export default function CartDrawer() {
     items,
     isCartDrawerOpen,
     closeCartDrawer,
+    clearDirectBuyItem,
     removeItem,
     updateQuantity,
     getSubtotal,
@@ -151,7 +152,10 @@ export default function CartDrawer() {
               </p>
               <Link
                 href="/checkout"
-                onClick={closeCartDrawer}
+                onClick={() => {
+                  clearDirectBuyItem();
+                  closeCartDrawer();
+                }}
                 className="w-full bg-[#303d6e] hover:bg-indigo-800 text-white font-bold py-3.5 px-4 rounded-2xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/20 transition-all active:scale-98"
               >
                 চেকআউট করুন <ArrowRight size={16} />

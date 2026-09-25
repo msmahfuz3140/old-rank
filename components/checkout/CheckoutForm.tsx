@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
+  Trash2,
 } from "lucide-react";
 import { useCartStore } from "@/lib/store";
 import { api } from "@/lib/api";
@@ -20,9 +21,42 @@ import ProductImage from "@/components/product/ProductImage";
 
 export default function CheckoutForm() {
   const router = useRouter();
-  const { items, getSubtotal, clearCart } = useCartStore();
-  const subtotal = getSubtotal();
+  const {
+    items,
+    directBuyItem,
+    clearDirectBuyItem,
+    updateDirectBuyQuantity,
+    getSubtotal,
+    clearCart,
+    closeCartDrawer,
+    updateQuantity,
+    removeItem,
+  } = useCartStore();
 
+  const activeItems = directBuyItem ? [directBuyItem] : items;
+  const subtotal = directBuyItem
+    ? directBuyItem.price * directBuyItem.quantity
+    : getSubtotal();
+
+  useEffect(() => {
+    closeCartDrawer();
+  }, [closeCartDrawer]);
+
+  const handleUpdateItemQuantity = (productId: string, newQty: number, variantInfo?: string) => {
+    if (directBuyItem) {
+      updateDirectBuyQuantity(newQty);
+    } else {
+      updateQuantity(productId, newQty, variantInfo);
+    }
+  };
+
+  const handleRemoveItem = (productId: string, variantInfo?: string) => {
+    if (directBuyItem) {
+      clearDirectBuyItem();
+    } else {
+      removeItem(productId, variantInfo);
+    }
+  };
 
   // Form State
   const [name, setName] = useState("");
@@ -69,7 +103,7 @@ export default function CheckoutForm() {
   // Debounced Auto-Save Incomplete Order Lead (Abandoned Cart recovery)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
-    if (phone.length >= 10 && items.length > 0) {
+    if (phone.length >= 10 && activeItems.length > 0) {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(() => {
         api.saveIncompleteOrder({
@@ -78,7 +112,7 @@ export default function CheckoutForm() {
           address,
           division,
           district,
-          items: items.map((i) => ({
+          items: activeItems.map((i) => ({
             productId: i.productId,
             name: i.name,
             price: i.price,
@@ -93,7 +127,7 @@ export default function CheckoutForm() {
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
-  }, [phone, name, address, division, district, items, subtotal, deliveryCharge]);
+  }, [phone, name, address, division, district, activeItems, subtotal, deliveryCharge]);
 
   // Coupon Submission
   const handleApplyCoupon = async () => {
@@ -132,7 +166,7 @@ export default function CheckoutForm() {
         division,
         district,
         note: orderNote,
-        items: items.map((i) => ({
+        items: activeItems.map((i) => ({
           productId: i.productId,
           name: i.name,
           image: i.image,
@@ -152,7 +186,11 @@ export default function CheckoutForm() {
       const result = await api.submitOrder(orderData);
 
       if (result.success) {
-        clearCart();
+        if (directBuyItem) {
+          clearDirectBuyItem();
+        } else {
+          clearCart();
+        }
         const invoiceId = result.data?.order?.invoiceId || "OR-ORDER";
         router.push(`/order-success?invoiceId=${invoiceId}&phone=${finalPhone}&paymentStatus=pending`);
       } else {
@@ -170,7 +208,7 @@ export default function CheckoutForm() {
     e.preventDefault();
     setErrorMessage("");
 
-    if (items.length === 0) {
+    if (activeItems.length === 0) {
       setErrorMessage("আপনার কার্টে কোনো পণ্য নেই। অনুগ্রহ করে পণ্য যোগ করুন।");
       return;
     }
@@ -204,20 +242,6 @@ export default function CheckoutForm() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Delivery & Payment Details */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Frictionless Guest Checkout Reassurance Banner */}
-          <div className="bg-emerald-50 border border-emerald-200/90 rounded-2xl p-4 flex items-center gap-3 text-emerald-950 shadow-xs">
-            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
-              <CheckCircle2 size={18} />
-            </div>
-            <div>
-              <h4 className="font-extrabold text-xs text-emerald-950">
-                কোনো অ্যাকাউন্ট বা লগইন ছাড়াই সরাসরি ক্যাশ অন ডেলিভারি
-              </h4>
-              <p className="text-[11px] text-emerald-800 mt-0.5">
-                শুধু আপনার নাম, ফোন ও ঠিকানা লিখে সরাসরি অর্ডার করুন। পণ্য হাতে পেয়ে সম্পূর্ণ নিশ্চিন্তে মূল্য পরিশোধ করবেন।
-              </p>
-            </div>
-          </div>
 
           {/* Card 1: Customer & Shipping Information */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
@@ -384,39 +408,101 @@ export default function CheckoutForm() {
         {/* Right Column: Order Summary & Placement */}
         <div className="lg:col-span-5 sticky top-24 space-y-6">
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-extrabold text-slate-900 pb-3 mb-4 border-b border-slate-100">
-              অর্ডার সামারি ({items.length} টি পণ্য)
+            <h3 className="text-lg font-extrabold text-slate-900 pb-3 mb-4 border-b border-slate-100 flex items-center justify-between">
+              <span>অর্ডার সামারি ({activeItems.length} টি পণ্য)</span>
+              {directBuyItem && (
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
+                  সরাসরি বাই
+                </span>
+              )}
             </h3>
 
-            {/* Cart Item Previews */}
-            <div className="max-h-64 overflow-y-auto space-y-3 mb-6 pr-1">
-              {items.map((item) => (
-                <div
-                  key={`${item.productId}-${item.variantInfo || ""}`}
-                  className="flex items-center justify-between text-xs gap-3 py-1.5"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-10 h-10 rounded-lg overflow-hidden border border-slate-100 shrink-0 bg-white">
-                      <ProductImage
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                        showText={false}
-                        iconSize={14}
-                      />
+            {/* Cart Item Previews with Quantity Controls */}
+            <div className="max-h-80 overflow-y-auto space-y-3 mb-6 pr-1 divide-y divide-slate-100">
+              {activeItems.length === 0 ? (
+                <div className="text-center py-8 text-slate-400">
+                  <p className="text-xs font-semibold">আপনার অর্ডার তালিকায় কোনো পণ্য নেই</p>
+                  <button
+                    type="button"
+                    onClick={() => router.push("/shop")}
+                    className="mt-2 text-xs font-bold text-[#303d6e] hover:underline"
+                  >
+                    শপ থেকে পণ্য নির্বাচন করুন →
+                  </button>
+                </div>
+              ) : (
+                activeItems.map((item) => (
+                  <div
+                    key={`${item.productId}-${item.variantInfo || ""}`}
+                    className="pt-2.5 first:pt-0 flex items-center justify-between gap-2.5 text-xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-white shadow-2xs">
+                        <ProductImage
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          showText={false}
+                          iconSize={14}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-800 truncate leading-tight">
+                          {item.name}
+                        </p>
+                        {item.variantInfo && (
+                          <p className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
+                            {item.variantInfo}
+                          </p>
+                        )}
+                        <div className="text-[11px] font-extrabold text-[#303d6e] mt-1">
+                          ৳ {item.price.toLocaleString()} × {item.quantity} ={" "}
+                          <span className="text-slate-900 font-black">
+                            ৳ {(item.price * item.quantity).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-800 truncate">{item.name}</p>
-                      <p className="text-slate-400 font-medium">
-                        Qty: {item.quantity} {item.variantInfo ? `• ${item.variantInfo}` : ""}
-                      </p>
+
+                    {/* Quantity Adjustment (+ / -) & Delete Button */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-slate-50 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateItemQuantity(item.productId, item.quantity - 1, item.variantInfo)}
+                          className="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-slate-200 hover:text-slate-900 font-black transition-colors cursor-pointer text-xs"
+                          title="পরিমাণ কমান"
+                          aria-label="Decrease quantity"
+                        >
+                          -
+                        </button>
+                        <span className="w-6 text-center font-black text-slate-900 text-xs">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateItemQuantity(item.productId, item.quantity + 1, item.variantInfo)}
+                          className="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-slate-200 hover:text-slate-900 font-black transition-colors cursor-pointer text-xs"
+                          title="পরিমাণ বাড়ান"
+                          aria-label="Increase quantity"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(item.productId, item.variantInfo)}
+                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                        title="মুছে ফেলুন"
+                        aria-label="Remove item"
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </div>
                   </div>
-                  <span className="font-extrabold text-slate-900 shrink-0">
-                    ৳ {(item.price * item.quantity).toLocaleString()}
-                  </span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             {/* Coupon Code Section */}

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { X, Sparkles, ArrowRight, Tag, Check, Copy } from "lucide-react";
+import { useCartStore } from "@/lib/store";
 
 export default function PromoModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -92,7 +93,10 @@ export default function PromoModal() {
           <div className="flex gap-3">
             <Link
               href="/checkout"
-              onClick={() => setIsOpen(false)}
+              onClick={() => {
+                useCartStore.getState().clearDirectBuyItem();
+                setIsOpen(false);
+              }}
               className="flex-1 bg-[#303d6e] hover:bg-indigo-800 text-white font-bold py-3 px-4 rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all hover:scale-[1.02]"
             >
               অর্ডার করুন এখনই <ArrowRight size={16} />

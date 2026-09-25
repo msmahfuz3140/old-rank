@@ -296,7 +296,9 @@ export default function ThreeDShowcase() {
   const activeItem = SHOWCASE_PRODUCTS[activeIdx];
   const stageRef = useRef<HTMLDivElement>(null);
   const addItem = useCartStore((state) => state.addItem);
+  const setDirectBuyItem = useCartStore((state) => state.setDirectBuyItem);
   const openCart = useCartStore((state) => state.openCartDrawer);
+  const closeCart = useCartStore((state) => state.closeCartDrawer);
 
   // Auto-Orbit interval
   useEffect(() => {
@@ -419,12 +421,30 @@ export default function ThreeDShowcase() {
         colorName: activeItem.colors[selectedColorIdx]?.name,
         variantInfo: `${selectedSize} | ${activeItem.colors[selectedColorIdx]?.name || ""}`,
       },
-      1
+      1,
+      false,
+      true
     );
 
     setToastMessage("কার্টে যোগ করা হয়েছে!");
     setTimeout(() => setToastMessage(""), 2500);
-    openCart();
+  };
+
+  const handleDirectBuy = () => {
+    setDirectBuyItem(
+      {
+        productId: activeItem.id,
+        name: `${activeItem.name} - ${activeItem.colors[selectedColorIdx]?.name || ""}`,
+        slug: activeItem.slug,
+        price: activeItem.basePrice,
+        image: activeItem.image,
+        sizeName: selectedSize,
+        colorName: activeItem.colors[selectedColorIdx]?.name,
+        variantInfo: `${selectedSize} | ${activeItem.colors[selectedColorIdx]?.name || ""}`,
+      },
+      1
+    );
+    closeCart();
   };
 
   // View Angle offsets
@@ -879,7 +899,7 @@ export default function ThreeDShowcase() {
 
                 <Link
                   href="/checkout"
-                  onClick={handleAddToCart}
+                  onClick={handleDirectBuy}
                   className="flex items-center justify-center gap-2 py-3 px-5 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black text-sm transition-all active:scale-95 shadow-xl shadow-amber-400/25 text-center"
                 >
                   <Zap size={18} className="fill-slate-950 text-slate-950" />
