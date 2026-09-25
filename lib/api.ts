@@ -382,19 +382,14 @@ export const fallbackVendors: IVendor[] = [
   },
 ];
 
-export const fallbackDeliveryZones: IDeliveryZone[] = [
-  { division: "Dhaka", district: "Dhaka City", deliveryCharge: 60, estimatedDelivery: "24-48 Hours" },
-  { division: "Dhaka", district: "Gazipur", deliveryCharge: 100, estimatedDelivery: "2-3 Days" },
-  { division: "Dhaka", district: "Narayanganj", deliveryCharge: 100, estimatedDelivery: "2-3 Days" },
-  { division: "Chittagong", district: "Chittagong City", deliveryCharge: 120, estimatedDelivery: "2-3 Days" },
-  { division: "Chittagong", district: "Cox's Bazar", deliveryCharge: 130, estimatedDelivery: "3-4 Days" },
-  { division: "Sylhet", district: "Sylhet City", deliveryCharge: 120, estimatedDelivery: "2-3 Days" },
-  { division: "Rajshahi", district: "Rajshahi City", deliveryCharge: 120, estimatedDelivery: "2-3 Days" },
-  { division: "Khulna", district: "Khulna City", deliveryCharge: 120, estimatedDelivery: "2-3 Days" },
-  { division: "Barisal", district: "Barisal City", deliveryCharge: 120, estimatedDelivery: "3-4 Days" },
-  { division: "Rangpur", district: "Rangpur City", deliveryCharge: 120, estimatedDelivery: "3-4 Days" },
-  { division: "Mymensingh", district: "Mymensingh City", deliveryCharge: 120, estimatedDelivery: "2-3 Days" },
-];
+import { BANGLADESH_64_DISTRICTS } from "./districts";
+
+export const fallbackDeliveryZones: IDeliveryZone[] = BANGLADESH_64_DISTRICTS.map((d) => ({
+  division: d.division,
+  district: d.name,
+  deliveryCharge: d.deliveryCharge,
+  estimatedDelivery: d.estimatedDelivery,
+}));
 
 // Robust fetch helper with 6000ms timeout for live database connection
 async function fetchFast(url: string, options: RequestInit = {}, timeoutMs: number = 6000): Promise<Response> {

@@ -18,6 +18,12 @@ import { useCartStore } from "@/lib/store";
 import { api } from "@/lib/api";
 import { IDeliveryZone } from "@/lib/types";
 import ProductImage from "@/components/product/ProductImage";
+import {
+  BANGLADESH_DIVISIONS,
+  BANGLADESH_64_DISTRICTS,
+  getDistrictsByDivision,
+  findDistrict,
+} from "@/lib/districts";
 
 export default function CheckoutForm() {
   const router = useRouter();
@@ -62,8 +68,8 @@ export default function CheckoutForm() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [division, setDivision] = useState("Dhaka");
-  const [district, setDistrict] = useState("Dhaka City");
+  const [division, setDivision] = useState("All");
+  const [district, setDistrict] = useState("Dhaka (ঢাকা)");
   const [orderNote, setOrderNote] = useState("");
 
   // Delivery & Zones
@@ -92,13 +98,45 @@ export default function CheckoutForm() {
 
   // Recalculate shipping charge when district changes
   useEffect(() => {
-    const matchedZone = deliveryZones.find((z) => z.district === district);
+    const matchedZone = deliveryZones.find(
+      (z) =>
+        z.district.toLowerCase() === district.toLowerCase() ||
+        district.toLowerCase().includes(z.district.toLowerCase())
+    );
     if (matchedZone) {
       setDeliveryCharge(matchedZone.deliveryCharge);
     } else {
-      setDeliveryCharge(division === "Dhaka" ? 60 : 120);
+      const found = findDistrict(district);
+      if (found) {
+        setDeliveryCharge(found.deliveryCharge);
+      } else {
+        setDeliveryCharge(district.toLowerCase().includes("dhaka") ? 60 : 120);
+      }
     }
   }, [district, division, deliveryZones]);
+
+  const handleDivisionChange = (newDivision: string) => {
+    setDivision(newDivision);
+    if (newDivision === "All") {
+      return;
+    }
+    const dists = getDistrictsByDivision(newDivision);
+    if (dists.length > 0) {
+      setDistrict(dists[0].name);
+      setDeliveryCharge(dists[0].deliveryCharge);
+    }
+  };
+
+  const handleDistrictChange = (newDistrictName: string) => {
+    setDistrict(newDistrictName);
+    const found = findDistrict(newDistrictName);
+    if (found) {
+      if (division !== "All" && found.division !== division) {
+        setDivision(found.division);
+      }
+      setDeliveryCharge(found.deliveryCharge);
+    }
+  };
 
   // Debounced Auto-Save Incomplete Order Lead (Abandoned Cart recovery)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -231,11 +269,6 @@ export default function CheckoutForm() {
     // Proceed for Cash on Delivery
     await finalizeOrder();
   };
-
-
-  const availableDistricts = deliveryZones
-    .filter((z) => z.division === division)
-    .map((z) => z.district);
 
   return (
     <form onSubmit={handleSubmitOrder} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
@@ -408,43 +441,50 @@ export default function CheckoutForm() {
                   </label>
                   <select
                     value={division}
-                    onChange={(e) => {
-                      setDivision(e.target.value);
-                      setDistrict(e.target.value === "Dhaka" ? "Dhaka City" : "Chittagong City");
-                    }}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#303d6e] focus:bg-white"
+                    onChange={(e) => handleDivisionChange(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#303d6e] focus:bg-white font-medium"
                   >
-                    <option value="Dhaka">Dhaka (ঢাকা)</option>
-                    <option value="Chittagong">Chittagong (চট্টগ্রাম)</option>
-                    <option value="Sylhet">Sylhet (সিলেট)</option>
-                    <option value="Rajshahi">Rajshahi (রাজশাহী)</option>
-                    <option value="Khulna">Khulna (খুলনা)</option>
-                    <option value="Barisal">Barisal (বরিশাল)</option>
-                    <option value="Rangpur">Rangpur (রংপুর)</option>
-                    <option value="Mymensingh">Mymensingh (ময়মনসিংহ)</option>
+                    {BANGLADESH_DIVISIONS.map((div) => (
+                      <option key={div.id} value={div.id}>
+                        {div.nameBn} ({div.nameEn})
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1.5 uppercase">
-                    জেলা / এলাকা <span className="text-red-500">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-700 uppercase">
+                      জেলা (৬৪টি জেলা) <span className="text-red-500">*</span>
+                    </label>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      সারা বাংলাদেশ
+                    </span>
+                  </div>
                   <select
                     value={district}
-                    onChange={(e) => setDistrict(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#303d6e] focus:bg-white"
+                    onChange={(e) => handleDistrictChange(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#303d6e] focus:bg-white font-medium"
                   >
-                    {availableDistricts.length > 0 ? (
-                      availableDistricts.map((d) => (
-                        <option key={d} value={d}>
-                          {d}
+                    {division === "All" ? (
+                      BANGLADESH_DIVISIONS.filter((div) => div.id !== "All").map((div) => {
+                        const divDistricts = getDistrictsByDivision(div.id);
+                        return (
+                          <optgroup key={div.id} label={`${div.nameBn} বিভাগ (${divDistricts.length}টি জেলা)`}>
+                            {divDistricts.map((d) => (
+                              <option key={d.id} value={d.name}>
+                                {d.name} — চার্জ ৳{d.deliveryCharge} ({d.estimatedDelivery})
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      })
+                    ) : (
+                      getDistrictsByDivision(division).map((d) => (
+                        <option key={d.id} value={d.name}>
+                          {d.name} — চার্জ ৳{d.deliveryCharge} ({d.estimatedDelivery})
                         </option>
                       ))
-                    ) : (
-                      <>
-                        <option value="Dhaka City">Dhaka City (৳60)</option>
-                        <option value="Outside Dhaka">Outside Dhaka (৳120)</option>
-                      </>
                     )}
                   </select>
                 </div>
