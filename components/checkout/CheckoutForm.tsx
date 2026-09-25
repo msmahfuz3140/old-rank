@@ -473,7 +473,7 @@ export default function CheckoutForm() {
                           <optgroup key={div.id} label={`${div.nameBn} বিভাগ (${divDistricts.length}টি জেলা)`}>
                             {divDistricts.map((d) => (
                               <option key={d.id} value={d.name}>
-                                {d.name} — চার্জ ৳{d.deliveryCharge} ({d.estimatedDelivery})
+                                {d.name}
                               </option>
                             ))}
                           </optgroup>
@@ -482,7 +482,7 @@ export default function CheckoutForm() {
                     ) : (
                       getDistrictsByDivision(division).map((d) => (
                         <option key={d.id} value={d.name}>
-                          {d.name} — চার্জ ৳{d.deliveryCharge} ({d.estimatedDelivery})
+                          {d.name}
                         </option>
                       ))
                     )}
@@ -609,7 +609,7 @@ export default function CheckoutForm() {
                 <span className="font-bold text-slate-900">৳ {subtotal.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-slate-600">
-                <span>ডেলিভারি চার্জ ({district})</span>
+                <span>ডেলিভারি চার্জ</span>
                 <span className="font-bold text-slate-900">৳ {deliveryCharge.toLocaleString()}</span>
               </div>
               {discountAmount > 0 && (
