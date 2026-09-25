@@ -526,6 +526,32 @@ export default function AdminPage() {
     }
   };
 
+  // Helper to extract alternative phone and clean notes
+  const extractAltPhone = (note?: string) => {
+    if (!note) return null;
+    const match = note.match(/বিকল্প ফোন:\s*([^\s|]+)/);
+    if (match) return match[1].trim();
+    return null;
+  };
+
+  const getCleanCustomerNote = (note?: string) => {
+    if (!note) return "";
+    return note.replace(/বিকল্প ফোন:\s*[^\s|]+(\s*\|\s*)?/, "").trim();
+  };
+
+  const getCleanPhoneForCall = (phone?: string) => {
+    if (!phone) return "";
+    return phone.replace(/[^\d+]/g, "");
+  };
+
+  const getCleanPhoneForWhatsApp = (phone?: string) => {
+    if (!phone) return "";
+    let p = phone.replace(/[^\d]/g, "");
+    if (p.startsWith("880")) return p;
+    if (p.startsWith("0")) return "88" + p;
+    return "880" + p;
+  };
+
   // Order Handlers
   const handleStatusChange = async (invoiceId: string, newStatus: string) => {
     try {
@@ -533,10 +559,22 @@ export default function AdminPage() {
       setOrders((prev) =>
         prev.map((ord) => (ord.invoiceId === invoiceId ? { ...ord, status: newStatus as any } : ord))
       );
+      setSelectedInvoice((prev) =>
+        prev && prev.invoiceId === invoiceId ? { ...prev, status: newStatus as any } : prev
+      );
       // Immediately refresh live server stats so revenue and metrics update
       api.getAdminStats().then(setStats).catch(() => {});
+
       if (newStatus === "confirmed") {
         showToast(`🎉 অর্ডার ${invoiceId} কনফার্ম করা হয়েছে এবং মূল হিসাবে যুক্ত করা হয়েছে!`);
+      } else if (newStatus === "processing") {
+        showToast(`📦 অর্ডার ${invoiceId} এর প্যাকেজিং ও প্রসেসিং শুরু হয়েছে!`);
+      } else if (newStatus === "shipped") {
+        showToast(`🚚 অর্ডার ${invoiceId} কুরিয়ারে হস্তান্তর করা হয়েছে!`);
+      } else if (newStatus === "delivered") {
+        showToast(`🏆 অর্ডার ${invoiceId} সফলভাবে ডেলিভার্ড ও সম্পন্ন হয়েছে!`);
+      } else if (newStatus === "cancelled") {
+        showToast(`❌ অর্ডার ${invoiceId} বাতিল করা হয়েছে!`);
       } else {
         showToast(`অর্ডার ${invoiceId} এর স্ট্যাটাস '${newStatus}' এ পরিবর্তন করা হয়েছে।`);
       }
@@ -957,12 +995,17 @@ export default function AdminPage() {
 
   // Filtered Orders
   const filteredOrders = orders.filter((o) => {
+    if (statusFilter && statusFilter !== "all" && o.status !== statusFilter) {
+      return false;
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return (
         o.invoiceId.toLowerCase().includes(q) ||
         o.customer?.phone?.includes(q) ||
-        o.customer?.name?.toLowerCase().includes(q)
+        o.customer?.name?.toLowerCase().includes(q) ||
+        o.customer?.district?.toLowerCase().includes(q) ||
+        o.customer?.address?.toLowerCase().includes(q)
       );
     }
     return true;
@@ -1781,10 +1824,13 @@ export default function AdminPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setActiveTab("orders")}
+                    onClick={() => {
+                      setActiveTab("orders");
+                      setStatusFilter("pending");
+                    }}
                     className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 hover:text-amber-950 underline shrink-0 cursor-pointer"
                   >
-                    <span>অর্ডার কনফার্ম করুন →</span>
+                    <span>পেন্ডিং অর্ডারসমূহ দেখুন ও কনফার্ম করুন →</span>
                   </button>
                 </div>
               )}
@@ -1937,15 +1983,37 @@ export default function AdminPage() {
                       <th className="py-2.5">পেমেন্ট মেথড</th>
                       <th className="py-2.5">মোট মূল্য</th>
                       <th className="py-2.5">স্ট্যাটাস</th>
+                      <th className="py-2.5 text-center">অ্যাকশন</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {orders.slice(0, 5).map((ord) => (
-                      <tr key={ord._id || ord.invoiceId} className="hover:bg-slate-50/60">
-                        <td className="py-3 font-bold text-slate-900">{ord.invoiceId}</td>
+                    {orders.slice(0, 6).map((ord) => (
+                      <tr
+                        key={ord._id || ord.invoiceId}
+                        onClick={() => setSelectedInvoice(ord)}
+                        className="hover:bg-amber-50/60 transition-colors cursor-pointer group"
+                      >
+                        <td className="py-3">
+                          <span className="font-extrabold text-slate-900 block font-mono group-hover:text-amber-800">
+                            {ord.invoiceId}
+                          </span>
+                          <span className="text-[10px] text-slate-400 block mt-0.5">
+                            {new Date(ord.createdAt).toLocaleDateString("bn-BD")}
+                          </span>
+                        </td>
                         <td className="py-3">
                           <span className="font-semibold block text-slate-800">{ord.customer?.name}</span>
-                          <span className="text-[11px] text-slate-400">{ord.customer?.phone}</span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[11px] text-slate-500 font-mono">{ord.customer?.phone}</span>
+                            <a
+                              href={`tel:${getCleanPhoneForCall(ord.customer?.phone)}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                              title="সরাসরি ফোন কল করুন"
+                            >
+                              <PhoneCall size={10} />
+                            </a>
+                          </div>
                         </td>
                         <td className="py-3">
                           <span className="font-bold text-slate-700 uppercase block text-[11px]">
@@ -1957,14 +2025,52 @@ export default function AdminPage() {
                           <span
                             className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
                               ord.status === "delivered"
-                                ? "bg-emerald-50 text-emerald-700"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                 : ord.status === "confirmed"
-                                ? "bg-blue-50 text-blue-700"
-                                : "bg-amber-50 text-amber-700"
+                                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                : ord.status === "processing"
+                                ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                : ord.status === "shipped"
+                                ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                : ord.status === "cancelled"
+                                ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                : "bg-amber-50 text-amber-700 border border-amber-200"
                             }`}
                           >
-                            {ord.status}
+                            {ord.status === "pending"
+                              ? "পেন্ডিং"
+                              : ord.status === "confirmed"
+                              ? "কনফার্মড"
+                              : ord.status === "processing"
+                              ? "প্রসেসিং"
+                              : ord.status === "shipped"
+                              ? "কুরিয়ারে"
+                              : ord.status === "delivered"
+                              ? "ডেলিভার্ড"
+                              : ord.status === "cancelled"
+                              ? "বাতিল"
+                              : ord.status}
                           </span>
+                        </td>
+                        <td className="py-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedInvoice(ord)}
+                              className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-bold text-[11px] inline-flex items-center gap-1 cursor-pointer transition-colors"
+                              title="সম্পূর্ণ বিবরণ দেখুন"
+                            >
+                              <Eye size={12} />
+                              <span>বিস্তারিত</span>
+                            </button>
+                            <a
+                              href={`tel:${getCleanPhoneForCall(ord.customer?.phone)}`}
+                              className="p-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs inline-flex items-center justify-center transition-colors"
+                              title="সরাসরি কল দিন"
+                            >
+                              <PhoneCall size={12} />
+                            </a>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -2361,17 +2467,34 @@ export default function AdminPage() {
             <div className="p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
               {/* Status Tabs */}
               <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
-                {["all", "pending", "confirmed", "shipped", "delivered"].map((st) => (
+                {[
+                  { id: "all", label: "সবগুলো", count: orders.length },
+                  { id: "pending", label: "⏳ পেন্ডিং", count: orders.filter((o) => o.status === "pending").length },
+                  { id: "confirmed", label: "✅ কনফার্মড", count: orders.filter((o) => o.status === "confirmed").length },
+                  { id: "processing", label: "📦 প্রসেসিং", count: orders.filter((o) => o.status === "processing").length },
+                  { id: "shipped", label: "🚚 কুরিয়ারে", count: orders.filter((o) => o.status === "shipped").length },
+                  { id: "delivered", label: "🏆 ডেলিভার্ড", count: orders.filter((o) => o.status === "delivered").length },
+                  { id: "cancelled", label: "❌ বাতিল", count: orders.filter((o) => o.status === "cancelled").length },
+                ].map((tab) => (
                   <button
-                    key={st}
-                    onClick={() => setStatusFilter(st)}
-                    className={`py-1.5 px-3 rounded-lg text-xs font-bold uppercase transition-colors cursor-pointer ${
-                      statusFilter === st
+                    key={tab.id}
+                    onClick={() => setStatusFilter(tab.id)}
+                    className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                      statusFilter === tab.id
                         ? "bg-[#0b0f19] text-amber-400 shadow-xs"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                     }`}
                   >
-                    {st === "all" ? "সবগুলো" : st}
+                    <span>{tab.label}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                        statusFilter === tab.id
+                          ? "bg-amber-400 text-slate-950 font-black"
+                          : "bg-slate-200 text-slate-700 font-bold"
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -2402,21 +2525,27 @@ export default function AdminPage() {
                     <th className="py-3 px-4">ক্রয় খরচ (অ্যাডমিন)</th>
                     <th className="py-3 px-4">নিট লাভ</th>
                     <th className="py-3 px-4">অর্ডার স্ট্যাটাস</th>
-                    <th className="py-3 px-4 text-center">ইনভয়েস</th>
+                    <th className="py-3 px-4 text-center">অ্যাকশন</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
+                      <td colSpan={9} className="py-12 text-center text-slate-400 font-medium">
                         কোনো অর্ডার পাওয়া যায়নি
                       </td>
                     </tr>
                   ) : (
                     filteredOrders.map((ord) => (
-                      <tr key={ord._id || ord.invoiceId} className="hover:bg-slate-50/60 transition-colors">
+                      <tr
+                        key={ord._id || ord.invoiceId}
+                        onClick={() => setSelectedInvoice(ord)}
+                        className="hover:bg-amber-50/60 transition-colors cursor-pointer group"
+                      >
                         <td className="py-3.5 px-4">
-                          <span className="font-extrabold text-slate-900 block font-mono">{ord.invoiceId}</span>
+                          <span className="font-extrabold text-slate-900 block font-mono group-hover:text-amber-800">
+                            {ord.invoiceId}
+                          </span>
                           <span className="text-[10px] text-slate-400 block mt-0.5">
                             {new Date(ord.createdAt).toLocaleDateString("bn-BD")}
                           </span>
@@ -2424,13 +2553,20 @@ export default function AdminPage() {
 
                         <td className="py-3.5 px-4">
                           <p className="font-bold text-slate-800">{ord.customer?.name}</p>
-                          <a
-                            href={`tel:${ord.customer?.phone}`}
-                            className="text-amber-800 hover:underline font-semibold block text-[11px]"
-                          >
-                            {ord.customer?.phone}
-                          </a>
-                          <span className="text-[11px] text-slate-500 block max-w-xs truncate">
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-amber-800 font-bold font-mono text-[11px]">
+                              {ord.customer?.phone}
+                            </span>
+                            <a
+                              href={`tel:${getCleanPhoneForCall(ord.customer?.phone)}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="p-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors"
+                              title="সরাসরি ফোন কল করুন"
+                            >
+                              <PhoneCall size={10} />
+                            </a>
+                          </div>
+                          <span className="text-[11px] text-slate-500 block max-w-xs truncate mt-0.5">
                             {ord.customer?.address}, {ord.customer?.district}
                           </span>
                         </td>
@@ -2452,16 +2588,22 @@ export default function AdminPage() {
                           </span>
                         </td>
 
-                                                <td className="py-3.5 px-4 font-black text-slate-900 text-sm">
+                        <td className="py-3.5 px-4 font-black text-slate-900 text-sm">
                           ৳ {ord.grandTotal?.toLocaleString()}
                         </td>
 
                         <td className="py-3.5 px-4">
                           {(() => {
-                            const ordCost = ord.items?.reduce((sum, item) => {
-                              const unitCost = Number(item.costPrice) || Number(products.find((p) => p._id === item.productId || p.name === item.name)?.costPrice) || 0;
-                              return sum + unitCost * (Number(item.quantity) || 1);
-                            }, 0) || 0;
+                            const ordCost =
+                              ord.items?.reduce((sum, item) => {
+                                const unitCost =
+                                  Number(item.costPrice) ||
+                                  Number(
+                                    products.find((p) => p._id === item.productId || p.name === item.name)?.costPrice
+                                  ) ||
+                                  0;
+                                return sum + unitCost * (Number(item.quantity) || 1);
+                              }, 0) || 0;
                             return (
                               <div>
                                 <span className="font-bold text-amber-900 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 text-xs inline-block">
@@ -2475,11 +2617,20 @@ export default function AdminPage() {
 
                         <td className="py-3.5 px-4">
                           {(() => {
-                            const ordCost = ord.items?.reduce((sum, item) => {
-                              const unitCost = Number(item.costPrice) || Number(products.find((p) => p._id === item.productId || p.name === item.name)?.costPrice) || 0;
-                              return sum + unitCost * (Number(item.quantity) || 1);
-                            }, 0) || 0;
-                            const profit = Math.max(0, (Number(ord.grandTotal) || 0) - (Number(ord.deliveryCharge) || 0) - ordCost);
+                            const ordCost =
+                              ord.items?.reduce((sum, item) => {
+                                const unitCost =
+                                  Number(item.costPrice) ||
+                                  Number(
+                                    products.find((p) => p._id === item.productId || p.name === item.name)?.costPrice
+                                  ) ||
+                                  0;
+                                return sum + unitCost * (Number(item.quantity) || 1);
+                              }, 0) || 0;
+                            const profit = Math.max(
+                              0,
+                              (Number(ord.grandTotal) || 0) - (Number(ord.deliveryCharge) || 0) - ordCost
+                            );
 
                             if (ord.status === "pending") {
                               return (
@@ -2487,7 +2638,9 @@ export default function AdminPage() {
                                   <span className="font-bold text-amber-800 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 text-xs inline-block">
                                     সম্ভাব্য ৳ {profit.toLocaleString()}
                                   </span>
-                                  <span className="text-[10px] text-amber-600 font-semibold block mt-0.5">⏳ কনফার্মের অপেক্ষায়</span>
+                                  <span className="text-[10px] text-amber-600 font-semibold block mt-0.5">
+                                    ⏳ কনফার্মের অপেক্ষায়
+                                  </span>
                                 </div>
                               );
                             }
@@ -2515,7 +2668,7 @@ export default function AdminPage() {
                         </td>
 
                         <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                             <select
                               value={ord.status}
                               onChange={(e) => handleStatusChange(ord.invoiceId, e.target.value)}
@@ -2524,16 +2677,21 @@ export default function AdminPage() {
                                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                   : ord.status === "confirmed"
                                   ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  : ord.status === "processing"
+                                  ? "bg-indigo-50 text-indigo-700 border-indigo-200"
                                   : ord.status === "shipped"
                                   ? "bg-purple-50 text-purple-700 border-purple-200"
+                                  : ord.status === "cancelled"
+                                  ? "bg-rose-50 text-rose-700 border-rose-200"
                                   : "bg-amber-50 text-amber-700 border-amber-200"
                               }`}
                             >
-                              <option value="pending">Pending</option>
-                              <option value="confirmed">Confirmed</option>
-                              <option value="shipped">Shipped</option>
-                              <option value="delivered">Delivered</option>
-                              <option value="cancelled">Cancelled</option>
+                              <option value="pending">⏳ Pending (পেন্ডিং)</option>
+                              <option value="confirmed">✅ Confirmed (কনফার্মড)</option>
+                              <option value="processing">📦 Processing (প্রসেসিং)</option>
+                              <option value="shipped">🚚 Shipped (কুরিয়ারে)</option>
+                              <option value="delivered">🏆 Delivered (ডেলিভার্ড)</option>
+                              <option value="cancelled">❌ Cancelled (বাতিল)</option>
                             </select>
 
                             {ord.status === "pending" && (
@@ -2551,14 +2709,24 @@ export default function AdminPage() {
                         </td>
 
                         <td className="py-3.5 px-4 text-center">
-                          <button
-                            onClick={() => setSelectedInvoice(ord)}
-                            className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer inline-flex items-center gap-1 font-bold text-xs"
-                            title="ইনভয়েস দেখুন"
-                          >
-                            <Printer size={13} />
-                            <span>প্রিন্ট</span>
-                          </button>
+                          <div className="flex items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedInvoice(ord)}
+                              className="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 cursor-pointer inline-flex items-center gap-1 font-bold text-xs transition-colors"
+                              title="সম্পূর্ণ বিবরণ দেখুন ও অবস্থান আপডেট করুন"
+                            >
+                              <Eye size={13} />
+                              <span>বিস্তারিত</span>
+                            </button>
+                            <a
+                              href={`tel:${getCleanPhoneForCall(ord.customer?.phone)}`}
+                              className="p-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer inline-flex items-center justify-center shadow-xs transition-colors"
+                              title="গ্রাহককে সরাসরি কল দিন"
+                            >
+                              <PhoneCall size={13} />
+                            </a>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -4983,70 +5151,492 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* MODAL 4: INVOICE PRINT MODAL */}
+      {/* MODAL 4: ENLARGED ORDER DETAILS & STATUS MANAGEMENT MODAL */}
       {selectedInvoice && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 animate-scaleUp">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2.5">
-                <img src="/images/logo.png" alt="Old Rank Logo" className="w-9 h-9 rounded-full object-cover" />
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-3xl w-full my-auto shadow-2xl border border-slate-200 overflow-hidden animate-scaleUp max-h-[92vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-amber-50/30 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 flex items-center justify-center font-black shadow-xs">
+                  <Package size={20} />
+                </div>
                 <div>
-                  <span className="font-extrabold text-xl text-slate-900 block leading-tight">Old Rank ইনভয়েস</span>
-                  <span className="text-xs font-mono text-amber-700 block font-bold">{selectedInvoice.invoiceId}</span>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedInvoice(null)}
-                className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs text-slate-700">
-              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
-                <p className="font-bold text-slate-900">{selectedInvoice.customer?.name}</p>
-                <p>মোবাইল: {selectedInvoice.customer?.phone}</p>
-                <p>ঠিকানা: {selectedInvoice.customer?.address}, {selectedInvoice.customer?.district}</p>
-              </div>
-
-              <div className="divide-y divide-slate-100 max-h-48 overflow-y-auto">
-                {selectedInvoice.items?.map((item, idx) => (
-                  <div key={idx} className="py-2 flex justify-between">
-                    <span>{item.name} × {item.quantity}</span>
-                    <span className="font-bold">৳ {(item.price * item.quantity).toLocaleString()}</span>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-black text-base sm:text-lg text-slate-900 leading-tight">
+                      অর্ডারের পূর্ণাঙ্গ বিবরণ ও ট্র্যাকিং
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof navigator !== "undefined" && navigator.clipboard) {
+                          navigator.clipboard.writeText(selectedInvoice.invoiceId);
+                          showToast(`📋 ইনভয়েস নং (${selectedInvoice.invoiceId}) কপি করা হয়েছে!`);
+                        }
+                      }}
+                      className="inline-flex items-center gap-1 font-mono text-xs font-black bg-amber-100 hover:bg-amber-200 text-amber-900 px-2 py-0.5 rounded-md border border-amber-200 cursor-pointer transition-colors"
+                      title="ক্লিক করে ইনভয়েস নং কপি করুন"
+                    >
+                      <span>#{selectedInvoice.invoiceId}</span>
+                      <Copy size={11} />
+                    </button>
                   </div>
-                ))}
+                  <span className="text-xs text-slate-500 block mt-0.5">
+                    অর্ডার সময়:{" "}
+                    {new Date(selectedInvoice.createdAt).toLocaleString("bn-BD", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
               </div>
 
-              <div className="border-t border-slate-200 pt-2 space-y-1">
-                <div className="flex justify-between text-slate-500">
-                  <span>সাবটোটাল</span>
-                  <span>৳ {selectedInvoice.subtotal?.toLocaleString()}</span>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider hidden sm:inline-flex items-center gap-1.5 border shadow-xs ${
+                    selectedInvoice.status === "delivered"
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                      : selectedInvoice.status === "confirmed"
+                      ? "bg-blue-50 text-blue-800 border-blue-300"
+                      : selectedInvoice.status === "processing"
+                      ? "bg-indigo-50 text-indigo-800 border-indigo-300"
+                      : selectedInvoice.status === "shipped"
+                      ? "bg-purple-50 text-purple-800 border-purple-300"
+                      : selectedInvoice.status === "cancelled"
+                      ? "bg-rose-50 text-rose-800 border-rose-300"
+                      : "bg-amber-50 text-amber-800 border-amber-300"
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-current animate-pulse"></span>
+                  <span>
+                    {selectedInvoice.status === "pending"
+                      ? "পেন্ডিং (অপেক্ষমাণ)"
+                      : selectedInvoice.status === "confirmed"
+                      ? "কনফার্মড (নিশ্চিত)"
+                      : selectedInvoice.status === "processing"
+                      ? "প্রসেসিং (প্যাকেজিং)"
+                      : selectedInvoice.status === "shipped"
+                      ? "কুরিয়ারে (ইন ট্রানজিট)"
+                      : selectedInvoice.status === "delivered"
+                      ? "ডেলিভার্ড (সম্পন্ন)"
+                      : selectedInvoice.status === "cancelled"
+                      ? "বাতিল (ক্যান্সেলড)"
+                      : selectedInvoice.status}
+                  </span>
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedInvoice(null)}
+                  className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+                  title="বন্ধ করুন"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body (Scrollable) */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-5 flex-1">
+              {/* SECTION 1: DIRECT CALL & WHATSAPP ACTION HERO CARD */}
+              <div className="bg-gradient-to-r from-emerald-50 via-teal-50/70 to-emerald-50 border border-emerald-200/90 rounded-2xl p-4 sm:p-5 shadow-xs">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-600 text-white shadow-xs">
+                        <PhoneCall size={14} />
+                      </span>
+                      <span className="font-black text-slate-900 text-sm sm:text-base">
+                        গ্রাহকের সাথে সরাসরি কথা বলুন (Direct Call)
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600">
+                      অর্ডার কনফার্মেশন, ঠিকানা যাচাই অথবা কুরিয়ার পার্সেল ট্র্যাকিং জানাতে এক ক্লিকে কল বা হোয়াটসঅ্যাপ করুন
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                    {/* Direct Call Button */}
+                    <a
+                      href={`tel:${getCleanPhoneForCall(selectedInvoice.customer?.phone)}`}
+                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs sm:text-sm shadow-md shadow-emerald-600/30 transition-all cursor-pointer"
+                      title="সরাসরি ফোন কল করুন"
+                    >
+                      <PhoneCall size={16} className="animate-pulse" />
+                      <span>কল করুন ({selectedInvoice.customer?.phone})</span>
+                    </a>
+
+                    {/* Direct WhatsApp Button */}
+                    <a
+                      href={`https://wa.me/${getCleanPhoneForWhatsApp(selectedInvoice.customer?.phone)}?text=${encodeURIComponent(
+                        `আসসালামু আলাইকুম ${selectedInvoice.customer?.name || "সম্মানিত গ্রাহক"}, Old Rank প্রিমিয়াম স্টোর থেকে আপনার অর্ডার #${selectedInvoice.invoiceId} (সর্বমোট ৳ ${selectedInvoice.grandTotal?.toLocaleString()}) সংক্রান্ত তথ্য নিয়ে যোগাযোগ করছি।`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#25D366] hover:bg-[#20ba59] active:scale-95 text-white font-black text-xs sm:text-sm shadow-md shadow-green-500/20 transition-all cursor-pointer"
+                      title="হোয়াটসঅ্যাপে মেসেজ পাঠান"
+                    >
+                      <MessageSquare size={16} />
+                      <span>WhatsApp</span>
+                    </a>
+                  </div>
                 </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>ডেলিভারি চার্জ</span>
-                  <span>৳ {selectedInvoice.deliveryCharge?.toLocaleString()}</span>
+
+                {/* If Alternative Phone exists, show quick call button for it too! */}
+                {extractAltPhone(selectedInvoice.customer?.note) && (
+                  <div className="mt-3 pt-3 border-t border-emerald-200/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="text-slate-700 font-medium">
+                      বিকল্প ফোন নম্বর: <strong className="font-mono text-slate-900">{extractAltPhone(selectedInvoice.customer?.note)}</strong>
+                    </span>
+                    <a
+                      href={`tel:${getCleanPhoneForCall(extractAltPhone(selectedInvoice.customer?.note) || "")}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-bold text-xs transition-colors cursor-pointer"
+                      title="বিকল্প নম্বরে কল দিন"
+                    >
+                      <PhoneCall size={12} />
+                      <span>বিকল্প নম্বরে কল করুন</span>
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION 2: LIVE ORDER STATUS TRACKING & CONTROLLER */}
+              <div className="bg-slate-50/80 rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-200/80 pb-2.5">
+                  <div>
+                    <h4 className="font-black text-xs sm:text-sm text-slate-900 flex items-center gap-2 uppercase tracking-wide">
+                      <Truck size={16} className="text-amber-800" />
+                      <span>অর্ডার ট্র্যাকিং ও অবস্থান নিয়ন্ত্রণ (Order Pipeline)</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      প্রোডাক্ট এখন কোন অবস্থানে আছে (প্রসেসিং নাকি কুরিয়ারে) তা লাইভ আপডেট করুন
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold text-amber-800 self-start sm:self-auto">
+                    বর্তমান অবস্থা: {selectedInvoice.status.toUpperCase()}
+                  </span>
                 </div>
-                <div className="flex justify-between text-base font-black text-slate-900 pt-1">
-                  <span>সর্বমোট প্রদেয় (ক্যাশ অন ডেলিভারি)</span>
-                  <span className="text-amber-800">৳ {selectedInvoice.grandTotal?.toLocaleString()}</span>
+
+                {/* Visual Progress Stepper (5-stage) */}
+                {selectedInvoice.status !== "cancelled" ? (
+                  <div className="pt-2 pb-1">
+                    <div className="grid grid-cols-5 gap-1.5 sm:gap-2 text-center">
+                      {[
+                        { key: "pending", label: "১. পেন্ডিং", sub: "অর্ডার জমা", icon: Clock },
+                        { key: "confirmed", label: "২. কনফার্মড", sub: "কথা বলে নিশ্চিত", icon: CheckCircle2 },
+                        { key: "processing", label: "৩. প্রসেসিং", sub: "প্যাকিং চলছে", icon: Package },
+                        { key: "shipped", label: "৪. কুরিয়ারে", sub: "ইন ট্রানজিট", icon: Truck },
+                        { key: "delivered", label: "৫. ডেলিভার্ড", sub: "টাকা পরিশোধ", icon: ShieldCheck },
+                      ].map((step, idx) => {
+                        const stepOrder = ["pending", "confirmed", "processing", "shipped", "delivered"];
+                        const currentIdx = stepOrder.indexOf(selectedInvoice.status);
+                        const isDone = currentIdx >= idx;
+                        const isCurrent = currentIdx === idx;
+                        const StepIcon = step.icon;
+
+                        return (
+                          <div key={step.key} className="flex flex-col items-center">
+                            <div
+                              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center font-bold transition-all shadow-xs ${
+                                isCurrent
+                                  ? "bg-amber-800 text-amber-300 ring-4 ring-amber-200 scale-105"
+                                  : isDone
+                                  ? "bg-emerald-600 text-white"
+                                  : "bg-white text-slate-400 border border-slate-200"
+                              }`}
+                            >
+                              <StepIcon size={18} />
+                            </div>
+                            <span
+                              className={`text-[10px] sm:text-xs font-black mt-2 leading-tight ${
+                                isCurrent ? "text-amber-900" : isDone ? "text-emerald-700" : "text-slate-400"
+                              }`}
+                            >
+                              {step.label}
+                            </span>
+                            <span className="text-[9px] text-slate-400 hidden sm:block mt-0.5">
+                              {step.sub}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-center gap-2 text-rose-800 text-xs">
+                    <Ban size={16} className="shrink-0 text-rose-600" />
+                    <span>
+                      <strong>অর্ডারটি বাতিল করা হয়েছে!</strong> আপনি নিচে থেকে যে কোনো নতুন স্ট্যাটাসে ক্লিক করে অর্ডারটি পুনরায় চালু করতে পারেন।
+                    </span>
+                  </div>
+                )}
+
+                {/* 1-Click Status Switcher Buttons */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block">
+                    স্ট্যাটাস এক ক্লিকে পরিবর্তন করুন:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { key: "pending", label: "⏳ পেন্ডিং (Pending)", activeCls: "bg-amber-800 text-amber-200 ring-2 ring-amber-400" },
+                      { key: "confirmed", label: "✅ কনফার্মড (Confirmed)", activeCls: "bg-blue-700 text-white ring-2 ring-blue-300" },
+                      { key: "processing", label: "📦 প্রসেসিং ও প্যাকিং (Processing)", activeCls: "bg-indigo-700 text-white ring-2 ring-indigo-300" },
+                      { key: "shipped", label: "🚚 কুরিয়ারে হস্তান্তর (Shipped)", activeCls: "bg-purple-700 text-white ring-2 ring-purple-300" },
+                      { key: "delivered", label: "🏆 ডেলিভার্ড সম্পন্ন (Delivered)", activeCls: "bg-emerald-700 text-white ring-2 ring-emerald-300" },
+                      { key: "cancelled", label: "❌ বাতিল (Cancelled)", activeCls: "bg-rose-700 text-white ring-2 ring-rose-300" },
+                    ].map((btn) => {
+                      const isSelected = selectedInvoice.status === btn.key;
+                      return (
+                        <button
+                          key={btn.key}
+                          type="button"
+                          onClick={() => handleStatusChange(selectedInvoice.invoiceId, btn.key)}
+                          className={`px-3 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                            isSelected
+                              ? `${btn.activeCls} shadow-sm font-black scale-102`
+                              : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          {btn.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 3: CUSTOMER PROFILE & DELIVERY ADDRESS DETAILS */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Customer Profile Card */}
+                <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-200 space-y-3">
+                  <div className="flex items-center gap-2 text-slate-900 font-black text-xs uppercase tracking-wider pb-1.5 border-b border-slate-200">
+                    <User size={15} className="text-amber-800" />
+                    <span>গ্রাহকের তথ্য (Customer Profile)</span>
+                  </div>
+
+                  <div className="space-y-2 text-xs text-slate-700">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">নাম:</span>
+                      <span className="font-extrabold text-slate-900 text-sm">
+                        {selectedInvoice.customer?.name || "নাম প্রদান করা হয়নি"}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">মোবাইল নম্বর:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-slate-900 font-mono text-sm">
+                          {selectedInvoice.customer?.phone}
+                        </span>
+                        <a
+                          href={`tel:${getCleanPhoneForCall(selectedInvoice.customer?.phone)}`}
+                          className="p-1 rounded-md bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors"
+                          title="সরাসরি কল দিন"
+                        >
+                          <PhoneCall size={12} />
+                        </a>
+                      </div>
+                    </div>
+
+                    {extractAltPhone(selectedInvoice.customer?.note) && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500">বিকল্প নম্বর:</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-slate-900 font-mono text-sm">
+                            {extractAltPhone(selectedInvoice.customer?.note)}
+                          </span>
+                          <a
+                            href={`tel:${getCleanPhoneForCall(extractAltPhone(selectedInvoice.customer?.note) || "")}`}
+                            className="p-1 rounded-md bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors"
+                            title="বিকল্প নম্বরে কল দিন"
+                          >
+                            <PhoneCall size={12} />
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">পেমেন্ট মেথড:</span>
+                      <span className="font-black text-slate-900 bg-amber-100/90 text-amber-950 px-2.5 py-0.5 rounded-md text-[11px]">
+                        {selectedInvoice.paymentMethod === "cod"
+                          ? "ক্যাশ অন ডেলিভারি (COD)"
+                          : selectedInvoice.paymentMethod}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">পেমেন্ট স্ট্যাটাস:</span>
+                      <span
+                        className={`font-black px-2.5 py-0.5 rounded-md text-[11px] ${
+                          selectedInvoice.paymentStatus === "paid"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-slate-200 text-slate-700"
+                        }`}
+                      >
+                        {selectedInvoice.paymentStatus === "paid"
+                          ? "✅ পরিশোধিত (Paid)"
+                          : "⏳ অপরিশোধিত (পেন্ডিং / ক্যাশ কালেকশন)"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Delivery & Shipping Info Card */}
+                <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-200 space-y-3">
+                  <div className="flex items-center gap-2 text-slate-900 font-black text-xs uppercase tracking-wider pb-1.5 border-b border-slate-200">
+                    <MapPin size={15} className="text-amber-800" />
+                    <span>শিপিং ও ডেলিভারি বিবরণ (Delivery Location)</span>
+                  </div>
+
+                  <div className="space-y-2 text-xs text-slate-700">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">ডেলিভারি এরিয়া:</span>
+                      <span className="font-extrabold text-amber-950 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md text-[11px]">
+                        {selectedInvoice.customer?.district ||
+                          (selectedInvoice.deliveryCharge === 60
+                            ? "ঢাকার মধ্যে (Inside Dhaka)"
+                            : "ঢাকার বাইরে (Outside Dhaka)")}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-slate-500 block">সম্পূর্ণ ডেলিভারি ঠিকানা:</span>
+                      <p className="font-bold text-slate-900 bg-white p-2.5 rounded-xl border border-slate-200 text-xs leading-relaxed">
+                        {selectedInvoice.customer?.address || "ঠিকানা দেওয়া হয়নি"}
+                      </p>
+                    </div>
+
+                    {getCleanCustomerNote(selectedInvoice.customer?.note) && (
+                      <div className="space-y-1 pt-1">
+                        <span className="text-slate-500 block">গ্রাহকের বিশেষ নির্দেশনা (Order Note):</span>
+                        <p className="font-semibold text-slate-800 bg-amber-50/70 p-2.5 rounded-xl border border-amber-200 text-xs italic">
+                          &ldquo;{getCleanCustomerNote(selectedInvoice.customer?.note)}&rdquo;
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 4: ORDERED ITEMS BREAKDOWN */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-black text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <ShoppingBag size={15} className="text-amber-800" />
+                    <span>অর্ডারকৃত পণ্যসমূহ ({selectedInvoice.items?.length || 0} টি আইটেম)</span>
+                  </h4>
+                </div>
+
+                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100/80 text-slate-600 font-black uppercase text-[10px]">
+                      <tr>
+                        <th className="py-2.5 px-3">পণ্য</th>
+                        <th className="py-2.5 px-3 text-center">পরিমাণ</th>
+                        <th className="py-2.5 px-3 text-right">একক মূল্য</th>
+                        <th className="py-2.5 px-3 text-right">মোট বিক্রয়</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {selectedInvoice.items?.map((item, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0">
+                                <ProductImage
+                                  src={item.image || "/images/old-rank-banner.jpg"}
+                                  alt={item.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-bold text-slate-900 text-xs truncate max-w-sm">
+                                  {item.name}
+                                </p>
+                                {item.variantInfo && (
+                                  <span className="inline-block text-[10px] text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 mt-0.5 font-semibold">
+                                    {item.variantInfo}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-center font-black text-slate-900 text-sm">
+                            ×{item.quantity}
+                          </td>
+                          <td className="py-3 px-3 text-right font-medium text-slate-600">
+                            ৳ {item.price?.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-3 text-right font-black text-slate-900 text-sm">
+                            ৳ {(item.price * item.quantity).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* SECTION 5: FINANCIAL BREAKDOWN */}
+              <div className="bg-slate-50/80 rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-2.5">
+                <div className="flex justify-between text-xs text-slate-600">
+                  <span>পণ্যের মূল্য (সাবটোটাল):</span>
+                  <span className="font-bold text-slate-900">৳ {selectedInvoice.subtotal?.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs text-slate-600">
+                  <span>ডেলিভারি চার্জ:</span>
+                  <span className="font-bold text-slate-900">৳ {selectedInvoice.deliveryCharge?.toLocaleString()}</span>
+                </div>
+                {Boolean(selectedInvoice.discount && selectedInvoice.discount > 0) && (
+                  <div className="flex justify-between text-xs text-emerald-600">
+                    <span>কুপন ডিসকাউন্ট:</span>
+                    <span className="font-black">-৳ {selectedInvoice.discount.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="border-t border-slate-200 pt-3 flex justify-between items-baseline">
+                  <div>
+                    <span className="text-sm sm:text-base font-black text-slate-900 block leading-tight">
+                      সর্বমোট প্রদেয় টাকা (গ্রাহক পরিশোধ করবেন)
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      ক্যাশ অন ডেলিভারি (কুরিয়ার পার্সেল পাওয়ার পর নগদ প্রদেয়)
+                    </span>
+                  </div>
+                  <span className="text-xl sm:text-2xl font-black text-amber-900 font-mono">
+                    ৳ {selectedInvoice.grandTotal?.toLocaleString()}
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="flex-1 bg-[#0b0f19] text-amber-400 hover:bg-slate-900 font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow"
-              >
-                <Printer size={14} /> প্রিন্ট ইনভয়েস
-              </button>
+            {/* Modal Footer Actions */}
+            <div className="p-4 sm:p-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50/50 shrink-0">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <a
+                  href={`tel:${getCleanPhoneForCall(selectedInvoice.customer?.phone)}`}
+                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                >
+                  <PhoneCall size={15} />
+                  <span>গ্রাহককে কল দিন</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-[#0b0f19] hover:bg-slate-900 text-amber-400 font-extrabold text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-all"
+                >
+                  <Printer size={15} />
+                  <span>প্রিন্ট ইনভয়েস</span>
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={() => setSelectedInvoice(null)}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs cursor-pointer"
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-extrabold text-xs cursor-pointer transition-colors"
               >
                 বন্ধ করুন
               </button>
