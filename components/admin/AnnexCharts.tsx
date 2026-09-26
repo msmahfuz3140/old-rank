@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 
@@ -451,7 +451,7 @@ export function DonutWheelChart({
           {/* Center Hub */}
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
             <span className="text-xl font-black text-slate-800">{cat1} টি</span>
-            <span className="text-[9px] font-bold text-emerald-600 uppercase">MongoDB Live</span>
+            <span className="text-[9px] font-bold text-emerald-600 uppercase">লাইভ ডাটা</span>
           </div>
         </div>
 
@@ -619,3 +619,4 @@ export function CleanPieChart({
     </div>
   );
 }
+

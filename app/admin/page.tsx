@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -156,6 +156,12 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedInvoice, setSelectedInvoice] = useState<IOrder | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Live Order Polling States
+  const [newOrderCount, setNewOrderCount] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const knownOrderIdsRef = useRef<Set<string>>(new Set());
 
   // Custom Confirmation Dialog Modal State (Replaces browser alert/confirm)
   const [confirmModal, setConfirmModal] = useState<{
@@ -446,9 +452,65 @@ export default function AdminPage() {
     }
   };
 
+  // Silent order-only poll — checks every 30s for new orders without showing loading spinner
+  const silentOrderPoll = async () => {
+    try {
+      const freshOrders = await api.getAllOrders(statusFilter, "");
+      if (!Array.isArray(freshOrders)) return;
+
+      // Detect newly arrived orders not in our known set
+      const newOnes = freshOrders.filter(
+        (o: IOrder) => o.invoiceId && !knownOrderIdsRef.current.has(o.invoiceId)
+      );
+
+      if (newOnes.length > 0) {
+        // Update known IDs
+        freshOrders.forEach((o: IOrder) => {
+          if (o.invoiceId) knownOrderIdsRef.current.add(o.invoiceId);
+        });
+        setOrders(freshOrders);
+        setNewOrderCount((prev) => prev + newOnes.length);
+        showToast(`🔔 ${newOnes.length}টি নতুন অর্ডার এসেছে!`);
+      } else {
+        // Still update order list in case status changed
+        setOrders(freshOrders);
+      }
+      setLastUpdated(new Date());
+    } catch {
+      // silent fail — don't disrupt admin
+    }
+  };
+
   useEffect(() => {
-    loadData();
+    loadData().then(() => {
+      // Seed known IDs after first load so we can detect future new ones
+      setLastUpdated(new Date());
+    });
   }, [statusFilter]);
+
+  // Register 30-second polling interval after admin is authenticated
+  useEffect(() => {
+    if (!isAdminAuthenticated) return;
+    const interval = setInterval(silentOrderPoll, 30_000);
+    return () => clearInterval(interval);
+  }, [isAdminAuthenticated, statusFilter]);
+
+  // Seed knownOrderIds after orders first load so notifications only fire for truly NEW orders
+  useEffect(() => {
+    if (orders.length > 0 && knownOrderIdsRef.current.size === 0) {
+      orders.forEach((o) => {
+        if (o.invoiceId) knownOrderIdsRef.current.add(o.invoiceId);
+      });
+    }
+  }, [orders]);
+
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    setNewOrderCount(0);
+    await loadData();
+    setLastUpdated(new Date());
+    setIsRefreshing(false);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -503,7 +565,7 @@ export default function AdminPage() {
     );
   };
 
-  // Cloudinary Image / PDF Upload Handler
+  // Image Upload Handler
   const handleCloudinaryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -514,13 +576,13 @@ export default function AdminPage() {
       const res = await api.uploadFile(file);
       if (res.success && res.url) {
         setProductForm((prev) => ({ ...prev, mainImage: res.url }));
-        setUploadSuccessMessage(`✅ ক্লাউডিনারিতে আপলোড সফল! (${file.name})`);
+        setUploadSuccessMessage(`✅ ছবি সফলভাবে আপলোড হয়েছে! (${file.name})`);
         showToast("🎉 ছবি সফলভাবে ক্লাউডিনারিতে আপলোড হয়েছে!");
       } else {
         showToast(res.message || "আপলোড ব্যর্থ হয়েছে।");
       }
     } catch (err: any) {
-      showToast("আপলোডে ত্রুটি: " + err.message);
+      showToast("⚠️ ছবি আপলোডে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
     } finally {
       setIsUploadingImage(false);
     }
@@ -1604,9 +1666,11 @@ export default function AdminPage() {
                 title="অর্ডার নোটিফিকেশন"
               >
                 <Bell size={17} />
-                {orders.filter((o) => o.status === "pending").length > 0 && (
-                  <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-amber-400 text-slate-900 font-bold text-[9px] flex items-center justify-center shadow">
-                    {orders.filter((o) => o.status === "pending").length}
+                {(newOrderCount > 0 || orders.filter((o) => o.status === "pending").length > 0) && (
+                  <span className={`absolute top-1 right-1 w-4 h-4 rounded-full font-bold text-[9px] flex items-center justify-center shadow ${
+                    newOrderCount > 0 ? "bg-red-500 text-white animate-pulse" : "bg-amber-400 text-slate-900"
+                  }`}>
+                    {newOrderCount > 0 ? newOrderCount : orders.filter((o) => o.status === "pending").length}
                   </span>
                 )}
               </button>
@@ -2512,6 +2576,39 @@ export default function AdminPage() {
               </form>
             </div>
 
+            {/* Live Status Bar */}
+            <div className="px-4 py-2 bg-gradient-to-r from-slate-900 to-slate-800 flex items-center justify-between gap-3 text-[11px]">
+              <div className="flex items-center gap-2">
+                {/* Pulsing live dot */}
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                <span className="text-slate-300 font-medium">লাইভ মনিটরিং সক্রিয় — প্রতি ৩০ সেকেন্ডে অটো রিফ্রেশ</span>
+                {lastUpdated && (
+                  <span className="text-slate-500">শেষ আপডেট: {lastUpdated.toLocaleTimeString("bn-BD")}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {newOrderCount > 0 && (
+                  <span className="animate-pulse bg-red-500 text-white font-black px-2 py-0.5 rounded-full text-[10px]">
+                    🔔 {newOrderCount}টি নতুন অর্ডার!
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={handleManualRefresh}
+                  disabled={isRefreshing}
+                  className="flex items-center gap-1.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-60 text-slate-900 font-black px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+                >
+                  <svg className={`w-3 h-3 ${isRefreshing ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {isRefreshing ? "রিফ্রেশ..." : "রিফ্রেশ"}
+                </button>
+              </div>
+            </div>
+
             {/* Orders Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -3382,7 +3479,7 @@ export default function AdminPage() {
                         <Shield size={12} className="text-emerald-400" /> AES-256 Bit সিকিউর সেশন
                       </span>
                       <span className="bg-white/10 px-2.5 py-1 rounded-xl border border-white/10 flex items-center gap-1">
-                        <Globe size={12} className="text-amber-400" /> MongoDB Atlas লাইভ ডাটাবেজ
+                        <Globe size={12} className="text-amber-400" /> লাইভ ডাটাবেজ সংযুক্ত
                       </span>
                     </div>
                   </div>
@@ -3727,7 +3824,7 @@ export default function AdminPage() {
                       <div>
                         <p className="font-bold text-slate-900">ক্লাউড ডাটাবেজ এক্সেস</p>
                         <p className="text-[11px] text-slate-500">
-                          MongoDB Atlas ক্লাস্টার সরাসরি রিড, রাইট ও অটো সিঙ্ক
+                          সরাসরি রিড, রাইট ও অটো সিঙ্ক সাপোর্ট সহ লাইভ ডাটাবেজ
                         </p>
                       </div>
                     </div>
@@ -4677,27 +4774,33 @@ export default function AdminPage() {
                     onChange={(e) => {
                       const selected = e.target.value;
                       const nameMap: Record<string, string> = {
+                        jewelry: "জুয়েলারি ও অলংকার",
                         fashion: "Men's Fashion",
                         electronics: "Electronics & Gadgets",
                         "womens-fashion": "Women's Fashion",
                         "baby-kids": "Baby & Kids",
                         "home-appliances": "Home & Kitchen",
                         "smart-watch": "Smart Watch",
+                        "beauty-cosmetics": "Beauty & Cosmetics",
                       };
                       setProductForm({
                         ...productForm,
                         category: selected,
-                        categoryName: nameMap[selected] || "Men's Fashion",
+                        categoryName: nameMap[selected] || "জুয়েলারি ও অলংকার",
                       });
                     }}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-amber-500"
                   >
-                    <option value="fashion">Men's Fashion (টি-শার্ট, হুডি, শার্ট)</option>
-                    <option value="electronics">Electronics & Gadgets</option>
-                    <option value="womens-fashion">Women's Fashion</option>
-                    <option value="baby-kids">Baby & Kids</option>
-                    <option value="home-appliances">Home & Kitchen</option>
-                    <option value="smart-watch">Smart Watch</option>
+                    {/* ✅ Active Category */}
+                    <option value="jewelry">💎 জুয়েলারি ও অলংকার — Active</option>
+                    {/* 🔒 Inactive Categories (isComingSoon) */}
+                    <option value="fashion" disabled style={{color:"#94a3b8"}}>🔒 Men's Fashion — Inactive</option>
+                    <option value="womens-fashion" disabled style={{color:"#94a3b8"}}>🔒 Women's Fashion — Inactive</option>
+                    <option value="electronics" disabled style={{color:"#94a3b8"}}>🔒 Electronics & Gadgets — Inactive</option>
+                    <option value="baby-kids" disabled style={{color:"#94a3b8"}}>🔒 Baby & Kids — Inactive</option>
+                    <option value="home-appliances" disabled style={{color:"#94a3b8"}}>🔒 Home & Kitchen — Inactive</option>
+                    <option value="smart-watch" disabled style={{color:"#94a3b8"}}>🔒 Smart Watch — Inactive</option>
+                    <option value="beauty-cosmetics" disabled style={{color:"#94a3b8"}}>🔒 Beauty & Cosmetics — Inactive</option>
                   </select>
                 </div>
 
@@ -4753,15 +4856,15 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Cloudinary Direct File & Document Upload */}
+              {/* Product Image Upload */}
               <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-2xl space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
                     <UploadCloud size={16} className="text-amber-600" />
-                    <span>ক্লাউডিনারি ফাইল আপলোড (Cloudinary Upload)</span>
+                    <span>প্রডাক্টের ছবি আপলোড করুন</span>
                   </label>
                   <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                    ছবি ও PDF ডকুমেন্টস
+                    ছবি ও PDF
                   </span>
                 </div>
 
@@ -4771,16 +4874,16 @@ export default function AdminPage() {
                       {isUploadingImage ? (
                         <div className="flex items-center gap-2 text-amber-700 font-bold py-1">
                           <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
-                          <span>ক্লাউডিনারিতে আপলোড হচ্ছে...</span>
+                          <span>আপলোড হচ্ছে...</span>
                         </div>
                       ) : (
                         <>
                           <UploadCloud size={20} className="text-amber-600 mb-0.5" />
                           <span className="text-xs font-bold text-slate-800">
-                            কম্পিউটার বা মোবাইল থেকে ফাইল আপলোড করুন
+                            কম্পিউটার বা মোবাইল থেকে ছবি সিলেক্ট করুন
                           </span>
                           <span className="text-[10px] text-slate-400">
-                            JPG, PNG, WEBP অথবা ক্যাটালগ PDF (Cloudinary Secure CDN)
+                            JPG, PNG, WEBP অথবা PDF
                           </span>
                         </>
                       )}
@@ -5701,3 +5804,4 @@ export default function AdminPage() {
     </div>
   );
 }
+
