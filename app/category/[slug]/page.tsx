@@ -53,8 +53,7 @@ export default function CategoryPage({
 async function CategoryProducts({ categorySlug }: { categorySlug: string }) {
   const products = await api.getProducts({ category: categorySlug });
 
-  const currentCat = fallbackCategories.find((c) => c.slug === categorySlug);
-  if (currentCat?.isComingSoon || products.length === 0) {
+  if (products.length === 0) {
     return (
       <div className="text-center py-20 px-4 bg-white rounded-3xl border border-slate-100 shadow-sm max-w-xl mx-auto space-y-4">
         <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-2xl font-black">

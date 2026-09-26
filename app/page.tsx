@@ -25,13 +25,9 @@ export default async function HomePage() {
     ...categories.filter((c) => c.slug !== "jewelry" && c.slug !== "all"),
   ];
 
-  // Strictly filter only real jewelry products (removing any other demo items)
-  const displayJewelry = products.filter((p) => {
-    const slug = typeof p.category === "object" ? p.category.slug : p.category;
-    return slug === "jewelry" || p.tags?.includes("jewelry");
-  });
-
-  const jewelryHotDeals = displayJewelry.filter((p) => p.isHotDeal);
+  // All products directly from the database
+  const allProducts = products;
+  const hotDeals = allProducts.filter((p) => p.isHotDeal);
 
   return (
     <div className="space-y-8 sm:space-y-12 pb-16 bg-[#f8fafc] pt-4 sm:pt-6">
@@ -207,29 +203,29 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-          {displayJewelry.map((p, idx) => (
+          {allProducts.map((p, idx) => (
             <PopUpProductCard key={p._id} product={p} index={idx} />
           ))}
         </div>
       </section>
 
-      {/* 4. Hot Deals Section (Featuring Jewelry Hot Deals) */}
-      <HotDealsSection products={displayJewelry} hotDeals={jewelryHotDeals} />
+      {/* 4. Hot Deals Section (Featuring All Hot Deals) */}
+      <HotDealsSection products={allProducts} hotDeals={hotDeals} />
 
-      {/* 5. All Jewelry Items Grid */}
+      {/* 5. All Store Products Grid */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
-                Jewelry Collection
+                All Products
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
-              জুয়েলারি শপের সমস্ত আইটেম
+              শপের সমস্ত প্রোডাক্ট কালেকশন
             </h2>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              স্টকের প্রতিটি অলংকার ও গহনা একসাথে ব্রাউজ করুন
+              লাইভ স্টকের সমস্ত প্রোডাক্ট একসাথে ব্রাউজ করুন
             </p>
           </div>
           <Link
@@ -241,7 +237,7 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-          {displayJewelry.map((p, idx) => (
+          {allProducts.map((p, idx) => (
             <PopUpProductCard key={p._id} product={p} index={idx} />
           ))}
         </div>

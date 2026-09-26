@@ -716,6 +716,10 @@ export default function AdminPage() {
       setProducts([createdProd, ...products]);
       setIsAddProductOpen(false);
       showToast(`🎉 "${productForm.name}" সফলভাবে পোস্ট করা হয়েছে!`);
+      try {
+        const fresh = await api.getProducts();
+        if (fresh && fresh.length > 0) setProducts(fresh);
+      } catch {}
 
       // Reset form
       setProductForm({
@@ -744,10 +748,14 @@ export default function AdminPage() {
     if (!editingProduct) return;
 
     try {
-      await api.updateProduct(editingProduct._id, editingProduct);
-      setProducts(products.map((p) => (p._id === editingProduct._id ? editingProduct : p)));
+      const res = await api.updateProduct(editingProduct._id, editingProduct);
+      setProducts(products.map((p) => (p._id === editingProduct._id ? (res.data || editingProduct) : p)));
       setEditingProduct(null);
       showToast(`প্রোডাক্ট "${editingProduct.name}" সফলভাবে আপডেট হয়েছে!`);
+      try {
+        const fresh = await api.getProducts();
+        if (fresh) setProducts(fresh);
+      } catch {}
     } catch {
       showToast("আপডেট ব্যর্থ হয়েছে।");
     }
@@ -767,6 +775,10 @@ export default function AdminPage() {
           await api.deleteProduct(id);
           setProducts((prev) => prev.filter((p) => p._id !== id));
           showToast(`"${name}" প্রোডাক্টটি সফলভাবে মুছে ফেলা হয়েছে।`);
+          try {
+            const fresh = await api.getProducts();
+            if (fresh) setProducts(fresh);
+          } catch {}
         } catch {
           showToast("ডিলিট করা সম্ভব হয়নি।");
         } finally {
