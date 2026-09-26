@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
@@ -577,7 +577,7 @@ export default function AdminPage() {
       if (res.success && res.url) {
         setProductForm((prev) => ({ ...prev, mainImage: res.url }));
         setUploadSuccessMessage(`✅ ছবি সফলভাবে আপলোড হয়েছে! (${file.name})`);
-        showToast("🎉 ছবি সফলভাবে ক্লাউডিনারিতে আপলোড হয়েছে!");
+        showToast("🎉 ছবি সফলভাবে আপলোড হয়েছে!");
       } else {
         showToast(res.message || "আপলোড ব্যর্থ হয়েছে।");
       }
@@ -4731,8 +4731,9 @@ export default function AdminPage() {
 
       {/* MODAL 1: ADD NEW PRODUCT MODAL */}
       {isAddProductOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-7 shadow-2xl border border-slate-200 my-8 animate-scaleUp">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs overflow-y-auto p-3 sm:p-6">
+          <div className="min-h-full flex items-start sm:items-center justify-center py-4 sm:py-8">
+            <div className="bg-white rounded-3xl max-w-2xl w-full p-4 sm:p-7 shadow-2xl border border-slate-200 animate-scaleUp relative">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-xl bg-amber-400/20 text-amber-700 flex items-center justify-center">
@@ -5019,12 +5020,14 @@ export default function AdminPage() {
             </form>
           </div>
         </div>
+      </div>
       )}
 
       {/* MODAL 2: EDIT PRODUCT MODAL */}
       {editingProduct && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-scaleUp">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs overflow-y-auto p-3 sm:p-6">
+          <div className="min-h-full flex items-start sm:items-center justify-center py-4 sm:py-8">
+            <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-scaleUp relative">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <h3 className="font-black text-base text-slate-900">প্রোডাক্ট এডিট করুন</h3>
               <button
@@ -5123,12 +5126,14 @@ export default function AdminPage() {
             </form>
           </div>
         </div>
+      </div>
       )}
 
       {/* MODAL 3: ADD NEW SELLER MODAL */}
       {isAddSellerOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-slate-200 animate-scaleUp">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs overflow-y-auto p-3 sm:p-6">
+          <div className="min-h-full flex items-start sm:items-center justify-center py-4 sm:py-8">
+            <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl border border-slate-200 animate-scaleUp relative">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-amber-400/20 text-amber-700 flex items-center justify-center">
@@ -5252,6 +5257,7 @@ export default function AdminPage() {
             </form>
           </div>
         </div>
+      </div>
       )}
 
       {/* MODAL 4: ENLARGED ORDER DETAILS & STATUS MANAGEMENT MODAL */}
