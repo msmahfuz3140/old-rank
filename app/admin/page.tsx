@@ -374,6 +374,7 @@ export default function AdminPage() {
     stock: "50",
     isHotDeal: true,
     isFeatured: true,
+    isActive: true,
     mainImage: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop&q=80",
     selectedSizes: ["Free Size"],
     colorName: "Gold Polish",
@@ -416,7 +417,7 @@ export default function AdminPage() {
         api.getAllOrders(statusFilter, searchQuery),
         api.getIncompleteOrders(),
         api.getAdminStats(),
-        api.getProducts(),
+        api.getProducts({ includeInactive: true }),
         api.getVendors(),
       ]);
 
@@ -700,6 +701,7 @@ export default function AdminPage() {
         stock: Number(productForm.stock) || 50,
         isHotDeal: productForm.isHotDeal,
         isFeatured: productForm.isFeatured,
+        isActive: productForm.isActive !== false,
         rating: 5.0,
         reviewCount: 1,
         variants: productForm.selectedSizes.map((sz) => ({
@@ -717,7 +719,7 @@ export default function AdminPage() {
       setIsAddProductOpen(false);
       showToast(`🎉 "${productForm.name}" সফলভাবে পোস্ট করা হয়েছে!`);
       try {
-        const fresh = await api.getProducts();
+        const fresh = await api.getProducts({ includeInactive: true });
         if (fresh && fresh.length > 0) setProducts(fresh);
       } catch {}
 
@@ -734,6 +736,7 @@ export default function AdminPage() {
         stock: "50",
         isHotDeal: true,
         isFeatured: true,
+        isActive: true,
         mainImage: "/images/old-rank-banner.jpg",
         selectedSizes: ["M", "L", "XL"],
         colorName: "Jet Black",
@@ -753,7 +756,7 @@ export default function AdminPage() {
       setEditingProduct(null);
       showToast(`প্রোডাক্ট "${editingProduct.name}" সফলভাবে আপডেট হয়েছে!`);
       try {
-        const fresh = await api.getProducts();
+        const fresh = await api.getProducts({ includeInactive: true });
         if (fresh) setProducts(fresh);
       } catch {}
     } catch {
@@ -776,7 +779,7 @@ export default function AdminPage() {
           setProducts((prev) => prev.filter((p) => p._id !== id));
           showToast(`"${name}" প্রোডাক্টটি সফলভাবে মুছে ফেলা হয়েছে।`);
           try {
-            const fresh = await api.getProducts();
+            const fresh = await api.getProducts({ includeInactive: true });
             if (fresh) setProducts(fresh);
           } catch {}
         } catch {
@@ -795,6 +798,22 @@ export default function AdminPage() {
       await api.updateProduct(product._id, { isHotDeal: updated });
       setProducts(products.map((p) => (p._id === product._id ? { ...p, isHotDeal: updated } : p)));
       showToast(`"${product.name}" এর হট ডিল স্ট্যাটাস ${updated ? "সক্রিয়" : "বন্ধ"} করা হয়েছে।`);
+    } catch {
+      showToast("স্ট্যাটাস আপডেট ব্যর্থ হয়েছে।");
+    }
+  };
+
+  const handleToggleActive = async (product: IProduct) => {
+    const currentActive = product.isActive !== false;
+    const newActive = !currentActive;
+    try {
+      await api.updateProduct(product._id, { isActive: newActive });
+      setProducts(products.map((p) => (p._id === product._id ? { ...p, isActive: newActive } : p)));
+      showToast(
+        newActive
+          ? `🟢 "${product.name}" সক্রিয় করা হয়েছে (এখন ওয়েবসাইটে দৃশ্যমান)!`
+          : `🔒 "${product.name}" নিষ্ক্রিয় করা হয়েছে (ওয়েবসাইট থেকে লুকানো হয়েছে)!`
+      );
     } catch {
       showToast("স্ট্যাটাস আপডেট ব্যর্থ হয়েছে।");
     }
@@ -2219,6 +2238,7 @@ export default function AdminPage() {
                       <th className="py-3 px-4">সম্ভাব্য লাভ</th>
                       <th className="py-3 px-4">স্টক</th>
                       <th className="py-3 px-4 text-center">হট ডিল</th>
+                      <th className="py-3 px-4 text-center">স্ট্যাটাস</th>
                       <th className="py-3 px-4 text-center">অ্যাকশন</th>
                     </tr>
                   </thead>
@@ -2315,6 +2335,22 @@ export default function AdminPage() {
                             >
                               <Flame size={13} className={p.isHotDeal ? "fill-white" : ""} />
                               <span>{p.isHotDeal ? "Active" : "Off"}</span>
+                            </button>
+                          </td>
+
+                          <td className="py-3 px-4 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleActive(p)}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all cursor-pointer inline-flex items-center gap-1 border ${
+                                p.isActive !== false
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                  : "bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-200"
+                              }`}
+                              title={p.isActive !== false ? "ক্লিক করে নিষ্ক্রিয় করুন (ওয়েবসাইটে লুকান)" : "ক্লিক করে সক্রিয় করুন (ওয়েবসাইটে দেখান)"}
+                            >
+                              <span className={`w-1.5 h-1.5 rounded-full ${p.isActive !== false ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                              <span>{p.isActive !== false ? "সক্রিয়" : "নিষ্ক্রিয়"}</span>
                             </button>
                           </td>
 
@@ -4992,7 +5028,17 @@ export default function AdminPage() {
               </div>
 
               {/* Toggles */}
-              <div className="flex items-center gap-6 pt-1">
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={productForm.isActive !== false}
+                    onChange={(e) => setProductForm({ ...productForm, isActive: e.target.checked })}
+                    className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 accent-emerald-500"
+                  />
+                  <span className="text-emerald-800">সরাসরি সক্রিয় রাখুন (Live on Website)</span>
+                </label>
+
                 <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
                   <input
                     type="checkbox"
@@ -5106,8 +5152,24 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800 pt-1">
+              <div className="space-y-2 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={editingProduct.isActive !== false}
+                    onChange={(e) =>
+                      setEditingProduct({ ...editingProduct, isActive: e.target.checked })
+                    }
+                    className="w-4 h-4 accent-emerald-500"
+                  />
+                  <span className={editingProduct.isActive !== false ? "text-emerald-700 font-bold" : "text-slate-500"}>
+                    {editingProduct.isActive !== false
+                      ? "🟢 প্রোডাক্ট সক্রিয় (Active - ওয়েবসাইটে দৃশ্যমান)"
+                      : "🔒 প্রোডাক্ট নিষ্ক্রিয় (Inactive - ওয়েবসাইট থেকে লুকানো)"}
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
                   <input
                     type="checkbox"
                     checked={editingProduct.isHotDeal}

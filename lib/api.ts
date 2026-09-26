@@ -409,43 +409,36 @@ async function fetchFast(url: string, options: RequestInit = {}, timeoutMs: numb
 }
 
 export const api = {
-  async getProducts(params?: { category?: string; search?: string; isHotDeal?: boolean }): Promise<IProduct[]> {
+  async getProducts(params?: {
+    category?: string;
+    search?: string;
+    isHotDeal?: boolean;
+    includeInactive?: boolean;
+  }): Promise<IProduct[]> {
     try {
       const query = new URLSearchParams();
       if (params?.category && params.category !== "all") query.set("category", params.category);
       if (params?.search) query.set("search", params.search);
       if (params?.isHotDeal) query.set("isHotDeal", "true");
+      if (params?.includeInactive) query.set("includeInactive", "true");
 
-      const res = await fetchFast(`${API_BASE}/products?${query.toString()}`, { cache: "no-store" }, 6000);
+      const res = await fetchFast(`${API_BASE}/products?${query.toString()}`, { cache: "no-store" }, 8000);
       if (!res.ok) throw new Error("Failed to fetch products");
       const json = await res.json();
-      return json.data || fallbackProducts;
+      return Array.isArray(json.data) ? json.data : [];
     } catch {
-      let filtered = [...fallbackProducts];
-      if (params?.category && params.category !== "all") {
-        filtered = filtered.filter((p) => (typeof p.category === "object" ? p.category.slug : p.category) === params.category);
-      }
-      if (params?.search) {
-        const q = params.search.toLowerCase();
-        filtered = filtered.filter((p) => p.name.toLowerCase().includes(q) || Boolean(p.tags?.some((t) => t.includes(q))));
-      }
-      if (params?.isHotDeal) {
-        filtered = filtered.filter((p) => p.isHotDeal);
-      }
-      return filtered;
+      return [];
     }
   },
 
-  async getProductBySlug(slug: string): Promise<{ product: IProduct; relatedProducts: IProduct[] }> {
+  async getProductBySlug(slug: string): Promise<{ product: IProduct; relatedProducts: IProduct[] } | null> {
     try {
-      const res = await fetchFast(`${API_BASE}/products/slug/${slug}`, { cache: "no-store" }, 6000);
+      const res = await fetchFast(`${API_BASE}/products/slug/${slug}`, { cache: "no-store" }, 8000);
       if (!res.ok) throw new Error("Failed to fetch product");
       const json = await res.json();
-      return json.data;
+      return json.data || null;
     } catch {
-      const product = fallbackProducts.find((p) => p.slug === slug) || fallbackProducts[0];
-      const relatedProducts = fallbackProducts.filter((p) => p.slug !== product.slug).slice(0, 4);
-      return { product, relatedProducts };
+      return null;
     }
   },
 
@@ -690,8 +683,8 @@ export const api = {
         method: "DELETE",
       });
       return await res.json();
-    } catch {
-      return { success: true, message: "প্রোডাক্ট সফলভাবে মুছে ফেলা হয়েছে!" };
+    } catch (err: any) {
+      return { success: false, message: err.message || "ডিলিট করতে সমস্যা হয়েছে।" };
     }
   },
 
