@@ -67,9 +67,9 @@ export default function LoginPage() {
     if (role === "admin") {
       demoUser = {
         id: "usr_admin",
-        name: "Old Rank Admin",
-        phone: "01956016119",
-        email: "mdmahfuzulhaque3140@gmail.com",
+        name: "Old Rank Admin (Niloy)",
+        phone: "01301010553",
+        email: "mdtasfirkhanniloy@gmail.com",
         role: "admin",
       };
       message = "👑 অ্যাডমিন হিসেবে সফলভাবে লগইন হয়েছে! ড্যাশবোর্ডে রিডাইরেক্ট করা হচ্ছে...";
@@ -160,13 +160,14 @@ export default function LoginPage() {
 
       if (
         input.includes("admin") ||
-        input === "01956016119" ||
         input === "01301010553" ||
-        input === "mdmahfuzulhaque3140@gmail.com" ||
+        input === "mdtasfirkhanniloy@gmail.com" ||
+        input === "mdtasfirkhanniloy" ||
+        input === "01956016119" ||
         input === "niloy@gmail.com"
       ) {
         role = "admin";
-        name = "Old Rank Admin";
+        name = "Niloy (Admin)";
       } else {
         role = "seller";
         name = "সেলার পার্টনার";
@@ -176,8 +177,8 @@ export default function LoginPage() {
       const authUser: IUser = {
         id: `usr_${Date.now()}`,
         name,
-        phone: input.includes("@") ? "01956016119" : input,
-        email: input.includes("@") ? input : (role === "admin" ? "mdmahfuzulhaque3140@gmail.com" : "seller@gmail.com"),
+        phone: input.includes("@") ? "01301010553" : input,
+        email: input.includes("@") ? input : (role === "admin" ? "mdtasfirkhanniloy@gmail.com" : "seller@gmail.com"),
         role,
         shopName,
       };
@@ -185,7 +186,8 @@ export default function LoginPage() {
       if (role === "admin") {
         if (typeof window !== "undefined") {
           localStorage.setItem("oldrank_admin_logged", "true");
-          localStorage.setItem("oldrank_admin_email", input.includes("@") ? input : "niloy@gmail.com");
+          localStorage.setItem("oldrank_admin_email", input.includes("@") ? input : "mdtasfirkhanniloy@gmail.com");
+          localStorage.setItem("oldrank_admin_phone", "01301010553");
         }
       }
 
@@ -494,7 +496,7 @@ export default function LoginPage() {
                       <input
                         type="text"
                         required
-                        placeholder="01956016119 অথবা seller@gmail.com"
+                        placeholder="01301010553 অথবা mdtasfirkhanniloy@gmail.com"
                         value={loginInput}
                         onChange={(e) => setLoginInput(e.target.value)}
                         className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"

@@ -173,7 +173,7 @@ export default function ProductDetailPage({
               {product.name}
             </h1>
 
-            {/* Rating & Stock */}
+            {/* Rating & Verification */}
             <div className="flex items-center gap-3 text-xs">
               <div className="flex items-center text-amber-400">
                 <Star size={15} className="fill-amber-400" />
@@ -182,7 +182,7 @@ export default function ProductDetailPage({
               </div>
               <span className="text-slate-300">|</span>
               <span className="font-bold text-emerald-600 flex items-center gap-1">
-                <Check size={14} /> {product.stock > 0 ? "স্টকে আছে" : "স্টক শেষ"}
+                <Check size={14} /> ১০০% আসল পণ্য
               </span>
               <span className="text-slate-300">|</span>
               <span className="text-slate-500 font-mono">SKU: {product.sku || "SG-SKU"}</span>

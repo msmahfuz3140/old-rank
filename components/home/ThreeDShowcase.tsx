@@ -765,9 +765,9 @@ export default function ThreeDShowcase() {
                 <span className="text-[11px] font-extrabold text-[#5064df] bg-indigo-500/15 border border-indigo-500/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                   {activeItem.category}
                 </span>
-                <span className="text-[11px] font-bold text-rose-400 bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <Flame size={12} className="text-rose-400" />
-                  <span>মাত্র {activeItem.stockLeft} টি অবশিষ্ট!</span>
+                <span className="text-[11px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Flame size={12} className="text-amber-400" />
+                  <span>এক্সক্লুসিভ কালেকশন</span>
                 </span>
               </div>
 

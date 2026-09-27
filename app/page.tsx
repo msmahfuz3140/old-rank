@@ -31,29 +31,45 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-8 sm:space-y-12 pb-16 bg-[#f8fafc] pt-4 sm:pt-6">
-      {/* 1. Category Section FIRST (Jewelry is First, others have Coming Soon badge & Inactive buttons) */}
+      {/* 1. Hot Deals & Exclusive Offer Section (Prominently at the top above Category Section) */}
+      <HotDealsSection products={allProducts} hotDeals={hotDeals} />
+
+      {/* 2. Category Section (Jewelry is First, others have Coming Soon badge & Inactive buttons) */}
       <section id="categories" className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-5 sm:p-8 text-white shadow-xl mb-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <span className="inline-flex items-center gap-1.5 bg-amber-400 text-slate-950 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider mb-2">
-                <Sparkles size={13} /> এক্সক্লুসিভ কালেকশন
+        <div className="relative rounded-3xl p-6 sm:p-10 md:p-12 text-white shadow-2xl mb-6 overflow-hidden border border-slate-700/60 min-h-[260px] sm:min-h-[300px] flex items-center">
+          {/* Responsive Background Image Layer */}
+          <div className="absolute inset-0 z-0">
+            <img
+              src="/images/category-showcase-banner.jpg"
+              alt="Old Rank Exclusive Showcase"
+              className="w-full h-full object-cover object-center transform scale-105 transition-transform duration-700 hover:scale-100"
+            />
+            {/* Elegant multi-layer dark gradient overlay so text remains 100% readable and luxury */}
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-slate-950/60 sm:from-slate-950/90 sm:via-slate-950/75 sm:to-slate-950/40" />
+            <div className="absolute inset-0 bg-radial-at-c from-transparent via-slate-950/30 to-slate-950/70" />
+          </div>
+
+          <div className="relative z-10 w-full flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 text-xs font-black px-3.5 py-1.5 rounded-full uppercase tracking-wider mb-3 shadow-md border border-amber-300/60">
+                <Sparkles size={14} className="fill-slate-950" /> এক্সক্লুসিভ কালেকশন
               </span>
-              <h1 className="text-xl sm:text-3xl font-black tracking-tight leading-tight">
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight text-white drop-shadow-md">
                 পছন্দের ক্যাটাগরি বেছে নিন
               </h1>
-              <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl">
+              <p className="text-xs sm:text-base text-slate-200 mt-2 font-medium leading-relaxed max-w-xl drop-shadow">
                 আমাদের প্রিমিয়াম জুয়েলারি শপ এখন উন্মুক্ত! অন্যান্য ক্যাটাগরি শীঘ্রই আসছে।
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 shrink-0">
               <Link
                 href="/category/jewelry"
-                className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-lg transition-transform flex items-center gap-1.5"
+                className="bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs sm:text-sm px-6 py-3.5 rounded-2xl shadow-xl hover:shadow-amber-400/30 transition-all flex items-center gap-2 border border-amber-300/80 active:scale-95 group cursor-pointer"
               >
-                <Gem size={15} /> জুয়েলারি শপ ভিজিট করুন
+                <Gem size={17} className="group-hover:rotate-12 transition-transform" />
+                <span>জুয়েলারি শপ ভিজিট করুন</span>
+                <ArrowRight size={15} />
               </Link>
             </div>
           </div>
@@ -178,7 +194,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 3. Exclusive Jewelry Collection Showcase (Active Main Category) */}
+      {/* 4. Exclusive Jewelry Collection Showcase (Active Main Category) */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
           <div>
@@ -209,9 +225,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 4. Hot Deals Section (Featuring All Hot Deals) */}
-      <HotDealsSection products={allProducts} hotDeals={hotDeals} />
-
       {/* 5. All Store Products Grid */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-6">
@@ -225,7 +238,7 @@ export default async function HomePage() {
               শপের সমস্ত প্রোডাক্ট কালেকশন
             </h2>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              লাইভ স্টকের সমস্ত প্রোডাক্ট একসাথে ব্রাউজ করুন
+              আমাদের সমস্ত ট্রেন্ডিং প্রিমিয়াম প্রোডাক্ট ব্রাউজ করুন
             </p>
           </div>
           <Link

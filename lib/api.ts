@@ -300,9 +300,9 @@ export const fallbackVendors: IVendor[] = [
     status: "Active",
     plan: "VIP",
     ownerName: "Old Rank Authority",
-    email: "mdmahfuzulhaque3140@gmail.com",
+    email: "mdtasfirkhanniloy@gmail.com",
     totalProducts: 45,
-    phone: "01956016119",
+    phone: "01301010553",
     address: "Dhanmondi, Dhaka, Bangladesh",
     description: "Official Flagship Brand Store of Old Rank — Wear Your Rank.",
   },
@@ -425,9 +425,59 @@ export const api = {
       const res = await fetchFast(`${API_BASE}/products?${query.toString()}`, { cache: "no-store" }, 8000);
       if (!res.ok) throw new Error("Failed to fetch products");
       const json = await res.json();
-      return Array.isArray(json.data) ? json.data : [];
+      let list: IProduct[] = Array.isArray(json.data) ? json.data : [];
+
+      if (typeof window !== "undefined") {
+        const savedOrderStr = localStorage.getItem("oldrank_products_order");
+        if (savedOrderStr) {
+          try {
+            const savedOrder: string[] = JSON.parse(savedOrderStr);
+            const orderMap = new Map<string, number>();
+            savedOrder.forEach((id, idx) => orderMap.set(String(id), idx));
+            list.sort((a, b) => {
+              const orderA = orderMap.has(String(a._id)) ? orderMap.get(String(a._id))! : 9999;
+              const orderB = orderMap.has(String(b._id)) ? orderMap.get(String(b._id))! : 9999;
+              return orderA - orderB;
+            });
+          } catch {}
+        }
+      }
+
+      return list.length > 0 ? list : fallbackProducts;
     } catch {
-      return [];
+      let list = [...fallbackProducts];
+      if (typeof window !== "undefined") {
+        const savedOrderStr = localStorage.getItem("oldrank_products_order");
+        if (savedOrderStr) {
+          try {
+            const savedOrder: string[] = JSON.parse(savedOrderStr);
+            const orderMap = new Map<string, number>();
+            savedOrder.forEach((id, idx) => orderMap.set(String(id), idx));
+            list.sort((a, b) => {
+              const orderA = orderMap.has(String(a._id)) ? orderMap.get(String(a._id))! : 9999;
+              const orderB = orderMap.has(String(b._id)) ? orderMap.get(String(b._id))! : 9999;
+              return orderA - orderB;
+            });
+          } catch {}
+        }
+      }
+      return list;
+    }
+  },
+
+  async reorderProducts(orderedIds: string[]): Promise<boolean> {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("oldrank_products_order", JSON.stringify(orderedIds));
+      }
+      const res = await fetch(`${API_BASE}/products/reorder`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds }),
+      });
+      return res.ok;
+    } catch {
+      return false;
     }
   },
 

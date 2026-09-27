@@ -45,20 +45,13 @@ export default function Footer() {
               <p className="flex items-center gap-2">
                 <Phone size={14} className="text-amber-400 shrink-0" />
                 <span>
-                  <a href="tel:01956016119" className="hover:text-white transition-colors">+880 1956-016119</a>,{" "}
                   <a href="tel:01301010553" className="hover:text-white transition-colors">+880 1301-010553</a>
                 </span>
               </p>
               <p className="flex items-center gap-2">
                 <Mail size={14} className="text-amber-400 shrink-0" />
-                <a href="mailto:mdmahfuzulhaque3140@gmail.com" className="hover:text-white transition-colors truncate">
-                  mdmahfuzulhaque3140@gmail.com
-                </a>
-              </p>
-              <p className="flex items-center gap-2">
-                <Mail size={14} className="text-amber-400 shrink-0" />
-                <a href="mailto:niloy@gmail.com" className="hover:text-white transition-colors truncate">
-                  niloy@gmail.com
+                <a href="mailto:mdtasfirkhanniloy@gmail.com" className="hover:text-white transition-colors truncate">
+                  mdtasfirkhanniloy@gmail.com
                 </a>
               </p>
               <p className="flex items-center gap-2">

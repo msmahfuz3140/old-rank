@@ -119,20 +119,13 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-6 min-w-0">
             <a
-              href="tel:01956016119"
+              href="tel:01301010553"
               className="flex items-center gap-1 sm:gap-1.5 hover:text-white transition-colors truncate"
             >
               <PhoneCall size={12} className="text-emerald-400 shrink-0" />
               <span className="truncate">
-                হটলাইন: <strong className="text-white">01956-016119</strong>
+                হটলাইন: <strong className="text-white">01301-010553</strong>
               </span>
-            </a>
-            <a
-              href="tel:01301010553"
-              className="hidden lg:flex items-center gap-1 hover:text-white transition-colors"
-            >
-              <span className="text-slate-400">/</span>
-              <strong className="text-white">01301-010553</strong>
             </a>
             <span className="hidden md:inline-flex items-center gap-1 text-slate-400">
               <Truck size={12} className="text-amber-400 shrink-0" />
@@ -181,8 +174,8 @@ export default function Navbar() {
                   <span className="font-black text-lg sm:text-2xl text-slate-900 tracking-tight block leading-none">
                     Old<span className="text-[#303d6e]">Rank</span>
                   </span>
-                  <span className="text-[9px] sm:text-[10px] font-bold bg-amber-50 text-amber-700 px-1 sm:px-1.5 py-0.5 rounded border border-amber-200">
-                    CLOTHING
+                  <span className="text-[9px] sm:text-[10px] font-bold bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded border border-amber-300 uppercase tracking-wider shadow-2xs">
+                    ONLINE SHOP
                   </span>
                 </div>
                 <span className="text-[9px] sm:text-[10px] font-medium text-slate-500 uppercase tracking-widest block mt-0.5 hidden xl:block">
@@ -406,7 +399,7 @@ export default function Navbar() {
                             {user?.name || "Niloy (Admin)"}
                           </p>
                           <p className="text-[11px] text-slate-600 truncate">
-                            {user?.email || "niloy@gmail.com"}
+                            {user?.email || "mdtasfirkhanniloy@gmail.com"}
                           </p>
                           <span className="inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 mt-1">
                             👑 সিস্টেম অ্যাডমিন
@@ -756,20 +749,13 @@ export default function Navbar() {
             </div>
 
             {/* Bottom Hotline Action in Drawer */}
-            <div className="p-3 border-t border-slate-100 bg-slate-50 space-y-1.5">
+            <div className="p-3 border-t border-slate-100 bg-slate-50">
               <a
-                href="tel:01956016119"
+                href="tel:01301010553"
                 className="flex items-center justify-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 py-2.5 px-3 rounded-xl transition-colors"
               >
                 <PhoneCall size={14} />
-                <span>হটলাইন: 01956-016119</span>
-              </a>
-              <a
-                href="tel:01301010553"
-                className="flex items-center justify-center gap-2 text-xs font-bold text-slate-700 bg-slate-200 hover:bg-slate-300 py-2 px-3 rounded-xl transition-colors"
-              >
-                <PhoneCall size={14} />
-                <span>হেল্পলাইন: 01301-010553</span>
+                <span>হটলাইন: 01301-010553</span>
               </a>
             </div>
           </div>

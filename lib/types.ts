@@ -45,6 +45,7 @@ export interface IProduct {
   rating: number;
   reviewCount: number;
   tags?: string[];
+  sortOrder?: number;
   isActive?: boolean;
 }
 

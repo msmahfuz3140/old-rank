@@ -61,6 +61,10 @@ import {
   Globe,
   Award,
   Copy,
+  GripVertical,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
 import { api, fallbackProducts, fallbackVendors } from "@/lib/api";
@@ -175,7 +179,7 @@ export default function AdminPage() {
   } | null>(null);
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
 
-  // Master Admin Authentication Gate (Exclusive for Niloy - niloy@gmail.com / niloy3140)
+  // Master Admin Authentication Gate (Exclusive for Niloy - mdtasfirkhanniloy@gmail.com / mdtasfirkhanniloy)
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
@@ -185,8 +189,8 @@ export default function AdminPage() {
   // Admin Profile Information State
   const [adminProfile, setAdminProfile] = useState({
     name: "Niloy",
-    email: "niloy@gmail.com",
-    phone: "01956016119",
+    email: "mdtasfirkhanniloy@gmail.com",
+    phone: "01301010553",
     role: "Master Administrator & Store Owner",
     designation: "চিফ এক্সিকিউটিভ ও সিস্টেম ওনার (HQ Control)",
     address: "মিরপুর, ঢাকা - ১২১৬, বাংলাদেশ",
@@ -214,8 +218,16 @@ export default function AdminPage() {
     // Check if admin is previously logged in
     const isLoggedAdmin = localStorage.getItem("oldrank_admin_logged") === "true";
     const storedName = localStorage.getItem("oldrank_admin_name") || "Niloy";
-    const storedEmail = localStorage.getItem("oldrank_admin_email") || "niloy@gmail.com";
-    const storedPhone = localStorage.getItem("oldrank_admin_phone") || "01956016119";
+    let storedEmail = localStorage.getItem("oldrank_admin_email");
+    if (!storedEmail || storedEmail === "niloy@gmail.com" || storedEmail === "mdmahfuzulhaque3140@gmail.com") {
+      storedEmail = "mdtasfirkhanniloy@gmail.com";
+      localStorage.setItem("oldrank_admin_email", storedEmail);
+    }
+    let storedPhone = localStorage.getItem("oldrank_admin_phone");
+    if (!storedPhone || storedPhone === "01956016119") {
+      storedPhone = "01301010553";
+      localStorage.setItem("oldrank_admin_phone", storedPhone);
+    }
     const storedAddress = localStorage.getItem("oldrank_admin_address") || "মিরপুর, ঢাকা - ১২১৬, বাংলাদেশ";
     const storedBio = localStorage.getItem("oldrank_admin_bio") || "Old Rank এক্সক্লুসিভ জুয়েলারি ও ই-কমার্স প্ল্যাটফর্মের প্রধান নিয়ন্ত্রক ও ডেটাবেজ সুপার অ্যাডমিন।";
 
@@ -256,23 +268,36 @@ export default function AdminPage() {
   const handleAdminLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setAdminAuthError("");
-    const storedEmail = (localStorage.getItem("oldrank_admin_email") || "niloy@gmail.com").trim().toLowerCase();
-    const storedPass = localStorage.getItem("oldrank_admin_password") || "niloy3140";
-    const storedName = localStorage.getItem("oldrank_admin_name") || "Niloy";
 
-    if (adminEmail.trim().toLowerCase() === storedEmail && adminPassword === storedPass) {
+    const customEmail = localStorage.getItem("oldrank_admin_email");
+    const storedEmail = (customEmail && customEmail !== "niloy@gmail.com" && customEmail !== "mdmahfuzulhaque3140@gmail.com"
+      ? customEmail
+      : "mdtasfirkhanniloy@gmail.com").trim().toLowerCase();
+
+    const customPass = localStorage.getItem("oldrank_admin_password");
+    const storedPass = (customPass && customPass !== "niloy3140" ? customPass : "mdtasfirkhanniloy");
+    const storedName = localStorage.getItem("oldrank_admin_name") || "Niloy";
+    const storedPhone = localStorage.getItem("oldrank_admin_phone") || "01301010553";
+
+    const inputEmail = adminEmail.trim().toLowerCase();
+    const isEmailValid = inputEmail === storedEmail || inputEmail === "mdtasfirkhanniloy@gmail.com";
+    const isPassValid = adminPassword === storedPass;
+
+    if (isEmailValid && isPassValid) {
       localStorage.setItem("oldrank_admin_logged", "true");
+      localStorage.setItem("oldrank_admin_email", storedEmail);
+      localStorage.setItem("oldrank_admin_password", storedPass);
       setIsAdminAuthenticated(true);
       login({
         id: "usr_niloy",
         name: `${storedName} (Admin)`,
         email: storedEmail,
-        phone: localStorage.getItem("oldrank_admin_phone") || "01956016119",
+        phone: storedPhone,
         role: "admin",
       });
       showToast("👑 স্বাগতম নিলয়! অ্যাডমিন প্যানেলে সফলভাবে লগইন হয়েছে।");
     } else {
-      setAdminAuthError("❌ ভুল ইমেইল বা পাসওয়ার্ড! অনুগ্রহ করে সঠিক অ্যাডমিন তথ্য প্রদান করুন।");
+      setAdminAuthError("❌ ভুল ইমেইল বা পাসওয়ার্ড! অনুগ্রহ করে সঠিক তথ্য দিন (ইমেইল: mdtasfirkhanniloy@gmail.com)");
     }
   };
 
@@ -330,7 +355,9 @@ export default function AdminPage() {
 
   const handleChangeAdminPassword = (e: React.FormEvent) => {
     e.preventDefault();
-    const storedPass = localStorage.getItem("oldrank_admin_password") || "niloy3140";
+    const customPass = localStorage.getItem("oldrank_admin_password");
+    const storedPass = (customPass && customPass !== "niloy3140" ? customPass : "mdtasfirkhanniloy");
+
     if (changePasswordForm.currentPassword !== storedPass) {
       showToast("❌ বর্তমান পাসওয়ার্ড ভুল হয়েছে!");
       return;
@@ -345,7 +372,7 @@ export default function AdminPage() {
     }
     localStorage.setItem("oldrank_admin_password", changePasswordForm.newPassword);
     setChangePasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    showToast("🎉 অ্যাডমিন পাসওয়ার্ড সফলভাবে পরিবর্তিত হয়েছে!");
+    showToast("🎉 অ্যাডমিন পাসওয়ার্ড সফলভাবে পরিবর্তিত হয়েছে! পরবর্তী লগইনে এই নতুন পাসওয়ার্ডটি ব্যবহার করবেন।");
   };
 
   const handleTogglePromoPopup = (active: boolean) => {
@@ -360,6 +387,12 @@ export default function AdminPage() {
   const [editingProduct, setEditingProduct] = useState<IProduct | null>(null);
   const [productSearch, setProductSearch] = useState("");
   const [productCategoryFilter, setProductCategoryFilter] = useState("all");
+  const [productStockFilter, setProductStockFilter] = useState<string>("all");
+
+  // Product Drag & Drop / Reordering State
+  const [draggedProductId, setDraggedProductId] = useState<string | null>(null);
+  const [dragOverProductId, setDragOverProductId] = useState<string | null>(null);
+  const [isReordering, setIsReordering] = useState(false);
 
   // New Product Form State
   const [productForm, setProductForm] = useState({
@@ -396,9 +429,9 @@ export default function AdminPage() {
 
   // Gateway & Shop Settings State
   const [settings, setSettings] = useState({
-    bkashNumber: "01956016119",
-    nagadNumber: "01956016119",
-    rocketNumber: "01956016119",
+    bkashNumber: "01301010553",
+    nagadNumber: "01301010553",
+    rocketNumber: "01301010553",
     dhakaCharge: 60,
     outsideDhakaCharge: 120,
     freeDeliveryThreshold: 2000,
@@ -819,6 +852,84 @@ export default function AdminPage() {
     }
   };
 
+  // Product Drag & Drop / Reordering Handlers
+  const applyProductReorder = async (newProductsList: IProduct[]) => {
+    setIsReordering(true);
+    setProducts(newProductsList);
+    const orderedIds = newProductsList.map((p) => p._id).filter(Boolean);
+    try {
+      await api.reorderProducts(orderedIds);
+      showToast("✨ প্রোডাক্টের নতুন সিরিয়াল সফলভাবে সেভ করা হয়েছে! ওয়েবসাইটে এই ক্রমেই গ্রাহকরা দেখবে।");
+    } catch {
+      showToast("⚠️ সার্ভারে ক্রম আপডেট করতে সমস্যা হয়েছে, তবে সাময়িকভাবে সেভ করা হয়েছে।");
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, productId: string) => {
+    e.dataTransfer.setData("text/plain", productId);
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedProductId(productId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, productId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverProductId !== productId) {
+      setDragOverProductId(productId);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDragEnd = () => {
+    setDraggedProductId(null);
+    setDragOverProductId(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetProductId: string) => {
+    e.preventDefault();
+    const sourceProductId = e.dataTransfer.getData("text/plain") || draggedProductId;
+    setDraggedProductId(null);
+    setDragOverProductId(null);
+
+    if (!sourceProductId || sourceProductId === targetProductId) return;
+
+    const sourceIndex = products.findIndex((p) => p._id === sourceProductId);
+    const targetIndex = products.findIndex((p) => p._id === targetProductId);
+
+    if (sourceIndex === -1 || targetIndex === -1) return;
+
+    const reordered = [...products];
+    const [moved] = reordered.splice(sourceIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+
+    await applyProductReorder(reordered);
+  };
+
+  const handleMoveProductUp = async (productId: string) => {
+    const idx = products.findIndex((p) => p._id === productId);
+    if (idx <= 0) return;
+    const reordered = [...products];
+    const temp = reordered[idx];
+    reordered[idx] = reordered[idx - 1];
+    reordered[idx - 1] = temp;
+    await applyProductReorder(reordered);
+  };
+
+  const handleMoveProductDown = async (productId: string) => {
+    const idx = products.findIndex((p) => p._id === productId);
+    if (idx === -1 || idx >= products.length - 1) return;
+    const reordered = [...products];
+    const temp = reordered[idx];
+    reordered[idx] = reordered[idx + 1];
+    reordered[idx + 1] = temp;
+    await applyProductReorder(reordered);
+  };
+
   // Seller Actions
   const handleCreateSellerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1104,6 +1215,16 @@ export default function AdminPage() {
     return true;
   });
 
+  // Stock Statistics for Admin
+  const productStockStats = useMemo(() => {
+    const totalCount = products.length;
+    const totalStock = products.reduce((acc, p) => acc + (Number(p.stock) || 0), 0);
+    const inStock = products.filter((p) => (Number(p.stock) || 0) > 10).length;
+    const lowStock = products.filter((p) => (Number(p.stock) || 0) > 0 && (Number(p.stock) || 0) <= 10).length;
+    const outOfStock = products.filter((p) => (Number(p.stock) || 0) <= 0).length;
+    return { totalCount, totalStock, inStock, lowStock, outOfStock };
+  }, [products]);
+
   // Filtered Products
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
@@ -1114,7 +1235,14 @@ export default function AdminPage() {
     const catSlug = typeof p.category === "object" ? p.category.slug : p.category;
     const matchesCat = productCategoryFilter === "all" || catSlug === productCategoryFilter;
 
-    return matchesSearch && matchesCat;
+    const stockVal = Number(p.stock) || 0;
+    const matchesStock =
+      productStockFilter === "all" ||
+      (productStockFilter === "in_stock" && stockVal > 10) ||
+      (productStockFilter === "low_stock" && stockVal > 0 && stockVal <= 10) ||
+      (productStockFilter === "out_of_stock" && stockVal <= 0);
+
+    return matchesSearch && matchesCat && matchesStock;
   });
 
   // Filtered Sellers
@@ -1270,6 +1398,7 @@ export default function AdminPage() {
                 <input
                   type="email"
                   required
+                  placeholder="mdtasfirkhanniloy@gmail.com"
                   value={adminEmail}
                   onChange={(e) => setAdminEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-xs"
@@ -1286,6 +1415,7 @@ export default function AdminPage() {
                 <input
                   type={showAdminPassword ? "text" : "password"}
                   required
+                  placeholder="পাসওয়ার্ড লিখুন"
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
                   className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-600 text-xs tracking-wider"
@@ -2179,6 +2309,116 @@ export default function AdminPage() {
         {/* TAB 2: PRODUCTS & INVENTORY MANAGEMENT */}
         {activeTab === "products" && (
           <div className="space-y-4">
+            {/* Inventory & Stock Summary Cards for Admin */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <button
+                type="button"
+                onClick={() => setProductStockFilter("all")}
+                className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                  productStockFilter === "all"
+                    ? "bg-[#303d6e] text-white border-[#303d6e] shadow-md ring-2 ring-indigo-400"
+                    : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 shadow-xs"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className={`text-[11px] font-bold uppercase tracking-wider ${productStockFilter === "all" ? "text-indigo-200" : "text-slate-400"}`}>
+                    মোট প্রোডাক্ট
+                  </span>
+                  <Package size={16} className={productStockFilter === "all" ? "text-amber-300" : "text-slate-400"} />
+                </div>
+                <div className="text-xl sm:text-2xl font-black">
+                  {productStockStats.totalCount} <span className="text-xs font-semibold">টি</span>
+                </div>
+                <div className={`text-[10px] mt-1 font-bold ${productStockFilter === "all" ? "text-indigo-200" : "text-slate-400"}`}>
+                  সব প্রোডাক্টের তালিকা
+                </div>
+              </button>
+
+              <div className="p-4 rounded-2xl border bg-white text-slate-800 border-slate-200 shadow-xs">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                    মোট মজুত স্টক
+                  </span>
+                  <ShoppingBag size={16} className="text-indigo-500" />
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-indigo-900">
+                  {productStockStats.totalStock} <span className="text-xs font-semibold text-slate-500">পিস</span>
+                </div>
+                <div className="text-[10px] mt-1 font-bold text-indigo-600">
+                  ইনভেন্টরিতে মোট কোয়ান্টিটি
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setProductStockFilter("in_stock")}
+                className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                  productStockFilter === "in_stock"
+                    ? "bg-emerald-700 text-white border-emerald-700 shadow-md ring-2 ring-emerald-300"
+                    : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 shadow-xs"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className={`text-[11px] font-bold uppercase tracking-wider ${productStockFilter === "in_stock" ? "text-emerald-100" : "text-slate-400"}`}>
+                    পর্যাপ্ত স্টক (&gt;১০)
+                  </span>
+                  <CheckCircle2 size={16} className={productStockFilter === "in_stock" ? "text-white" : "text-emerald-500"} />
+                </div>
+                <div className={`text-xl sm:text-2xl font-black ${productStockFilter === "in_stock" ? "text-white" : "text-emerald-700"}`}>
+                  {productStockStats.inStock} <span className="text-xs font-semibold">টি</span>
+                </div>
+                <div className={`text-[10px] mt-1 font-bold ${productStockFilter === "in_stock" ? "text-emerald-100" : "text-emerald-600"}`}>
+                  রেডি ফর সেল
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setProductStockFilter("low_stock")}
+                className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                  productStockFilter === "low_stock"
+                    ? "bg-amber-600 text-white border-amber-600 shadow-md ring-2 ring-amber-300"
+                    : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 shadow-xs"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className={`text-[11px] font-bold uppercase tracking-wider ${productStockFilter === "low_stock" ? "text-amber-100" : "text-slate-400"}`}>
+                    সীমিত স্টক (১-১০)
+                  </span>
+                  <AlertCircle size={16} className={productStockFilter === "low_stock" ? "text-white" : "text-amber-500"} />
+                </div>
+                <div className={`text-xl sm:text-2xl font-black ${productStockFilter === "low_stock" ? "text-white" : "text-amber-700"}`}>
+                  {productStockStats.lowStock} <span className="text-xs font-semibold">টি</span>
+                </div>
+                <div className={`text-[10px] mt-1 font-bold ${productStockFilter === "low_stock" ? "text-amber-100" : "text-amber-600"}`}>
+                  দ্রুত রি-স্টক প্রয়োজন
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setProductStockFilter("out_of_stock")}
+                className={`p-4 rounded-2xl border text-left transition-all cursor-pointer col-span-2 sm:col-span-1 ${
+                  productStockFilter === "out_of_stock"
+                    ? "bg-rose-700 text-white border-rose-700 shadow-md ring-2 ring-rose-300"
+                    : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 shadow-xs"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className={`text-[11px] font-bold uppercase tracking-wider ${productStockFilter === "out_of_stock" ? "text-rose-100" : "text-slate-400"}`}>
+                    আউট অব স্টক (০)
+                  </span>
+                  <Ban size={16} className={productStockFilter === "out_of_stock" ? "text-white" : "text-rose-500"} />
+                </div>
+                <div className={`text-xl sm:text-2xl font-black ${productStockFilter === "out_of_stock" ? "text-white" : "text-rose-700"}`}>
+                  {productStockStats.outOfStock} <span className="text-xs font-semibold">টি</span>
+                </div>
+                <div className={`text-[10px] mt-1 font-bold ${productStockFilter === "out_of_stock" ? "text-rose-100" : "text-rose-600"}`}>
+                  স্টক শেষ হয়ে গেছে
+                </div>
+              </button>
+            </div>
+
             {/* Header & Action Bar */}
             <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
               <div>
@@ -2214,6 +2454,17 @@ export default function AdminPage() {
                   <option value="smart-watch">Smart Watch</option>
                 </select>
 
+                <select
+                  value={productStockFilter}
+                  onChange={(e) => setProductStockFilter(e.target.value)}
+                  className="py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-amber-500"
+                >
+                  <option value="all">সব স্টক ({productStockStats.totalCount})</option>
+                  <option value="in_stock">পর্যাপ্ত স্টক ({productStockStats.inStock})</option>
+                  <option value="low_stock">সীমিত স্টক ({productStockStats.lowStock})</option>
+                  <option value="out_of_stock">আউট অব স্টক ({productStockStats.outOfStock})</option>
+                </select>
+
                 <button
                   onClick={() => setIsAddProductOpen(true)}
                   className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs py-2 px-4 rounded-xl flex items-center gap-1.5 shadow transition-all cursor-pointer shrink-0"
@@ -2224,12 +2475,36 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {/* Reorder Guidance Banner */}
+            <div className="bg-amber-500/10 border border-amber-400/30 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-400/20 text-amber-600 flex items-center justify-center shrink-0">
+                  <ArrowUpDown size={18} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-xs">
+                    প্রোডাক্টের সিরিয়াল ও ডিসপ্লে অর্ডার সাজান (Drag & Drop Reorder)
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    বাম পাশের <span className="font-bold text-slate-700">⋮⋮ হ্যান্ডল টেনে (Drag)</span> অথবা <span className="font-bold text-slate-700">▲/▼ বাটন চেপে</span> যেকোনো প্রোডাক্টকে আগে বা পরে নিতে পারেন। আপনি যেভাবে সাজাবেন, ওয়েবসাইটে কাস্টমাররাও ঠিক সেই সিরিয়ালে দেখবে।
+                  </p>
+                </div>
+              </div>
+              {isReordering && (
+                <div className="flex items-center gap-2 text-amber-700 font-bold bg-amber-100/80 px-3 py-1.5 rounded-xl self-start sm:self-auto shrink-0 animate-pulse">
+                  <RefreshCw size={14} className="animate-spin" />
+                  <span>নতুন সিরিয়াল সেভ হচ্ছে...</span>
+                </div>
+              )}
+            </div>
+
             {/* Products Table */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 uppercase text-[10px] font-bold">
+                      <th className="py-3 px-3 text-center w-24">সিরিয়াল ও ক্রম</th>
                       <th className="py-3 px-4">প্রোডাক্ট ও বিবরণ</th>
                       <th className="py-3 px-4">ক্যাটাগরি</th>
                       <th className="py-3 px-4">সেলার শপ</th>
@@ -2245,14 +2520,72 @@ export default function AdminPage() {
                   <tbody className="divide-y divide-slate-100">
                     {filteredProducts.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
+                        <td colSpan={11} className="py-12 text-center text-slate-400 font-medium">
                           কোনো প্রোডাক্ট পাওয়া যায়নি
                         </td>
                       </tr>
                     ) : (
-                      filteredProducts.map((p) => (
-                        <tr key={p._id} className="hover:bg-slate-50/60 transition-colors">
-                          <td className="py-3 px-4">
+                      filteredProducts.map((p) => {
+                        const globalIndex = products.findIndex((prod) => prod._id === p._id);
+                        const isFirst = globalIndex <= 0;
+                        const isLast = globalIndex >= products.length - 1 || globalIndex === -1;
+
+                        return (
+                          <tr
+                            key={p._id}
+                            draggable={true}
+                            onDragStart={(e) => handleDragStart(e, p._id)}
+                            onDragOver={(e) => handleDragOver(e, p._id)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, p._id)}
+                            onDragEnd={handleDragEnd}
+                            className={`transition-all select-none ${
+                              draggedProductId === p._id
+                                ? "opacity-30 bg-amber-100/60 scale-[0.99] border-dashed border-2 border-amber-500"
+                                : dragOverProductId === p._id
+                                ? "bg-amber-100/80 border-t-2 border-amber-600 shadow-sm"
+                                : "hover:bg-slate-50/60"
+                            }`}
+                          >
+                            <td className="py-3 px-3">
+                              <div className="flex items-center gap-1.5 justify-center">
+                                {/* Drag Handle */}
+                                <div
+                                  className="p-1 text-slate-400 hover:text-amber-600 cursor-grab active:cursor-grabbing rounded hover:bg-slate-100 transition-colors"
+                                  title="ড্র্যাগ করে উপরে বা নিচে নিয়ে সিরিয়াল সাজান"
+                                >
+                                  <GripVertical size={16} />
+                                </div>
+
+                                {/* Serial Badge */}
+                                <span className="font-mono text-[11px] font-black px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-900 border border-amber-200/80 min-w-[28px] text-center">
+                                  #{globalIndex !== -1 ? globalIndex + 1 : "-"}
+                                </span>
+
+                                {/* Up / Down Arrow Buttons */}
+                                <div className="flex flex-col gap-0.5">
+                                  <button
+                                    type="button"
+                                    disabled={isFirst}
+                                    onClick={() => handleMoveProductUp(p._id)}
+                                    className="p-0.5 rounded hover:bg-slate-200 text-slate-600 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                    title="এক ধাপ উপরে তুলুন"
+                                  >
+                                    <ChevronUp size={12} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isLast}
+                                    onClick={() => handleMoveProductDown(p._id)}
+                                    className="p-0.5 rounded hover:bg-slate-200 text-slate-600 disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                                    title="এক ধাপ নিচে নামান"
+                                  >
+                                    <ChevronDown size={12} />
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
                               <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
                                 <ProductImage
@@ -2381,8 +2714,9 @@ export default function AdminPage() {
                             </div>
                           </td>
                         </tr>
-                      ))
-                    )}
+                      );
+                    })
+                  )}
                   </tbody>
                 </table>
               </div>
@@ -2900,7 +3234,7 @@ export default function AdminPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {incompleteOrders.map((lead) => {
                 const waMessage = encodeURIComponent(
-                  `আসসালামু আলাইকুম ${lead.name || "গ্রাহক"}, আপনি Old Rank-এ অর্ডার করার চেষ্টা করছিলেন। কোনো সহযোগিতার প্রয়োজন হলে আমাদের জানান। হটলাইন: 01956016119`
+                  `আসসালামু আলাইকুম ${lead.name || "গ্রাহক"}, আপনি Old Rank-এ অর্ডার করার চেষ্টা করছিলেন। কোনো সহযোগিতার প্রয়োজন হলে আমাদের জানান। হটলাইন: 01301010553`
                 );
 
                 return (

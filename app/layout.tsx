@@ -15,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Old Rank | Premium Men's Wear & Clothing Brand",
+  title: "Old Rank | Premium Online Shop",
   description:
-    "Old Rank - Wear Your Rank. বাংলাদেশের সেরা প্রিমিয়াম লাইফস্টাইল ও মেনস ওয়্যার ক্লথিং ব্র্যান্ড।",
+    "Old Rank - Wear Your Rank. বাংলাদেশের সেরা প্রিমিয়াম লাইফস্টাইল ও অনলাইন শপ।",
   icons: {
     icon: [
       { url: "/images/logo.png", type: "image/png" },

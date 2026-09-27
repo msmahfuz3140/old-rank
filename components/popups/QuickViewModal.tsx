@@ -100,7 +100,7 @@ export default function QuickViewModal() {
               {product.name}
             </h3>
 
-            {/* Rating & Stock */}
+            {/* Rating & Verification */}
             <div className="flex items-center gap-3 mb-4">
               <div className="flex items-center text-amber-400 text-xs">
                 <Star size={14} className="fill-amber-400" />
@@ -109,7 +109,7 @@ export default function QuickViewModal() {
               </div>
               <span className="text-xs text-slate-300">|</span>
               <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
-                <Check size={13} /> {product.stock > 0 ? "স্টকে আছে" : "স্টক শেষ"}
+                <Check size={13} /> ১০০% আসল কোয়ালিটি
               </span>
             </div>
 
