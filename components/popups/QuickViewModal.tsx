@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Check, Star, ShoppingCart, ArrowRight } from "lucide-react";
+import { X, Check, Star, ShoppingCart, ArrowRight, ZoomIn } from "lucide-react";
 import { useQuickViewStore, useCartStore } from "@/lib/store";
 import ProductImage from "@/components/product/ProductImage";
+import ProductImageZoomModal from "@/components/product/ProductImageZoomModal";
 
 export default function QuickViewModal() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function QuickViewModal() {
 
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
 
   if (!isOpen || !product) return null;
 
@@ -79,15 +81,23 @@ export default function QuickViewModal() {
         </button>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 items-start">
-          {/* Image */}
-          <div className="rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm aspect-square sm:aspect-auto">
+          {/* Clickable Image with Zoom */}
+          <div
+            onClick={() => setIsZoomOpen(true)}
+            className="group relative rounded-2xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm aspect-square sm:aspect-auto cursor-zoom-in hover:shadow-md transition-all"
+            title="ছবি বড় করে জুম করে দেখুন"
+          >
             <ProductImage
               src={product.mainImage}
               alt={product.name}
-              className="w-full h-64 sm:h-80 object-cover"
+              className="w-full h-64 sm:h-80 object-cover group-hover:scale-102 transition-transform duration-300"
               showText={true}
               iconSize={32}
             />
+            <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1 bg-slate-900/80 text-white backdrop-blur-md text-[10px] font-bold px-2.5 py-1 rounded-full shadow pointer-events-none">
+              <ZoomIn size={12} className="text-amber-400" />
+              <span>জুম</span>
+            </div>
           </div>
 
           {/* Info */}
@@ -193,6 +203,14 @@ export default function QuickViewModal() {
           </div>
         </div>
       </div>
+
+      {/* Full-Screen Zoom Lightbox */}
+      <ProductImageZoomModal
+        isOpen={isZoomOpen}
+        onClose={() => setIsZoomOpen(false)}
+        images={[product.mainImage, ...(product.galleryImages || [])]}
+        productName={product.name}
+      />
     </div>
   );
 }

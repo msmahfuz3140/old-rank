@@ -12,12 +12,14 @@ import {
   ArrowRight,
   Store,
   RotateCcw,
+  ZoomIn,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useCartStore } from "@/lib/store";
 import { IProduct } from "@/lib/types";
 import PopUpProductCard from "@/components/product/PopUpProductCard";
 import ProductImage from "@/components/product/ProductImage";
+import ProductImageZoomModal from "@/components/product/ProductImageZoomModal";
 
 export default function ProductDetailPage({
   params,
@@ -36,6 +38,7 @@ export default function ProductDetailPage({
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<"desc" | "spec">("desc");
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
 
   useEffect(() => {
     api.getProductBySlug(resolvedParams.slug).then((data) => {
@@ -128,14 +131,25 @@ export default function ProductDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-start">
         {/* Left: Product Images Gallery */}
         <div className="lg:col-span-6 space-y-4">
-          <div className="rounded-3xl overflow-hidden bg-white border border-slate-100 shadow-md aspect-square flex items-center justify-center p-2">
+          {/* Main Product Image (Click to Zoom) */}
+          <div
+            onClick={() => setIsZoomOpen(true)}
+            className="group relative rounded-3xl overflow-hidden bg-white border border-slate-100 shadow-md aspect-square flex items-center justify-center p-2 cursor-zoom-in hover:shadow-xl transition-all"
+            title="ছবি বড় করে জুম করে দেখুন"
+          >
             <ProductImage
               src={selectedImage || product.mainImage}
               alt={product.name}
-              className="w-full h-full object-cover rounded-2xl"
+              className="w-full h-full object-cover rounded-2xl group-hover:scale-102 transition-transform duration-300"
               showText={true}
               iconSize={40}
             />
+
+            {/* Hover Floating Zoom Pill */}
+            <div className="absolute bottom-4 right-4 z-10 flex items-center gap-1.5 bg-slate-900/85 hover:bg-slate-900 text-white backdrop-blur-md text-xs font-bold px-3 py-1.5 rounded-full shadow-lg transition-transform group-hover:scale-105 pointer-events-none">
+              <ZoomIn size={14} className="text-amber-400" />
+              <span>বড় করে দেখুন (Zoom)</span>
+            </div>
           </div>
 
           {/* Thumbnails */}
@@ -383,6 +397,15 @@ export default function ProductDetailPage({
           </div>
         </section>
       )}
+
+      {/* Product Image Full-Screen Zoom & Lightbox Modal */}
+      <ProductImageZoomModal
+        isOpen={isZoomOpen}
+        onClose={() => setIsZoomOpen(false)}
+        images={allImages}
+        initialIndex={Math.max(allImages.indexOf(selectedImage || product.mainImage), 0)}
+        productName={product.name}
+      />
     </div>
   );
 }
