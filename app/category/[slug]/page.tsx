@@ -4,6 +4,9 @@ import { ArrowLeft, Layers } from "lucide-react";
 import { api, fallbackCategories } from "@/lib/api";
 import ProductCard from "@/components/product/ProductCard";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default function CategoryPage({
   params,
 }: {

@@ -13,6 +13,9 @@ import PopUpProductCard from "@/components/product/PopUpProductCard";
 import HotDealsSection from "@/components/home/HotDealsSection";
 import { api } from "@/lib/api";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function HomePage() {
   const [products, categories] = await Promise.all([
     api.getProducts(),

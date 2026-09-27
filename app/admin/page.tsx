@@ -64,6 +64,7 @@ import {
   GripVertical,
   ChevronUp,
   ChevronDown,
+  ChevronsUp,
   ArrowUpDown,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
@@ -929,6 +930,15 @@ export default function AdminPage() {
     const temp = reordered[idx];
     reordered[idx] = reordered[idx + 1];
     reordered[idx + 1] = temp;
+    await applyProductReorder(reordered);
+  };
+
+  const handleMoveToTop = async (productId: string) => {
+    const idx = products.findIndex((p) => p._id === productId);
+    if (idx <= 0) return;
+    const reordered = [...products];
+    const [moved] = reordered.splice(idx, 1);
+    reordered.unshift(moved);
     await applyProductReorder(reordered);
   };
 
@@ -2566,6 +2576,16 @@ export default function AdminPage() {
 
                                 {/* Up / Down Arrow Buttons */}
                                 <div className="flex flex-col gap-0.5">
+                                  {!isFirst && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMoveToTop(p._id)}
+                                      className="p-0.5 rounded hover:bg-amber-100 text-amber-600 transition-colors cursor-pointer"
+                                      title="এক ক্লিকে সবার প্রথমে (#১) আনুন"
+                                    >
+                                      <ChevronsUp size={12} />
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
                                     disabled={isFirst}
