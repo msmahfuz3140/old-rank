@@ -194,6 +194,9 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* 3. Hot Deals & Exclusive Live Offer Section (Placed right after Category Section and above Premium Jewelry) */}
+      <HotDealsSection products={allProducts} hotDeals={hotDeals} />
+
       {/* 4. Exclusive Jewelry Collection Showcase (Active Main Category) */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
@@ -225,10 +228,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 3. Hot Deals & Live Offer Section (Placed after Main Category Section) */}
-      <HotDealsSection products={allProducts} hotDeals={hotDeals} />
-
-      {/* 4. All Store Products Grid */}
+      {/* 5. All Store Products Grid */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-6">
           <div>
