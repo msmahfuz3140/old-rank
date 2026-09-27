@@ -125,7 +125,11 @@ export default async function HomePage() {
 
                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-indigo-50 mb-3 group-hover:scale-105 transition-transform border border-indigo-200 shadow-xs">
                       <img
-                        src={cat.image || "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500&auto=format&fit=crop&q=80"}
+                        src={
+                          cat.slug === "jewelry"
+                            ? (cat.image && !cat.image.includes("unsplash.com/photo-1515562141207") ? cat.image : "/images/jewelry-category.jpg")
+                            : cat.image || "/images/jewelry-category.jpg"
+                        }
                         alt={cat.name}
                         className="w-full h-full object-cover"
                       />

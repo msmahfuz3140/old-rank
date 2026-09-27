@@ -80,11 +80,12 @@ import {
 
 // Preset luxury jewelry images for 1-click rapid posting
 const PRESET_GALLERY_IMAGES = [
+  { label: "Oxidized Silver Chandelier Earrings", url: "https://res.cloudinary.com/qofsvx9f/image/upload/v1790535329/old-rank/jewelry/fehlrlobeorivjuij2im.jpg" },
   { label: "Bridal Choker Necklace Set", url: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop&q=80" },
   { label: "Royal Emerald Drop Earrings", url: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop&q=80" },
   { label: "Antique Kundan Floral Ring", url: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800&auto=format&fit=crop&q=80" },
   { label: "Gold Plated Textured Bangles", url: "https://images.unsplash.com/photo-1611591475152-473549605898?w=800&auto=format&fit=crop&q=80" },
-  { label: "Pearl & Ruby Statement Necklace", url: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&auto=format&fit=crop&q=80" },
+  { label: "Pearl & Ruby Statement Necklace", url: "/images/jewelry-category.jpg" },
   { label: "Traditional Matte Gold Jhumka", url: "https://images.unsplash.com/photo-1630019852942-f89202989a59?w=800&auto=format&fit=crop&q=80" },
   { label: "Diamond-Cut CZ Tennis Bracelet", url: "https://images.unsplash.com/photo-1611591475152-473549605898?w=800&auto=format&fit=crop&q=80" },
   { label: "Old Rank Official Store Banner", url: "/images/old-rank-banner.jpg" },
