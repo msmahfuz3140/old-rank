@@ -432,6 +432,8 @@ export default function AdminPage() {
     bkashNumber: "01301010553",
     nagadNumber: "01301010553",
     rocketNumber: "01301010553",
+    secondaryPhone: "01956016119",
+    secondaryEmail: "mdmahfuzulhaque3140@gmail.com",
     dhakaCharge: 60,
     outsideDhakaCharge: 120,
     freeDeliveryThreshold: 2000,
@@ -3333,13 +3335,25 @@ export default function AdminPage() {
 
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1 uppercase">
-                  সেকেন্ডারি হেল্পলাইন (Secondary Line)
+                  সেকেন্ডারি হেল্পলাইন (Secondary Hotline)
                 </label>
                 <input
                   type="text"
-                  value="01301010553"
-                  disabled
-                  className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-mono text-slate-700 cursor-not-allowed"
+                  value={settings.secondaryPhone || "01956016119"}
+                  onChange={(e) => setSettings({ ...settings, secondaryPhone: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-slate-900 focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1 uppercase">
+                  সেকেন্ডারি ইমেইল (Secondary Email)
+                </label>
+                <input
+                  type="text"
+                  value={settings.secondaryEmail || "mdmahfuzulhaque3140@gmail.com"}
+                  onChange={(e) => setSettings({ ...settings, secondaryEmail: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-slate-900 focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 

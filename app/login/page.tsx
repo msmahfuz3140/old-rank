@@ -164,6 +164,7 @@ export default function LoginPage() {
         input === "mdtasfirkhanniloy@gmail.com" ||
         input === "mdtasfirkhanniloy" ||
         input === "01956016119" ||
+        input === "mdmahfuzulhaque3140@gmail.com" ||
         input === "niloy@gmail.com"
       ) {
         role = "admin";

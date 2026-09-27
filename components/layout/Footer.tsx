@@ -41,19 +41,31 @@ export default function Footer() {
             <p className="text-sm text-slate-400 leading-relaxed mb-4">
               বাংলাদেশের প্রিমিয়াম মেনস ওয়্যার ও ফ্যাশন লাইফস্টাইল ব্র্যান্ড। অরিজিনাল ক্লোথিং ও কোয়ালিটি প্রোডাক্ট শতভাগ নিশ্চিন্তে কিনুন।
             </p>
-            <div className="space-y-2 text-xs text-slate-400">
-              <p className="flex items-center gap-2">
-                <Phone size={14} className="text-amber-400 shrink-0" />
-                <span>
-                  <a href="tel:01301010553" className="hover:text-white transition-colors">+880 1301-010553</a>
-                </span>
-              </p>
-              <p className="flex items-center gap-2">
-                <Mail size={14} className="text-amber-400 shrink-0" />
-                <a href="mailto:mdtasfirkhanniloy@gmail.com" className="hover:text-white transition-colors truncate">
-                  mdtasfirkhanniloy@gmail.com
-                </a>
-              </p>
+            <div className="space-y-2.5 text-xs text-slate-400">
+              <div className="flex items-start gap-2">
+                <Phone size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p>
+                    <span className="text-slate-300 font-semibold">হটলাইন:</span>{" "}
+                    <a href="tel:01301010553" className="hover:text-white font-medium text-white transition-colors">+880 1301-010553</a>
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    <span className="text-amber-400 font-semibold">বিকল্প (Secondary):</span>{" "}
+                    <a href="tel:01956016119" className="hover:text-white transition-colors">+880 1956-016119</a>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Mail size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <a href="mailto:mdtasfirkhanniloy@gmail.com" className="hover:text-white text-white font-medium transition-colors block truncate">
+                    mdtasfirkhanniloy@gmail.com
+                  </a>
+                  <a href="mailto:mdmahfuzulhaque3140@gmail.com" className="hover:text-white text-slate-400 transition-colors block truncate text-[11px]">
+                    mdmahfuzulhaque3140@gmail.com <span className="text-amber-400 font-medium">(Secondary)</span>
+                  </a>
+                </div>
+              </div>
               <p className="flex items-center gap-2">
                 <MapPin size={14} className="text-amber-400 shrink-0" /> Dhanmondi, Dhaka, Bangladesh
               </p>

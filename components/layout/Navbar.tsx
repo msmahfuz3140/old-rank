@@ -117,7 +117,7 @@ export default function Navbar() {
       {/* Top Corporate Micro Bar */}
       <div className="bg-[#1e293b] text-slate-300 text-[11px] py-1.5 px-3 sm:px-4 border-b border-slate-800">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 sm:gap-6 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <a
               href="tel:01301010553"
               className="flex items-center gap-1 sm:gap-1.5 hover:text-white transition-colors truncate"
@@ -127,7 +127,17 @@ export default function Navbar() {
                 হটলাইন: <strong className="text-white">01301-010553</strong>
               </span>
             </a>
-            <span className="hidden md:inline-flex items-center gap-1 text-slate-400">
+            <a
+              href="tel:01956016119"
+              className="hidden sm:flex items-center gap-1 hover:text-white text-slate-300 transition-colors truncate"
+              title="বিকল্প হটলাইন"
+            >
+              <span className="text-amber-400 font-bold">•</span>
+              <span className="truncate">
+                বিকল্প: <strong className="text-white">01956-016119</strong>
+              </span>
+            </a>
+            <span className="hidden lg:inline-flex items-center gap-1 text-slate-400">
               <Truck size={12} className="text-amber-400 shrink-0" />
               <span>সারাদেশে ৬৪ জেলায় দ্রুত হোম ডেলিভারি</span>
             </span>
@@ -749,13 +759,20 @@ export default function Navbar() {
             </div>
 
             {/* Bottom Hotline Action in Drawer */}
-            <div className="p-3 border-t border-slate-100 bg-slate-50">
+            <div className="p-3 border-t border-slate-100 bg-slate-50 space-y-2">
               <a
                 href="tel:01301010553"
                 className="flex items-center justify-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 py-2.5 px-3 rounded-xl transition-colors"
               >
                 <PhoneCall size={14} />
                 <span>হটলাইন: 01301-010553</span>
+              </a>
+              <a
+                href="tel:01956016119"
+                className="flex items-center justify-center gap-2 text-xs font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 py-2 px-3 rounded-xl transition-colors"
+              >
+                <PhoneCall size={13} />
+                <span>বিকল্প হেল্পলাইন: 01956-016119</span>
               </a>
             </div>
           </div>
