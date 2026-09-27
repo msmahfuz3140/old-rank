@@ -13,13 +13,15 @@ import {
   Store,
   RotateCcw,
   ZoomIn,
+  MessageSquarePlus,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useCartStore } from "@/lib/store";
-import { IProduct } from "@/lib/types";
+import { IProduct, IReview } from "@/lib/types";
 import PopUpProductCard from "@/components/product/PopUpProductCard";
 import ProductImage from "@/components/product/ProductImage";
 import ProductImageZoomModal from "@/components/product/ProductImageZoomModal";
+import ProductReviewModal from "@/components/product/ProductReviewModal";
 
 export default function ProductDetailPage({
   params,
@@ -40,7 +42,22 @@ export default function ProductDetailPage({
   const [activeTab, setActiveTab] = useState<"desc" | "spec">("desc");
   const [isZoomOpen, setIsZoomOpen] = useState(false);
 
+  // Real Customer Reviews State
+  const [reviews, setReviews] = useState<IReview[]>([]);
+  const [reviewStats, setReviewStats] = useState<{
+    averageRating: number;
+    totalReviews: number;
+    breakdown: Record<number, number>;
+  }>({
+    averageRating: 0,
+    totalReviews: 0,
+    breakdown: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  });
+  const [isLoadingReviews, setIsLoadingReviews] = useState(true);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
   useEffect(() => {
+    setIsLoadingReviews(true);
     api.getProductBySlug(resolvedParams.slug).then((data) => {
       if (data && data.product) {
         setProduct(data.product);
@@ -48,7 +65,53 @@ export default function ProductDetailPage({
         setRelatedProducts(data.relatedProducts || []);
       }
     });
+
+    api
+      .getProductReviews(resolvedParams.slug)
+      .then((res) => {
+        if (res && res.success && Array.isArray(res.data)) {
+          setReviews(res.data);
+          const bd: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+          if (res.stats?.breakdown) {
+            Object.entries(res.stats.breakdown).forEach(([k, v]) => {
+              bd[Number(k)] = Number(v);
+            });
+          }
+          setReviewStats({
+            averageRating: res.stats?.rating || 0,
+            totalReviews: res.stats?.reviewCount || res.data.length,
+            breakdown: bd,
+          });
+        }
+        setIsLoadingReviews(false);
+      })
+      .catch(() => {
+        setIsLoadingReviews(false);
+      });
   }, [resolvedParams.slug]);
+
+  const handleReviewSubmitted = (
+    newReview: IReview,
+    updatedStats?: { rating: number; reviewCount: number }
+  ) => {
+    setReviews((prev) => [newReview, ...prev.filter((r) => r._id !== newReview._id)]);
+    if (updatedStats) {
+      setProduct((prev) =>
+        prev
+          ? {
+              ...prev,
+              rating: updatedStats.rating,
+              reviewCount: updatedStats.reviewCount,
+            }
+          : prev
+      );
+      setReviewStats((prev) => ({
+        ...prev,
+        averageRating: updatedStats.rating,
+        totalReviews: updatedStats.reviewCount,
+      }));
+    }
+  };
 
   if (!product) {
     return (
@@ -189,11 +252,25 @@ export default function ProductDetailPage({
 
             {/* Rating & Verification */}
             <div className="flex items-center gap-3 text-xs">
-              <div className="flex items-center text-amber-400">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("spec");
+                  const el = document.getElementById("product-tabs-section");
+                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="flex items-center text-amber-400 hover:opacity-80 transition-opacity"
+              >
                 <Star size={15} className="fill-amber-400" />
-                <span className="font-bold text-slate-700 ml-1">{product.rating}</span>
-                <span className="text-slate-400 ml-1">({product.reviewCount} কাস্টমার রিভিউ)</span>
-              </div>
+                <span className="font-bold text-slate-700 ml-1">
+                  {reviews.length > 0
+                    ? reviewStats.averageRating.toFixed(1)
+                    : (product.rating ? Number(product.rating).toFixed(1) : "5.0")}
+                </span>
+                <span className="text-slate-400 ml-1">
+                  ({reviews.length} কাস্টমার রিভিউ)
+                </span>
+              </button>
               <span className="text-slate-300">|</span>
               <span className="font-bold text-emerald-600 flex items-center gap-1">
                 <Check size={14} /> ১০০% আসল পণ্য
@@ -325,8 +402,8 @@ export default function ProductDetailPage({
         </div>
       </div>
 
-      {/* Description & Specifications Tabs */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
+      {/* Description & Customer Reviews Tabs */}
+      <div id="product-tabs-section" className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm scroll-mt-24">
         <div className="flex gap-4 border-b border-slate-100 pb-3 mb-6">
           <button
             onClick={() => setActiveTab("desc")}
@@ -340,13 +417,22 @@ export default function ProductDetailPage({
           </button>
           <button
             onClick={() => setActiveTab("spec")}
-            className={`text-sm font-bold pb-2 border-b-2 transition-colors ${
+            className={`text-sm font-bold pb-2 border-b-2 transition-colors flex items-center gap-2 ${
               activeTab === "spec"
                 ? "border-[#303d6e] text-[#303d6e]"
                 : "border-transparent text-slate-400 hover:text-slate-700"
             }`}
           >
-            কাস্টমার রিভিউ (Reviews)
+            <span>কাস্টমার রিভিউ</span>
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                activeTab === "spec"
+                  ? "bg-[#303d6e] text-white"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {reviews.length}
+            </span>
           </button>
         </div>
 
@@ -360,21 +446,149 @@ export default function ProductDetailPage({
             )}
           </div>
         ) : (
-          <div className="space-y-4 text-xs sm:text-sm">
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-slate-900">রফিকুল ইসলাম, ঢাকা</span>
-                <span className="text-amber-400">⭐⭐⭐⭐⭐</span>
+          <div className="space-y-6">
+            {/* Reviews Summary Header Card */}
+            <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-indigo-50/40 border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-5">
+                <div className="text-center sm:text-left">
+                  <div className="text-4xl sm:text-5xl font-black text-slate-900 leading-none">
+                    {reviews.length > 0 ? (reviewStats.averageRating || 5).toFixed(1) : "5.0"}
+                  </div>
+                  <div className="flex items-center justify-center sm:justify-start gap-1 mt-2 text-amber-400">
+                    {[1, 2, 3, 4, 5].map((s) => {
+                      const avg = reviews.length > 0 ? reviewStats.averageRating : 5;
+                      return (
+                        <Star
+                          key={s}
+                          size={18}
+                          className={s <= Math.round(avg) ? "fill-amber-400 text-amber-400" : "text-slate-200"}
+                        />
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium mt-1">
+                    {reviews.length > 0
+                      ? `${reviews.length} টি ভেরিফাইড রিভিউ এর ভিত্তিতে`
+                      : "১০০% বিশ্বস্ত ও আসল কাস্টমার রিভিউ"}
+                  </p>
+                </div>
               </div>
-              <p className="text-slate-600">খুবই চমৎকার এবং ১০০% অরিজিনাল পণ্য। ১ দিনের মধ্যে ডেলিভারি পেয়েছি।</p>
-            </div>
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-slate-900">তানজিনা আহমেদ, চট্টগ্রাম</span>
-                <span className="text-amber-400">⭐⭐⭐⭐⭐</span>
+
+              {/* Rating Bars */}
+              <div className="w-full md:w-64 space-y-1.5 text-xs">
+                {[5, 4, 3, 2, 1].map((num) => {
+                  const count = reviewStats.breakdown?.[num] || 0;
+                  const pct = reviews.length > 0 ? Math.round((count / reviews.length) * 100) : 0;
+                  return (
+                    <div key={num} className="flex items-center gap-2">
+                      <span className="w-4 font-bold text-slate-600">{num}★</span>
+                      <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="w-8 text-right text-slate-400 text-[11px] font-mono">{count}</span>
+                    </div>
+                  );
+                })}
               </div>
-              <p className="text-slate-600">প্যাকেজিং দারুণ ছিল। সেলারের রেসপন্সও খুব ভালো। Recommended!</p>
+
+              {/* Action Button */}
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setIsReviewModalOpen(true)}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#303d6e] hover:bg-indigo-900 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-2xl shadow-md transition-all active:scale-95"
+                >
+                  <MessageSquarePlus size={16} />
+                  রিভিউ লিখুন (Write Review)
+                </button>
+              </div>
             </div>
+
+            {/* Reviews List */}
+            {isLoadingReviews ? (
+              <div className="p-8 text-center text-sm font-semibold text-slate-400">
+                রিভিউ লোড হচ্ছে...
+              </div>
+            ) : reviews.length === 0 ? (
+              <div className="text-center py-10 px-4 bg-slate-50/70 border border-dashed border-slate-200 rounded-2xl">
+                <div className="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-xs">
+                  <Star size={24} className="fill-amber-400" />
+                </div>
+                <h4 className="text-base font-bold text-slate-800">এখনও কোনো কাস্টমার রিভিউ নেই</h4>
+                <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto mt-1 mb-5">
+                  আপনি কি এই পণ্যটি অর্ডার করেছিলেন? আপনার সৎ ও মূল্যবান মতামত সবার সাথে শেয়ার করতে প্রথম রিভিউটি দিন!
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsReviewModalOpen(true)}
+                  className="inline-flex items-center gap-2 bg-[#303d6e] hover:bg-indigo-900 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95"
+                >
+                  <MessageSquarePlus size={16} />
+                  প্রথম রিভিউ দিন (Write First Review)
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {reviews.map((rev) => (
+                  <div
+                    key={rev._id}
+                    className="p-5 rounded-2xl bg-white border border-slate-100 shadow-xs hover:border-slate-200 transition-all"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#303d6e] to-indigo-600 text-white font-bold text-sm flex items-center justify-center shadow-xs">
+                          {rev.customerName ? rev.customerName.charAt(0).toUpperCase() : "U"}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-slate-900 text-sm">
+                              {rev.customerName}
+                            </span>
+                            {rev.customerCity && (
+                              <span className="text-xs text-slate-400 font-medium">
+                                • {rev.customerCity}
+                              </span>
+                            )}
+                            {rev.isVerifiedPurchase && (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+                                <ShieldCheck size={12} className="text-emerald-600" />
+                                যাচাইকৃত ক্রেতা (Verified)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="flex text-amber-400">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              size={14}
+                              className={s <= rev.rating ? "fill-amber-400 text-amber-400" : "text-slate-200"}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          {new Date(rev.createdAt).toLocaleDateString("bn-BD", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-slate-700 text-xs sm:text-sm leading-relaxed mt-2 pl-0 sm:pl-12">
+                      {rev.comment}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -405,6 +619,19 @@ export default function ProductDetailPage({
         images={allImages}
         initialIndex={Math.max(allImages.indexOf(selectedImage || product.mainImage), 0)}
         productName={product.name}
+      />
+
+      {/* Real Customer Review Modal */}
+      <ProductReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        product={{
+          _id: product._id,
+          name: product.name,
+          slug: product.slug,
+          image: product.mainImage,
+        }}
+        onReviewSubmitted={handleReviewSubmitted}
       />
     </div>
   );

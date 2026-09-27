@@ -9,6 +9,7 @@ import PromoModal from "@/components/popups/PromoModal";
 import QuickViewModal from "@/components/popups/QuickViewModal";
 import CartDrawer from "@/components/cart/CartDrawer";
 import CartToast from "@/components/cart/CartToast";
+import CustomerReviewPrompt from "@/components/product/CustomerReviewPrompt";
 
 export default function StorefrontShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -31,6 +32,7 @@ export default function StorefrontShell({ children }: { children: React.ReactNod
       <QuickViewModal />
       <CartDrawer />
       <CartToast />
+      <CustomerReviewPrompt />
     </>
   );
 }

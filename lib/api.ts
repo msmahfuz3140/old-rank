@@ -1,4 +1,4 @@
-import { ICategory, IProduct, IVendor, IDeliveryZone, IAdminStats } from "./types";
+import { ICategory, IProduct, IVendor, IDeliveryZone, IAdminStats, IReview } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
@@ -580,6 +580,55 @@ export const api = {
     }
   },
 
+
+  async getProductReviews(idOrSlug: string): Promise<{ success: boolean; data: IReview[]; stats: { rating: number; reviewCount: number; breakdown?: Record<string, number> } }> {
+    try {
+      const res = await fetch(`${API_BASE}/reviews/product/${encodeURIComponent(idOrSlug)}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to fetch reviews");
+      return await res.json();
+    } catch {
+      return {
+        success: true,
+        data: [],
+        stats: { rating: 5, reviewCount: 0, breakdown: { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 } },
+      };
+    }
+  },
+
+  async submitReview(reviewData: {
+    productId?: string;
+    productSlug?: string;
+    customerName: string;
+    customerPhone?: string;
+    customerCity?: string;
+    rating: number;
+    comment: string;
+    orderInvoiceId?: string;
+  }): Promise<{ success: boolean; message: string; data?: IReview; productStats?: { rating: number; reviewCount: number } }> {
+    try {
+      const res = await fetch(`${API_BASE}/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reviewData),
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, message: err.message || "সার্ভার সংযোগ সমস্যা। পুনরায় চেষ্টা করুন।" };
+    }
+  },
+
+  async checkCustomerOrders(query: { phone?: string; invoiceId?: string }): Promise<{ success: boolean; data: any[] }> {
+    try {
+      const params = new URLSearchParams();
+      if (query.phone) params.set("phone", query.phone);
+      if (query.invoiceId) params.set("invoiceId", query.invoiceId);
+      const res = await fetch(`${API_BASE}/reviews/customer-orders?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to check customer orders");
+      return await res.json();
+    } catch {
+      return { success: false, data: [] };
+    }
+  },
 
   async trackOrder(query: string): Promise<any> {
     try {

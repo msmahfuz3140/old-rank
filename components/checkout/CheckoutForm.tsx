@@ -181,12 +181,31 @@ export default function CheckoutForm() {
       const result = await api.submitOrder(orderData);
 
       if (result.success) {
+        const invoiceId = result.data?.order?.invoiceId || "OR-ORDER";
+        try {
+          localStorage.setItem(
+            "oldrank_recent_order",
+            JSON.stringify({
+              invoiceId,
+              name: name.trim(),
+              phone: finalPhone,
+              district: deliveryArea === "inside" ? "ঢাকা" : "অন্যান্য জেলা",
+              items: activeItems.map((it) => ({
+                productId: it.productId,
+                name: it.name,
+                slug: it.slug || "",
+                image: it.image || "",
+              })),
+              timestamp: Date.now(),
+            })
+          );
+        } catch {}
+
         if (directBuyItem) {
           clearDirectBuyItem();
         } else {
           clearCart();
         }
-        const invoiceId = result.data?.order?.invoiceId || "OR-ORDER";
         router.push(`/order-success?invoiceId=${invoiceId}&phone=${finalPhone}&paymentStatus=pending`);
       } else {
         setErrorMessage(result.message || "অর্ডার সম্পন্ন হতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");

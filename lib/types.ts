@@ -182,3 +182,17 @@ export interface IIncompleteOrder {
   updatedAt: string;
 }
 
+export interface IReview {
+  _id: string;
+  productId: string;
+  productSlug?: string;
+  customerName: string;
+  customerPhone?: string;
+  customerCity?: string;
+  rating: number;
+  comment: string;
+  isVerifiedPurchase: boolean;
+  orderInvoiceId?: string;
+  createdAt: string;
+}
+

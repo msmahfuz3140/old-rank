@@ -10,8 +10,10 @@ import {
   Package,
   MapPin,
   AlertCircle,
+  Star,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import ProductReviewModal from "@/components/product/ProductReviewModal";
 
 function TrackContent() {
   const searchParams = useSearchParams();
@@ -21,6 +23,21 @@ function TrackContent() {
   const [orders, setOrders] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [reviewModalData, setReviewModalData] = useState<{
+    isOpen: boolean;
+    product: { _id?: string; name: string; slug: string; image?: string };
+    customerName: string;
+    customerPhone: string;
+    customerCity: string;
+    invoiceId: string;
+  }>({
+    isOpen: false,
+    product: { name: "", slug: "" },
+    customerName: "",
+    customerPhone: "",
+    customerCity: "",
+    invoiceId: "",
+  });
 
   const handleTrack = async (searchTarget?: string) => {
     const q = searchTarget || query;
@@ -188,12 +205,36 @@ function TrackContent() {
                   {order.items?.map((item: any, iIdx: number) => (
                     <div
                       key={iIdx}
-                      className="flex items-center justify-between text-xs p-2.5 rounded-xl border border-slate-100"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-all bg-white"
                     >
-                      <span className="font-semibold text-slate-800">{item.name}</span>
-                      <span className="font-black text-slate-900">
-                        Qty: {item.quantity} • ৳ {item.price.toLocaleString()}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-slate-800">{item.name}</span>
+                        <span className="font-semibold text-slate-500">
+                          Qty: {item.quantity} • ৳ {item.price.toLocaleString()}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setReviewModalData({
+                            isOpen: true,
+                            product: {
+                              _id: item.productId,
+                              name: item.name,
+                              slug: item.slug || (item.name ? item.name.toLowerCase().replace(/\s+/g, "-") : ""),
+                              image: item.image,
+                            },
+                            customerName: order.customer?.name || "",
+                            customerPhone: order.customer?.phone || "",
+                            customerCity: order.customer?.district || "",
+                            invoiceId: order.invoiceId || "",
+                          })
+                        }
+                        className="inline-flex items-center gap-1.5 self-start sm:self-auto text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200/80 px-3 py-1.5 rounded-xl transition-all shadow-2xs active:scale-95"
+                      >
+                        <Star size={13} className="fill-amber-500 text-amber-500" />
+                        <span>রিভিউ দিন (Review)</span>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -202,6 +243,20 @@ function TrackContent() {
           ))}
         </div>
       )}
+
+      {/* Product Review Modal for Tracked Orders */}
+      <ProductReviewModal
+        isOpen={reviewModalData.isOpen}
+        onClose={() => setReviewModalData((prev) => ({ ...prev, isOpen: false }))}
+        product={reviewModalData.product}
+        defaultCustomerName={reviewModalData.customerName}
+        defaultCustomerPhone={reviewModalData.customerPhone}
+        defaultCustomerCity={reviewModalData.customerCity}
+        defaultInvoiceId={reviewModalData.invoiceId}
+        onReviewSubmitted={() => {
+          // Handled within modal with verified status & success alert
+        }}
+      />
     </div>
   );
 }
