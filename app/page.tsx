@@ -31,10 +31,7 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-8 sm:space-y-12 pb-16 bg-[#f8fafc] pt-4 sm:pt-6">
-      {/* 1. Hot Deals & Exclusive Offer Section (Prominently at the top above Category Section) */}
-      <HotDealsSection products={allProducts} hotDeals={hotDeals} />
-
-      {/* 2. Category Section (Jewelry is First, others have Coming Soon badge & Inactive buttons) */}
+      {/* 1. Category Section FIRST (পছন্দের ক্যাটাগরি বেছে নিন) */}
       <section id="categories" className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="relative rounded-3xl p-6 sm:p-10 md:p-12 text-white shadow-2xl mb-6 overflow-hidden border border-slate-700/60 min-h-[260px] sm:min-h-[300px] flex items-center">
           {/* Responsive Background Image Layer */}
@@ -225,7 +222,10 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 5. All Store Products Grid */}
+      {/* 3. Hot Deals & Live Offer Section (Placed after Main Category Section) */}
+      <HotDealsSection products={allProducts} hotDeals={hotDeals} />
+
+      {/* 4. All Store Products Grid */}
       <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-6">
           <div>
