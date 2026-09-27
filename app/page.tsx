@@ -84,23 +84,25 @@ export default async function HomePage() {
             return (
               <div key={cat._id} className="relative">
                 {isComingSoon ? (
-                  <div className="group relative bg-white/95 rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs text-center flex flex-col items-center opacity-85 select-none cursor-not-allowed">
-                    {/* Badge: Coming Soon */}
-                    <span className="absolute top-2.5 right-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border border-amber-300 shadow-sm flex items-center gap-1">
-                      <Clock size={11} className="stroke-[3]" /> Coming Soon
-                    </span>
+                  <div className="group relative bg-white/95 rounded-2xl p-3.5 sm:p-5 border border-slate-200/90 shadow-2xs text-center flex flex-col items-center opacity-85 select-none cursor-not-allowed">
+                    {/* Sleek Minimal Top Tag - No Overlap with Logo */}
+                    <div className="w-full flex items-center justify-end mb-1.5">
+                      <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-2xs">
+                        <Clock size={9} /> Soon
+                      </span>
+                    </div>
 
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-slate-100 mb-3 grayscale opacity-60 border border-slate-200">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-slate-50 mb-2.5 grayscale opacity-60 border border-slate-200 p-0.5">
                       <img
                         src={cat.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60"}
                         alt={cat.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover rounded-xl"
                       />
                     </div>
                     <h3 className="text-xs sm:text-sm font-bold text-slate-700 line-clamp-1">
                       {cat.name}
                     </h3>
-                    <p className="text-[10px] text-amber-700 font-semibold mt-1">
+                    <p className="text-[10px] text-amber-700 font-semibold mt-0.5">
                       এই ক্যাটাগরি শীঘ্রই আসছে
                     </p>
 
@@ -116,14 +118,17 @@ export default async function HomePage() {
                 ) : (
                   <Link
                     href={`/category/${cat.slug}`}
-                    className="group block relative bg-gradient-to-b from-white to-amber-50/20 rounded-2xl p-4 sm:p-5 border-2 border-indigo-600 shadow-lg hover:shadow-2xl transition-all text-center flex flex-col items-center ring-4 ring-indigo-500/10"
+                    className="group block relative bg-gradient-to-b from-white to-amber-50/20 rounded-2xl p-3.5 sm:p-5 border-2 border-indigo-600 shadow-lg hover:shadow-2xl transition-all text-center flex flex-col items-center ring-4 ring-indigo-500/10"
                   >
-                    {/* Active Badge */}
-                    <span className="absolute top-2.5 right-2.5 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1 animate-pulse">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white"></span> ওপেন (Active)
-                    </span>
+                    {/* Sleek Minimal Top Tag - No Overlap with Logo */}
+                    <div className="w-full flex items-center justify-end mb-1.5">
+                      <span className="inline-flex items-center gap-1 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-xs">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                        Active
+                      </span>
+                    </div>
 
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden bg-indigo-50 mb-3 group-hover:scale-105 transition-transform border border-indigo-200 shadow-xs">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-white mb-2.5 group-hover:scale-105 transition-transform border border-indigo-200 shadow-xs p-0.5">
                       <img
                         src={
                           cat.slug === "jewelry"
@@ -131,13 +136,13 @@ export default async function HomePage() {
                             : cat.image || "/images/jewelry-category.jpg"
                         }
                         alt={cat.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover rounded-xl"
                       />
                     </div>
                     <h3 className="text-xs sm:text-sm font-black text-slate-900 group-hover:text-[#303d6e] transition-colors line-clamp-1">
                       {cat.name}
                     </h3>
-                    <p className="text-[10px] text-emerald-700 font-bold mt-1">
+                    <p className="text-[10px] text-emerald-700 font-bold mt-0.5">
                       এক্সক্লুসিভ কালেকশন উন্মুক্ত
                     </p>
 
