@@ -405,6 +405,7 @@ export default function AdminPage() {
     basePrice: "",
     costPrice: "",
     oldPrice: "",
+    discountPercentage: "",
     stock: "50",
     isHotDeal: true,
     isFeatured: true,
@@ -709,8 +710,17 @@ export default function AdminPage() {
 
     try {
       const base = Number(productForm.basePrice);
-      const old = productForm.oldPrice ? Number(productForm.oldPrice) : Math.round(base * 1.25);
-      const discount = old > base ? Math.round(((old - base) / old) * 100) : 0;
+      let discount = Number(productForm.discountPercentage) || 0;
+      let old = Number(productForm.oldPrice) || 0;
+
+      if (discount > 0 && (!old || old <= base)) {
+        old = Math.round(base / (1 - discount / 100));
+      } else if (old > base && discount <= 0) {
+        discount = Math.round(((old - base) / old) * 100);
+      } else if (!old && discount <= 0) {
+        old = Math.round(base * 1.25);
+        discount = 20;
+      }
 
       const payload = {
         name: productForm.name,
@@ -769,13 +779,14 @@ export default function AdminPage() {
         basePrice: "",
         costPrice: "",
         oldPrice: "",
+        discountPercentage: "",
         stock: "50",
         isHotDeal: true,
         isFeatured: true,
         isActive: true,
         mainImage: "/images/old-rank-banner.jpg",
-        selectedSizes: ["M", "L", "XL"],
-        colorName: "Jet Black",
+        selectedSizes: ["Free Size"],
+        colorName: "Gold Polish",
       });
     } catch (err: any) {
       showToast("প্রোডাক্ট পোস্ট করা সম্ভব হয়নি।");
@@ -787,8 +798,25 @@ export default function AdminPage() {
     if (!editingProduct) return;
 
     try {
-      const res = await api.updateProduct(editingProduct._id, editingProduct);
-      setProducts(products.map((p) => (p._id === editingProduct._id ? (res.data || editingProduct) : p)));
+      const base = Number(editingProduct.basePrice) || 0;
+      let discount = Number(editingProduct.discountPercentage) || 0;
+      let old = Number(editingProduct.oldPrice) || 0;
+
+      if (discount > 0 && (!old || old <= base)) {
+        old = Math.round(base / (1 - discount / 100));
+      } else if (old > base && discount <= 0) {
+        discount = Math.round(((old - base) / old) * 100);
+      }
+
+      const updatedPayload = {
+        ...editingProduct,
+        basePrice: base,
+        oldPrice: old,
+        discountPercentage: discount,
+      };
+
+      const res = await api.updateProduct(editingProduct._id, updatedPayload);
+      setProducts(products.map((p) => (p._id === editingProduct._id ? (res.data || updatedPayload) : p)));
       setEditingProduct(null);
       showToast(`প্রোডাক্ট "${editingProduct.name}" সফলভাবে আপডেট হয়েছে!`);
       try {
@@ -5237,32 +5265,84 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">বিক্রয় মূল্য (Base Price ৳) *</label>
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">বিক্রয় মূল্য (৳) *</label>
                   <input
                     type="number"
                     required
                     placeholder="990"
                     value={productForm.basePrice}
-                    onChange={(e) => setProductForm({ ...productForm, basePrice: e.target.value })}
+                    onChange={(e) => {
+                      const base = e.target.value;
+                      const disc = Number(productForm.discountPercentage) || 0;
+                      let old = productForm.oldPrice;
+                      if (base && disc > 0 && disc < 100) {
+                        old = String(Math.round(Number(base) / (1 - disc / 100)));
+                      }
+                      setProductForm({ ...productForm, basePrice: base, oldPrice: old });
+                    }}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">কাস্টমার বিক্রয় রেট</span>
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">পূর্বের মূল্য (Old Price ৳)</label>
+                  <label className="block font-bold text-rose-600 mb-1 text-xs flex items-center justify-between">
+                    <span>ছাড় (% Discount)</span>
+                    {productForm.discountPercentage && (
+                      <span className="text-[10px] bg-rose-100 text-rose-700 px-1 rounded font-black">
+                        -{productForm.discountPercentage}%
+                      </span>
+                    )}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="99"
+                      placeholder="20"
+                      value={productForm.discountPercentage}
+                      onChange={(e) => {
+                        const disc = e.target.value;
+                        const base = Number(productForm.basePrice) || 0;
+                        let old = productForm.oldPrice;
+                        if (base > 0 && Number(disc) > 0 && Number(disc) < 100) {
+                          old = String(Math.round(base / (1 - Number(disc) / 100)));
+                        } else if (Number(disc) === 0) {
+                          old = "";
+                        }
+                        setProductForm({ ...productForm, discountPercentage: disc, oldPrice: old });
+                      }}
+                      className="w-full pl-3 pr-7 py-2.5 bg-rose-50/60 border border-rose-200 rounded-xl text-xs font-black text-rose-700 focus:ring-2 focus:ring-rose-500"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-rose-500">%</span>
+                  </div>
+                  <span className="text-[10px] text-rose-600 mt-0.5 block font-medium">ডিসকাউন্ট হার</span>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">পূর্বের মূল্য (Old Price ৳)</label>
                   <input
                     type="number"
                     placeholder="1250"
                     value={productForm.oldPrice}
-                    onChange={(e) => setProductForm({ ...productForm, oldPrice: e.target.value })}
+                    onChange={(e) => {
+                      const old = e.target.value;
+                      const base = Number(productForm.basePrice) || 0;
+                      let disc = productForm.discountPercentage;
+                      if (base > 0 && Number(old) > base) {
+                        disc = String(Math.round(((Number(old) - base) / Number(old)) * 100));
+                      }
+                      setProductForm({ ...productForm, oldPrice: old, discountPercentage: disc });
+                    }}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:ring-2 focus:ring-amber-500"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">কাটা মূল্য (আসল)</span>
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">স্টক সংখ্যা (Stock)</label>
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">স্টক সংখ্যা (Stock)</label>
                   <input
                     type="number"
                     placeholder="50"
@@ -5270,7 +5350,35 @@ export default function AdminPage() {
                     onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">মজুত পরিমাণ</span>
                 </div>
+              </div>
+
+              {/* Quick Discount Presets */}
+              <div className="flex items-center gap-1.5 flex-wrap bg-slate-50 p-2 rounded-xl border border-slate-200/70">
+                <span className="text-[10px] font-bold text-slate-600 mr-1">কুইক ডিসকাউন্ট:</span>
+                {[10, 15, 20, 25, 30, 35, 40, 50].map((pct) => (
+                  <button
+                    key={pct}
+                    type="button"
+                    onClick={() => {
+                      const base = Number(productForm.basePrice) || 0;
+                      const old = base > 0 ? String(Math.round(base / (1 - pct / 100))) : "";
+                      setProductForm({
+                        ...productForm,
+                        discountPercentage: String(pct),
+                        oldPrice: old,
+                      });
+                    }}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                      Number(productForm.discountPercentage) === pct
+                        ? "bg-rose-500 text-white border-rose-500 shadow-xs"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-rose-300 hover:bg-rose-50"
+                    }`}
+                  >
+                    {pct}% Off
+                  </button>
+                ))}
               </div>
 
               {/* Product Image Upload */}
@@ -5453,9 +5561,12 @@ export default function AdminPage() {
       {editingProduct && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs overflow-y-auto p-3 sm:p-6">
           <div className="min-h-full flex items-start sm:items-center justify-center py-4 sm:py-8">
-            <div className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl border border-slate-200 animate-scaleUp relative">
+            <div className="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-7 shadow-2xl border border-slate-200 animate-scaleUp relative">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-              <h3 className="font-black text-base text-slate-900">প্রোডাক্ট এডিট করুন</h3>
+              <div>
+                <h3 className="font-black text-base text-slate-900">প্রোডাক্ট এডিট করুন</h3>
+                <p className="text-[11px] text-slate-400">মূল্য, ডিসকাউন্ট ও স্টক পরিবর্তন করুন</p>
+              </div>
               <button
                 onClick={() => setEditingProduct(null)}
                 className="p-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer"
@@ -5476,38 +5587,91 @@ export default function AdminPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                  <label className="block font-bold text-slate-700 mb-1">বিক্রয় মূল্য (৳)</label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">বিক্রয় মূল্য (৳) *</label>
                   <input
                     type="number"
                     required
                     value={editingProduct.basePrice}
-                    onChange={(e) =>
-                      setEditingProduct({ ...editingProduct, basePrice: Number(e.target.value) })
-                    }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900"
+                    onChange={(e) => {
+                      const base = Number(e.target.value);
+                      const disc = Number(editingProduct.discountPercentage) || 0;
+                      let old = editingProduct.oldPrice;
+                      if (base > 0 && disc > 0 && disc < 100) {
+                        old = Math.round(base / (1 - disc / 100));
+                      }
+                      setEditingProduct({ ...editingProduct, basePrice: base, oldPrice: old });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 text-xs focus:ring-2 focus:ring-amber-500"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">কাস্টমার বিক্রয় রেট</span>
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">
-                    ক্রয় ও খরচ মূল্য (৳)
-                    <span className="text-[10px] text-amber-700 font-bold ml-1">(অ্যাডমিন)</span>
+                  <label className="block font-bold text-rose-600 mb-1 text-xs flex items-center justify-between">
+                    <span>ছাড় (% Discount)</span>
+                    {Boolean(editingProduct.discountPercentage) && (
+                      <span className="text-[10px] bg-rose-100 text-rose-700 px-1 rounded font-black">
+                        -{editingProduct.discountPercentage}%
+                      </span>
+                    )}
                   </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="99"
+                      placeholder="20"
+                      value={editingProduct.discountPercentage ?? ""}
+                      onChange={(e) => {
+                        const disc = Number(e.target.value);
+                        const base = Number(editingProduct.basePrice) || 0;
+                        let old = editingProduct.oldPrice;
+                        if (base > 0 && disc > 0 && disc < 100) {
+                          old = Math.round(base / (1 - disc / 100));
+                        } else if (disc === 0) {
+                          old = undefined;
+                        }
+                        setEditingProduct({
+                          ...editingProduct,
+                          discountPercentage: disc || 0,
+                          oldPrice: old,
+                        });
+                      }}
+                      className="w-full pl-3 pr-7 py-2 bg-rose-50/60 border border-rose-200 rounded-xl font-black text-rose-700 text-xs focus:ring-2 focus:ring-rose-500"
+                    />
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-rose-500">%</span>
+                  </div>
+                  <span className="text-[10px] text-rose-600 mt-0.5 block font-medium">ডিসকাউন্ট হার</span>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">পূর্বের মূল্য (Old ৳)</label>
                   <input
                     type="number"
-                    value={editingProduct.costPrice || ""}
-                    onChange={(e) =>
-                      setEditingProduct({ ...editingProduct, costPrice: Number(e.target.value) })
-                    }
-                    placeholder="পণ্য ক্রয় + গাড়িভাড়া/খরচ"
-                    className="w-full px-3 py-2 bg-amber-50/70 border border-amber-300 rounded-xl font-bold text-amber-950"
+                    placeholder="1250"
+                    value={editingProduct.oldPrice ?? ""}
+                    onChange={(e) => {
+                      const old = Number(e.target.value);
+                      const base = Number(editingProduct.basePrice) || 0;
+                      let disc = editingProduct.discountPercentage || 0;
+                      if (base > 0 && old > base) {
+                        disc = Math.round(((old - base) / old) * 100);
+                      }
+                      setEditingProduct({
+                        ...editingProduct,
+                        oldPrice: old || undefined,
+                        discountPercentage: disc,
+                      });
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700 text-xs focus:ring-2 focus:ring-amber-500"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">কাটা মূল্য (আসল)</span>
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">স্টক সংখ্যা</label>
+                  <label className="block font-bold text-slate-700 mb-1 text-xs">স্টক সংখ্যা</label>
                   <input
                     type="number"
                     required
@@ -5515,9 +5679,68 @@ export default function AdminPage() {
                     onChange={(e) =>
                       setEditingProduct({ ...editingProduct, stock: Number(e.target.value) })
                     }
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 text-xs focus:ring-2 focus:ring-amber-500"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">মজুত পরিমাণ</span>
                 </div>
+              </div>
+
+              {/* Quick Discount Presets for Edit Modal */}
+              <div className="flex items-center gap-1.5 flex-wrap bg-slate-50 p-2 rounded-xl border border-slate-200/70">
+                <span className="text-[10px] font-bold text-slate-600 mr-1">কুইক ডিসকাউন্ট:</span>
+                {[10, 15, 20, 25, 30, 35, 40, 50].map((pct) => (
+                  <button
+                    key={pct}
+                    type="button"
+                    onClick={() => {
+                      const base = Number(editingProduct.basePrice) || 0;
+                      const old = base > 0 ? Math.round(base / (1 - pct / 100)) : undefined;
+                      setEditingProduct({
+                        ...editingProduct,
+                        discountPercentage: pct,
+                        oldPrice: old,
+                      });
+                    }}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                      Number(editingProduct.discountPercentage) === pct
+                        ? "bg-rose-500 text-white border-rose-500 shadow-xs"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-rose-300 hover:bg-rose-50"
+                    }`}
+                  >
+                    {pct}% Off
+                  </button>
+                ))}
+                {Boolean(editingProduct.discountPercentage) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingProduct({
+                        ...editingProduct,
+                        discountPercentage: 0,
+                        oldPrice: undefined,
+                      });
+                    }}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 cursor-pointer"
+                  >
+                    রিমুভ
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  ক্রয় ও খরচ মূল্য (৳)
+                  <span className="text-[10px] text-amber-700 font-bold ml-1">(অ্যাডমিন ইন্টারনাল)</span>
+                </label>
+                <input
+                  type="number"
+                  value={editingProduct.costPrice || ""}
+                  onChange={(e) =>
+                    setEditingProduct({ ...editingProduct, costPrice: Number(e.target.value) })
+                  }
+                  placeholder="পণ্য ক্রয় + গাড়িভাড়া/খরচ"
+                  className="w-full px-3 py-2 bg-amber-50/70 border border-amber-300 rounded-xl font-bold text-amber-950"
+                />
               </div>
 
               <div className="space-y-2 pt-1">
