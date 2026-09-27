@@ -2,7 +2,7 @@ import { use } from "react";
 import Link from "next/link";
 import { ShieldCheck, Star, MapPin, Phone, ArrowLeft } from "lucide-react";
 import { api, fallbackVendors } from "@/lib/api";
-import ProductCard from "@/components/product/ProductCard";
+import PopUpProductCard from "@/components/product/PopUpProductCard";
 
 export default function ShopFrontPage({
   params,
@@ -96,9 +96,14 @@ async function ShopProducts({ vendorSlug }: { vendorSlug: string }) {
   const displayList = shopProducts.length > 0 ? shopProducts : products.slice(0, 4);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-      {displayList.map((p) => (
-        <ProductCard key={p._id} product={p} />
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+      {displayList.map((p, idx) => (
+        <PopUpProductCard
+          key={p._id}
+          product={p}
+          index={idx}
+          isPopHighlight={p.isHotDeal}
+        />
       ))}
     </div>
   );

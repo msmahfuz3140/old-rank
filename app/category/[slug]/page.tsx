@@ -2,7 +2,7 @@ import { use } from "react";
 import Link from "next/link";
 import { ArrowLeft, Layers } from "lucide-react";
 import { api, fallbackCategories } from "@/lib/api";
-import ProductCard from "@/components/product/ProductCard";
+import PopUpProductCard from "@/components/product/PopUpProductCard";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -77,9 +77,14 @@ async function CategoryProducts({ categorySlug }: { categorySlug: string }) {
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-      {products.map((p) => (
-        <ProductCard key={p._id} product={p} />
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+      {products.map((p, idx) => (
+        <PopUpProductCard
+          key={p._id}
+          product={p}
+          index={idx}
+          isPopHighlight={p.isHotDeal}
+        />
       ))}
     </div>
   );

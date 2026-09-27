@@ -16,7 +16,7 @@ import {
 import { api } from "@/lib/api";
 import { useCartStore } from "@/lib/store";
 import { IProduct } from "@/lib/types";
-import ProductCard from "@/components/product/ProductCard";
+import PopUpProductCard from "@/components/product/PopUpProductCard";
 import ProductImage from "@/components/product/ProductImage";
 
 export default function ProductDetailPage({
@@ -371,9 +371,14 @@ export default function ProductDetailPage({
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
             সম্পর্কিত পণ্যসমূহ (Related Products)
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {relatedProducts.map((p) => (
-              <ProductCard key={p._id} product={p} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+            {relatedProducts.map((p, idx) => (
+              <PopUpProductCard
+                key={p._id}
+                product={p}
+                index={idx}
+                isPopHighlight={p.isHotDeal}
+              />
             ))}
           </div>
         </section>

@@ -20,7 +20,6 @@ export default function PopUpProductCard({
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // If IntersectionObserver is not supported, show immediately
     if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
       setIsVisible(true);
       return;
@@ -34,8 +33,8 @@ export default function PopUpProductCard({
         }
       },
       {
-        rootMargin: "0px 0px -40px 0px",
-        threshold: 0.08,
+        rootMargin: "60px 0px 40px 0px",
+        threshold: 0.02,
       }
     );
 
