@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -71,6 +72,7 @@ import { useAuthStore } from "@/lib/store";
 import { api, fallbackProducts, fallbackVendors } from "@/lib/api";
 import { IOrder, IIncompleteOrder, IProduct, IVendor } from "@/lib/types";
 import ProductImage from "@/components/product/ProductImage";
+import { optimizeImageUrl } from "@/lib/imageUtils";
 import {
   SalesBarChart,
   StackedBarChart,
@@ -80,7 +82,7 @@ import {
 
 // Preset luxury jewelry images for 1-click rapid posting
 const PRESET_GALLERY_IMAGES = [
-  { label: "Oxidized Silver Chandelier Earrings", url: "https://res.cloudinary.com/qofsvx9f/image/upload/v1790535329/old-rank/jewelry/fehlrlobeorivjuij2im.jpg" },
+  { label: "Oxidized Silver Chandelier Earrings", url: "/images/jewelry-category.jpg" },
   { label: "Bridal Choker Necklace Set", url: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop&q=80" },
   { label: "Royal Emerald Drop Earrings", url: "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800&auto=format&fit=crop&q=80" },
   { label: "Antique Kundan Floral Ring", url: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=800&auto=format&fit=crop&q=80" },
@@ -1512,9 +1514,12 @@ export default function AdminPage() {
         <div className="h-16 px-4 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
           {!isSidebarCollapsed ? (
             <Link href="/" className="flex items-center gap-3 group">
-              <img
+              <Image
                 src="/images/logo.png"
                 alt="Old Rank Logo"
+                width={40}
+                height={40}
+                priority
                 className="w-10 h-10 rounded-full object-cover shadow-sm group-hover:scale-105 transition-transform shrink-0 ring-1 ring-slate-200"
               />
               <div className="min-w-0">
@@ -1533,9 +1538,12 @@ export default function AdminPage() {
             </Link>
           ) : (
             <Link href="/" className="mx-auto group flex items-center justify-center" title="Old Rank Store">
-              <img
+              <Image
                 src="/images/logo.png"
                 alt="Old Rank Logo"
+                width={40}
+                height={40}
+                priority
                 className="w-10 h-10 rounded-full object-cover shadow-sm group-hover:scale-110 transition-transform ring-1 ring-slate-200"
               />
             </Link>
@@ -1666,9 +1674,12 @@ export default function AdminPage() {
           <aside className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white border-r border-slate-200 text-slate-700 shadow-2xl flex flex-col z-10 animate-slide-in">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <img
+                <Image
                   src="/images/logo.png"
                   alt="Old Rank Logo"
+                  width={40}
+                  height={40}
+                  priority
                   className="w-10 h-10 rounded-full object-cover shadow-sm shrink-0 ring-1 ring-slate-200"
                 />
                 <div>
@@ -1811,9 +1822,12 @@ export default function AdminPage() {
                 className="flex items-center gap-1.5 sm:gap-2.5 py-1 px-1.5 sm:px-2.5 rounded-xl bg-white/15 hover:bg-white/25 transition-all group shrink-0 border border-white/20 shadow-xs"
                 title="Old Rank হোমপেজে যান"
               >
-                <img
+                <Image
                   src="/images/logo.png"
                   alt="Old Rank Logo"
+                  width={32}
+                  height={32}
+                  priority
                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover shadow-sm ring-1 sm:ring-2 ring-white/40 group-hover:scale-105 transition-transform shrink-0"
                 />
                 <div className="min-w-0">
@@ -2833,9 +2847,12 @@ export default function AdminPage() {
                         <tr key={v._id} className="hover:bg-slate-50/60 transition-colors">
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
-                              <img
-                                src={v.logo || "/images/logo.png"}
+                              <Image
+                                src={optimizeImageUrl(v.logo || "/images/logo.png", { width: 80, quality: "auto:good" })}
                                 alt={v.shopName}
+                                width={40}
+                                height={40}
+                                loading="lazy"
                                 className="w-10 h-10 rounded-xl object-cover border border-slate-200 shrink-0"
                               />
                               <div>
@@ -5425,12 +5442,14 @@ export default function AdminPage() {
 
                   {productForm.mainImage && (
                     <div className="relative w-16 h-16 rounded-xl overflow-hidden border-2 border-amber-400 shadow-sm shrink-0 bg-slate-100">
-                      <img
-                        src={productForm.mainImage}
+                      <Image
+                        src={optimizeImageUrl(productForm.mainImage, { width: 120, quality: "auto:good" })}
                         alt="Preview"
+                        fill
+                        sizes="64px"
                         className="w-full h-full object-cover"
                       />
-                      <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[8px] text-center font-bold py-0.5">
+                      <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[8px] text-center font-bold py-0.5 z-10">
                         প্রিভিউ
                       </span>
                     </div>
@@ -5462,7 +5481,14 @@ export default function AdminPage() {
                       }`}
                       title={img.label}
                     >
-                      <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+                      <Image
+                        src={optimizeImageUrl(img.url, { width: 200, quality: "auto:good" })}
+                        alt={img.label}
+                        fill
+                        sizes="120px"
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
                     </button>
                   ))}
                 </div>

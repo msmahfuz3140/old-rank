@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { X, ShieldCheck, ShoppingBag, MapPin, Sparkles } from "lucide-react";
+import { optimizeImageUrl } from "@/lib/imageUtils";
 
 interface NotificationItem {
   name: string;
@@ -112,9 +114,12 @@ export default function SocialProofPopup() {
       <div className="flex items-center gap-3">
         {/* Thumbnail with verified ring */}
         <div className="relative shrink-0">
-          <img
-            src={currentItem.image}
+          <Image
+            src={optimizeImageUrl(currentItem.image, { width: 120, quality: "auto:good" })}
             alt={currentItem.product_name}
+            width={56}
+            height={56}
+            loading="lazy"
             className="w-14 h-14 rounded-xl object-cover border border-slate-200 shadow-sm"
           />
           <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow">

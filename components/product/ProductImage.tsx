@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ImageOff, Sparkles } from "lucide-react";
+import Image from "next/image";
+import { ImageOff } from "lucide-react";
+import { optimizeImageUrl, shimmerPlaceholder } from "@/lib/imageUtils";
 
 interface ProductImageProps {
   src?: string | null;
@@ -10,15 +12,21 @@ interface ProductImageProps {
   containerClassName?: string;
   showText?: boolean;
   iconSize?: number;
+  priority?: boolean;
+  sizes?: string;
+  targetWidth?: number;
 }
 
 export default function ProductImage({
   src,
   alt,
-  className = "w-full h-full object-cover",
+  className = "object-cover",
   containerClassName = "w-full h-full",
   showText = true,
   iconSize = 24,
+  priority = false,
+  sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw",
+  targetWidth = 800,
 }: ProductImageProps) {
   const [hasError, setHasError] = useState(false);
 
@@ -46,13 +54,25 @@ export default function ProductImage({
     );
   }
 
+  const optimizedSrc = optimizeImageUrl(src, {
+    width: targetWidth,
+    quality: "auto:good",
+  });
+
   return (
-    <img
-      src={src}
-      alt={alt}
-      className={className}
-      onError={() => setHasError(true)}
-      loading="lazy"
-    />
+    <div className={`relative overflow-hidden ${containerClassName}`}>
+      <Image
+        src={optimizedSrc}
+        alt={alt || "Product Image"}
+        fill
+        sizes={sizes}
+        priority={priority}
+        loading={priority ? undefined : "lazy"}
+        placeholder="blur"
+        blurDataURL={shimmerPlaceholder(targetWidth, targetWidth)}
+        className={`${className}`}
+        onError={() => setHasError(true)}
+      />
+    </div>
   );
 }

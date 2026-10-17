@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Sparkles,
   ShoppingBag,
@@ -26,6 +27,7 @@ import {
   Sliders,
 } from "lucide-react";
 import { useCartStore } from "@/lib/store";
+import { optimizeImageUrl } from "@/lib/imageUtils";
 
 interface Hotspot {
   id: string;
@@ -625,8 +627,9 @@ export default function ThreeDShowcase() {
                         className="relative z-10 my-auto flex items-center justify-center py-2 h-44 sm:h-56"
                       >
                         <img
-                          src={prod.image}
+                          src={optimizeImageUrl(prod.image, { width: 800, quality: "auto:good" })}
                           alt={prod.name}
+                          loading="lazy"
                           className="max-h-full max-w-full object-contain filter drop-shadow-[0_25px_30px_rgba(0,0,0,0.85)] group-hover:scale-105 transition-transform duration-500"
                         />
 
@@ -738,11 +741,14 @@ export default function ThreeDShowcase() {
                         : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 opacity-70 hover:opacity-100"
                     }`}
                   >
-                    <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl overflow-hidden bg-black/40 flex items-center justify-center p-1 border border-white/10">
-                      <img
-                        src={item.image}
+                    <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl overflow-hidden bg-black/40 flex items-center justify-center p-1 border border-white/10 relative">
+                      <Image
+                        src={optimizeImageUrl(item.image, { width: 120, quality: "auto:good" })}
                         alt={item.name}
-                        className="w-full h-full object-contain group-hover:scale-110 transition-transform"
+                        fill
+                        sizes="44px"
+                        loading="lazy"
+                        className="object-contain group-hover:scale-110 transition-transform"
                       />
                     </div>
                     <span className="text-[10px] font-bold text-slate-200 line-clamp-1">

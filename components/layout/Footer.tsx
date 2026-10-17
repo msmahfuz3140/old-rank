@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Send, Phone, Mail, MapPin, CheckCircle2 } from "lucide-react";
 
 export default function Footer() {
@@ -24,9 +25,12 @@ export default function Footer() {
           {/* Col 1: Brand */}
           <div>
             <div className="flex items-center gap-2.5 mb-4">
-              <img
+              <Image
                 src="/images/logo.png"
                 alt="Old Rank Logo"
+                width={44}
+                height={44}
+                loading="lazy"
                 className="w-11 h-11 rounded-full object-cover shadow border border-amber-400/30"
               />
               <div>

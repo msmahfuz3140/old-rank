@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { optimizeImageUrl } from "@/lib/imageUtils";
 import {
   Sparkles,
   ArrowRight,
@@ -316,10 +318,13 @@ export default function HeroSlider() {
           <div className="lg:col-span-5 relative flex items-center justify-center">
             {/* Desktop and Tablet Showcase Container */}
             <div className="relative w-full max-w-xs sm:max-w-sm lg:max-w-md aspect-[4/3] sm:aspect-square rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl group">
-              <img
+              <Image
                 key={slide.id}
-                src={slide.image}
+                src={optimizeImageUrl(slide.image, { width: 900, quality: "auto:good" })}
                 alt={slide.imageAlt}
+                fill
+                priority
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 450px"
                 className="w-full h-full object-cover object-center animate-fade-in transform hover:scale-105 transition-transform duration-700"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />

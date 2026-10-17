@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   Truck,
   ShieldCheck,
@@ -12,6 +13,7 @@ import {
 import PopUpProductCard from "@/components/product/PopUpProductCard";
 import HotDealsSection from "@/components/home/HotDealsSection";
 import { api } from "@/lib/api";
+import { optimizeImageUrl } from "@/lib/imageUtils";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -39,9 +41,12 @@ export default async function HomePage() {
         <div className="relative rounded-3xl p-6 sm:p-10 md:p-12 text-white shadow-2xl mb-6 overflow-hidden border border-slate-700/60 min-h-[260px] sm:min-h-[300px] flex items-center">
           {/* Responsive Background Image Layer */}
           <div className="absolute inset-0 z-0">
-            <img
+            <Image
               src="/images/category-showcase-banner.jpg"
               alt="Old Rank Exclusive Showcase"
+              fill
+              priority
+              sizes="100vw"
               className="w-full h-full object-cover object-center transform scale-105 transition-transform duration-700 hover:scale-100"
             />
             {/* Elegant multi-layer dark gradient overlay so text remains 100% readable and luxury */}
@@ -93,9 +98,12 @@ export default async function HomePage() {
                     </div>
 
                     <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-slate-50 mb-2.5 grayscale opacity-60 border border-slate-200 p-0.5">
-                      <img
-                        src={cat.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60"}
+                      <Image
+                        src={optimizeImageUrl(cat.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60", { width: 200, quality: "auto:good" })}
                         alt={cat.name}
+                        width={96}
+                        height={96}
+                        loading="lazy"
                         className="w-full h-full object-cover rounded-xl"
                       />
                     </div>
@@ -129,13 +137,17 @@ export default async function HomePage() {
                     </div>
 
                     <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-white mb-2.5 group-hover:scale-105 transition-transform border border-indigo-200 shadow-xs p-0.5">
-                      <img
-                        src={
+                      <Image
+                        src={optimizeImageUrl(
                           cat.slug === "jewelry"
                             ? (cat.image && !cat.image.includes("unsplash.com/photo-1515562141207") ? cat.image : "/images/jewelry-category.jpg")
-                            : cat.image || "/images/jewelry-category.jpg"
-                        }
+                            : cat.image || "/images/jewelry-category.jpg",
+                          { width: 200, quality: "auto:good" }
+                        )}
                         alt={cat.name}
+                        width={96}
+                        height={96}
+                        loading="lazy"
                         className="w-full h-full object-cover rounded-xl"
                       />
                     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
 import {
   X,
   ZoomIn,
@@ -12,6 +13,7 @@ import {
   Move,
 } from "lucide-react";
 import ProductImage from "./ProductImage";
+import { optimizeImageUrl } from "@/lib/imageUtils";
 
 interface ProductImageZoomModalProps {
   isOpen: boolean;
@@ -291,7 +293,7 @@ export default function ProductImageZoomModal({
           className="relative max-w-full max-h-[75vh] flex items-center justify-center will-change-transform"
         >
           <img
-            src={currentImage}
+            src={optimizeImageUrl(currentImage, { width: 1400, quality: "auto:best" })}
             alt={productName}
             draggable={false}
             className="max-w-full max-h-[75vh] object-contain rounded-2xl shadow-2xl pointer-events-none drop-shadow-2xl"
@@ -343,9 +345,12 @@ export default function ProductImageZoomModal({
                   : "border-white/20 hover:border-white/60 opacity-60 hover:opacity-100"
               }`}
             >
-              <img
-                src={img}
-                alt=""
+              <Image
+                src={optimizeImageUrl(img, { width: 160, quality: "auto:good" })}
+                alt={`Product thumbnail ${idx + 1}`}
+                fill
+                sizes="64px"
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
             </button>

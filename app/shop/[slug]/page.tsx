@@ -1,8 +1,10 @@
 import { use } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ShieldCheck, Star, MapPin, Phone, ArrowLeft } from "lucide-react";
 import { api, fallbackVendors } from "@/lib/api";
 import PopUpProductCard from "@/components/product/PopUpProductCard";
+import { optimizeImageUrl } from "@/lib/imageUtils";
 
 export default function ShopFrontPage({
   params,
@@ -35,9 +37,12 @@ export default function ShopFrontPage({
         <div className="px-6 sm:px-8 pb-8 pt-0 relative">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between -mt-14 mb-4 gap-4">
             <div className="flex items-end gap-4">
-              <img
-                src={vendor.logo}
+              <Image
+                src={optimizeImageUrl(vendor.logo, { width: 192, quality: "auto:good" })}
                 alt={vendor.shopName}
+                width={96}
+                height={96}
+                loading="lazy"
                 className="w-24 h-24 rounded-2xl object-cover border-4 border-white shadow-lg bg-white shrink-0"
               />
               <div>

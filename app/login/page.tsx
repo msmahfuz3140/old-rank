@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   User,
@@ -237,9 +238,12 @@ export default function LoginPage() {
           {/* Header */}
           <div className="text-center">
             <Link href="/" className="inline-flex items-center gap-2 mb-3 group">
-              <img
+              <Image
                 src="/images/logo.png"
                 alt="Old Rank Logo"
+                width={48}
+                height={48}
+                priority
                 className="w-12 h-12 rounded-full object-cover ring-2 ring-amber-400/60 shadow-md group-hover:scale-105 transition-transform"
               />
               <span className="font-black text-2xl text-slate-900 tracking-tight">

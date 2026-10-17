@@ -1,5 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, Sparkles, Zap } from "lucide-react";
+import { optimizeImageUrl } from "@/lib/imageUtils";
 
 export default function PromoAdBanners() {
   return (
@@ -29,9 +31,12 @@ export default function PromoAdBanners() {
 
           {/* Floating Product Cutout Graphic */}
           <div className="absolute -bottom-2 -right-2 sm:-bottom-4 sm:-right-4 w-32 sm:w-56 h-32 sm:h-56 opacity-40 sm:opacity-85 group-hover:scale-105 group-hover:rotate-2 transition-transform duration-500 pointer-events-none">
-            <img
-              src="https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&auto=format&fit=crop&q=80"
+            <Image
+              src={optimizeImageUrl("https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&auto=format&fit=crop&q=80", { width: 500, quality: "auto:good" })}
               alt="Smartwatch Deal"
+              fill
+              sizes="(max-width: 640px) 128px, 224px"
+              loading="lazy"
               className="w-full h-full object-contain rounded-2xl drop-shadow-2xl"
             />
           </div>
@@ -63,9 +68,12 @@ export default function PromoAdBanners() {
 
           {/* Floating Product Cutout Graphic */}
           <div className="absolute -bottom-2 -right-2 sm:-bottom-4 sm:-right-4 w-32 sm:w-56 h-32 sm:h-56 opacity-40 sm:opacity-85 group-hover:scale-105 group-hover:-rotate-2 transition-transform duration-500 pointer-events-none">
-            <img
-              src="https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=500&auto=format&fit=crop&q=80"
+            <Image
+              src={optimizeImageUrl("https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=500&auto=format&fit=crop&q=80", { width: 500, quality: "auto:good" })}
               alt="Fashion Deal"
+              fill
+              sizes="(max-width: 640px) 128px, 224px"
+              loading="lazy"
               className="w-full h-full object-contain rounded-2xl drop-shadow-2xl"
             />
           </div>

@@ -1,6 +1,8 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Store, ShieldCheck, Star, MapPin, Phone, ArrowRight } from "lucide-react";
 import { api } from "@/lib/api";
+import { optimizeImageUrl } from "@/lib/imageUtils";
 
 export const metadata = {
   title: "Verified Sellers & Shops | Shop Genie",
@@ -43,9 +45,12 @@ export default async function SellersPage() {
             {/* Content */}
             <div className="px-6 pb-6 pt-0 relative flex-1 flex flex-col justify-between">
               <div className="flex items-end justify-between -mt-10 mb-3">
-                <img
-                  src={v.logo}
+                <Image
+                  src={optimizeImageUrl(v.logo, { width: 160, quality: "auto:good" })}
                   alt={v.shopName}
+                  width={80}
+                  height={80}
+                  loading="lazy"
                   className="w-20 h-20 rounded-2xl object-cover border-4 border-white shadow-md bg-white shrink-0"
                 />
                 <span className="bg-emerald-50 text-emerald-700 text-xs font-black px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1 shadow-xs">

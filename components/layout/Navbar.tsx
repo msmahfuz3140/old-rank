@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -174,9 +175,12 @@ export default function Navbar() {
             </button>
 
             <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group">
-              <img
+              <Image
                 src="/images/logo.png"
                 alt="Old Rank Logo"
+                width={40}
+                height={40}
+                priority
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover shadow-sm group-hover:scale-105 transition-transform shrink-0 ring-1 ring-slate-200"
               />
               <div>
@@ -571,9 +575,11 @@ export default function Navbar() {
             {/* Header */}
             <div className="p-4 bg-gradient-to-r from-[#1e293b] to-[#303d6e] text-white flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <img
+                <Image
                   src="/images/logo.png"
                   alt="Old Rank Logo"
+                  width={36}
+                  height={36}
                   className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-amber-400/40"
                 />
                 <div>
