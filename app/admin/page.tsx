@@ -683,7 +683,7 @@ export default function AdminPage() {
   const updateEditingProductImages = (newImages: string[]) => {
     if (!editingProduct) return;
     const cleanList = newImages.filter((u) => u && typeof u === "string" && u.trim().length > 0);
-    const mainImage = cleanList[0] || "/images/old-rank-banner.jpg";
+    const mainImage = cleanList.length > 0 ? cleanList[0] : "";
     const galleryImages = cleanList.slice(1);
     setEditingProduct({
       ...editingProduct,
@@ -700,7 +700,7 @@ export default function AdminPage() {
     const rest = current.filter((_, idx) => idx !== index);
     const reordered = [selected, ...rest];
     updateEditingProductImages(reordered);
-    showToast("⭐ প্রধান থাম্বনেইল হিসেবে সেট করা হয়েছে!");
+    showToast("⭐ প্রধান থাম্বনেইল হিসেবে সেট করা হয়েছে! সেভ করতে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করুন।");
   };
 
   const handleMoveImageOrder = (index: number, direction: "prev" | "next") => {
@@ -717,9 +717,10 @@ export default function AdminPage() {
   const handleRemoveImageFromEdit = (index: number) => {
     if (!editingProduct) return;
     const current = getEditingProductImages(editingProduct);
+    if (index < 0 || index >= current.length) return;
     const removed = current.filter((_, idx) => idx !== index);
     updateEditingProductImages(removed);
-    showToast("ছবি মুছে ফেলা হয়েছে।");
+    showToast("🗑️ ছবিটি তালিকা থেকে মুছে ফেলা হয়েছে। সংরক্ষণের জন্য নিচে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করুন।");
   };
 
   const handleAddImageUrlToEdit = (urlToAdd?: string) => {
@@ -750,20 +751,43 @@ export default function AdminPage() {
       const res = await api.uploadMultipleFiles(files);
       if (res.success && res.urls && res.urls.length > 0) {
         const current = getEditingProductImages(editingProduct);
-        const combined = [...current];
-        for (const u of res.urls) {
-          if (!combined.includes(u)) {
-            combined.push(u);
-          }
-        }
+        // Put newly uploaded images at index 0 so thumbnail updates immediately!
+        const combined = [...res.urls, ...current.filter((u) => !res.urls.includes(u))];
         updateEditingProductImages(combined);
-        setEditUploadSuccessMessage(`✅ ${res.urls.length}টি ছবি সফলভাবে আপলোড হয়েছে!`);
-        showToast(`🎉 ${res.urls.length}টি ছবি সফলভাবে আপলোড ও যুক্ত হয়েছে!`);
+        setEditUploadSuccessMessage(`✅ ${res.urls.length}টি ছবি সফলভাবে আপলোড ও থাম্বনেইলে সেট হয়েছে!`);
+        showToast(`🎉 ছবি আপলোড সফল ও নতুন থাম্বনেইল সেট হয়েছে! সেভ করতে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করুন।`);
       } else {
         showToast(res.message || "ছবি আপলোড ব্যর্থ হয়েছে।");
       }
     } catch {
       showToast("⚠️ ছবি আপলোডে ত্রুটি দেখা দিয়েছে।");
+    } finally {
+      setIsUploadingEditImages(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleUploadNewThumbnailDirectly = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingProduct) return;
+
+    setIsUploadingEditImages(true);
+    setEditUploadSuccessMessage("");
+
+    try {
+      const res = await api.uploadFile(file);
+      if (res.success && res.url) {
+        const current = getEditingProductImages(editingProduct);
+        const rest = current.filter((u) => u !== res.url);
+        const nextList = [res.url, ...rest];
+        updateEditingProductImages(nextList);
+        setEditUploadSuccessMessage("✅ প্রধান থাম্বনেইল সফলভাবে পরিবর্তন হয়েছে!");
+        showToast("⭐ প্রধান থাম্বনেইল পরিবর্তিত হয়েছে! নিচে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করে সেভ করুন।");
+      } else {
+        showToast(res.message || "থাম্বনেইল আপলোড ব্যর্থ হয়েছে।");
+      }
+    } catch {
+      showToast("⚠️ থাম্বনেইল আপলোডে ত্রুটি দেখা দিয়েছে।");
     } finally {
       setIsUploadingEditImages(false);
       e.target.value = "";
@@ -1045,7 +1069,7 @@ export default function AdminPage() {
       }
 
       const currentImages = getEditingProductImages(editingProduct);
-      const mainImage = currentImages[0] || editingProduct.mainImage || "/images/old-rank-banner.jpg";
+      const mainImage = currentImages[0] || editingProduct.mainImage || "";
       const galleryImages = currentImages.slice(1);
 
       const updatedPayload = {
@@ -6052,6 +6076,85 @@ export default function AdminPage() {
                   </div>
                 </div>
 
+                {/* Dedicated Active Main Thumbnail Hero Card */}
+                {(() => {
+                  const currentImages = getEditingProductImages(editingProduct);
+                  const activeThumb = currentImages[0] || editingProduct.mainImage || "";
+                  return (
+                    <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-slate-50 border-2 border-amber-400/80 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center gap-3.5 shadow-xs">
+                      <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-2 border-amber-500 shrink-0 bg-white shadow-sm">
+                        {activeThumb ? (
+                          <ProductImage
+                            src={activeThumb}
+                            alt="Current Thumbnail"
+                            className="w-full h-full object-cover"
+                            showText={false}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-300 text-[10px] text-center p-1">
+                            নো থাম্বনেইল
+                          </div>
+                        )}
+                        <div className="absolute top-1 left-1 bg-amber-500 text-slate-950 font-black text-[8px] px-1.5 py-0.5 rounded shadow flex items-center gap-0.5 pointer-events-none z-10">
+                          <Crown size={9} className="fill-slate-950" />
+                          <span>মূল থাম্বনেইল</span>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 text-center sm:text-left space-y-1">
+                        <div className="flex items-center justify-center sm:justify-start gap-1.5">
+                          <h5 className="font-black text-slate-900 text-xs">প্রধান থাম্বনেইল (Active Main Thumbnail)</h5>
+                          <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full">
+                            শপে দৃশ্যমান
+                          </span>
+                        </div>
+                        <p className="text-[10.5px] text-slate-500 leading-relaxed">
+                          শপ ও ক্যাটালগে এই ছবিটি প্রধান থাম্বনেইল হিসেবে প্রদর্শিত হবে। নতুন থাম্বনেইল দিতে সরাসরি আপলোড করুন বা নিচের তালিকা থেকে নির্বাচন করুন।
+                        </p>
+
+                        <div className="flex items-center justify-center sm:justify-start gap-2 pt-1 flex-wrap">
+                          <label className="cursor-pointer">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-[11px] rounded-xl shadow-xs transition-all hover:scale-102 active:scale-95">
+                              <UploadCloud size={13} />
+                              <span>নতুন থাম্বনেইল আপলোড করুন</span>
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleUploadNewThumbnailDirectly}
+                              disabled={isUploadingEditImages}
+                              className="hidden"
+                            />
+                          </label>
+
+                          {activeThumb && (
+                            <button
+                              type="button"
+                              onClick={() => setLightboxPreviewUrl(activeThumb)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-[11px] rounded-xl cursor-pointer"
+                            >
+                              <Eye size={12} className="text-indigo-600" />
+                              <span>বড় করে দেখুন</span>
+                            </button>
+                          )}
+
+                          {activeThumb && currentImages.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImageFromEdit(0)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-[11px] rounded-xl cursor-pointer"
+                              title="এই থাম্বনেইলটি মুছে ফেলুন (পরবর্তী ছবি স্বয়ংক্রিয়ভাবে থাম্বনেইল হবে)"
+                            >
+                              <Trash2 size={12} className="text-rose-600" />
+                              <span>থাম্বনেইল মুছুন</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Images Preview Grid */}
                 {getEditingProductImages(editingProduct).length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
@@ -6066,20 +6169,8 @@ export default function AdminPage() {
                               : "border-slate-200 hover:border-amber-400"
                           }`}
                         >
-                          {/* Image Box (Clicking opens See Image / Change Image action) */}
-                          <div
-                            onClick={() =>
-                              setSelectedImageAction({
-                                isOpen: true,
-                                productId: editingProduct._id,
-                                imageIndex: idx,
-                                imageUrl: imgUrl,
-                                productName: editingProduct.name,
-                              })
-                            }
-                            className="relative aspect-square w-full bg-slate-100 overflow-hidden cursor-pointer"
-                            title="ক্লিক করুন: See Image বা Change Image"
-                          >
+                          {/* Image Box */}
+                          <div className="relative aspect-square w-full bg-slate-100 overflow-hidden">
                             <ProductImage
                               src={imgUrl}
                               alt={`Product image ${idx + 1}`}
@@ -6089,7 +6180,7 @@ export default function AdminPage() {
                             />
 
                             {/* Badge */}
-                            <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
+                            <div className="absolute top-1.5 left-1.5 z-20 pointer-events-none">
                               {isMain ? (
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500 text-slate-950 font-black text-[9px] shadow-sm">
                                   <Crown size={10} className="fill-slate-950" />
@@ -6102,24 +6193,26 @@ export default function AdminPage() {
                               )}
                             </div>
 
-                            {/* Delete Button */}
+                            {/* Top-Right Delete Button (z-30 pointer-events-auto) */}
                             <button
                               type="button"
                               onClick={(e) => {
+                                e.preventDefault();
                                 e.stopPropagation();
                                 handleRemoveImageFromEdit(idx);
                               }}
-                              className="absolute top-1.5 right-1.5 z-20 w-6 h-6 rounded-md bg-rose-600/90 hover:bg-rose-600 text-white flex items-center justify-center transition-all cursor-pointer shadow-sm"
-                              title="ছবি মুছে ফেলুন"
+                              className="absolute top-1.5 right-1.5 z-30 w-7 h-7 rounded-lg bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition-all cursor-pointer shadow-md pointer-events-auto hover:scale-110 active:scale-95"
+                              title="ছবি মুছে ফেলুন (Delete Image)"
                             >
-                              <Trash2 size={11} />
+                              <Trash2 size={13} />
                             </button>
 
                             {/* Hover Overlay with See Image and Change Image */}
-                            <div className="absolute inset-0 bg-slate-950/65 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2 backdrop-blur-xs z-15">
+                            <div className="absolute inset-0 bg-slate-950/65 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2 backdrop-blur-xs z-20 pointer-events-none group-hover:pointer-events-auto">
                               <button
                                 type="button"
                                 onClick={(e) => {
+                                  e.preventDefault();
                                   e.stopPropagation();
                                   setLightboxPreviewUrl(imgUrl);
                                 }}
@@ -6132,6 +6225,7 @@ export default function AdminPage() {
                               <button
                                 type="button"
                                 onClick={(e) => {
+                                  e.preventDefault();
                                   e.stopPropagation();
                                   triggerGalleryChangeFor(editingProduct._id, idx);
                                 }}
@@ -6187,26 +6281,36 @@ export default function AdminPage() {
                               )}
                             </div>
 
-                            {/* Dual Direct Action Buttons: See Image & Change Image */}
-                            <div className="grid grid-cols-2 gap-1 pt-0.5">
+                            {/* 3-Action Buttons Grid: See Image, Change Image, Delete Image */}
+                            <div className="grid grid-cols-3 gap-1 pt-0.5">
                               <button
                                 type="button"
                                 onClick={() => setLightboxPreviewUrl(imgUrl)}
-                                className="py-1 px-1 rounded-md bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-indigo-700 text-[9px] font-bold inline-flex items-center justify-center gap-1 cursor-pointer"
+                                className="py-1 px-1 rounded-md bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-indigo-700 text-[9px] font-bold inline-flex items-center justify-center gap-0.5 cursor-pointer"
                                 title="বড় করে দেখুন"
                               >
                                 <Eye size={10} />
-                                <span>See Image</span>
+                                <span>See</span>
                               </button>
 
                               <button
                                 type="button"
                                 onClick={() => triggerGalleryChangeFor(editingProduct._id, idx)}
-                                className="py-1 px-1 rounded-md bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-400 text-amber-900 text-[9px] font-bold inline-flex items-center justify-center gap-1 cursor-pointer"
+                                className="py-1 px-1 rounded-md bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-400 text-amber-900 text-[9px] font-bold inline-flex items-center justify-center gap-0.5 cursor-pointer"
                                 title="গ্যালারি থেকে পরিবর্তন করুন"
                               >
                                 <RefreshCw size={9} className="text-amber-600" />
-                                <span>Change Image</span>
+                                <span>Change</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveImageFromEdit(idx)}
+                                className="py-1 px-1 rounded-md bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-rose-700 text-[9px] font-bold inline-flex items-center justify-center gap-0.5 cursor-pointer"
+                                title="ছবি মুছে ফেলুন"
+                              >
+                                <Trash2 size={10} className="text-rose-600" />
+                                <span>Delete</span>
                               </button>
                             </div>
                           </div>
@@ -7140,6 +7244,21 @@ export default function AdminPage() {
                 <span className="text-[10px] text-amber-800 font-medium">গ্যালারি থেকে বদলান</span>
               </button>
             </div>
+
+            {/* Option 3: Delete Image */}
+            <button
+              type="button"
+              onClick={() => {
+                if (editingProduct && editingProduct._id === selectedImageAction.productId) {
+                  handleRemoveImageFromEdit(selectedImageAction.imageIndex);
+                }
+                setSelectedImageAction((prev) => ({ ...prev, isOpen: false }));
+              }}
+              className="w-full flex items-center justify-center gap-2 p-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-black text-xs transition-all cursor-pointer shadow-xs active:scale-95"
+            >
+              <Trash2 size={15} className="text-rose-600" />
+              <span>ছবি মুছে ফেলুন (Delete Image)</span>
+            </button>
 
             <button
               type="button"

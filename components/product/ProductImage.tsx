@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { ImageOff } from "lucide-react";
 import { optimizeImageUrl, shimmerPlaceholder } from "@/lib/imageUtils";
@@ -29,6 +29,10 @@ export default function ProductImage({
   targetWidth = 800,
 }: ProductImageProps) {
   const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [src]);
 
   const isInvalid = !src || typeof src !== "string" || src.trim() === "" || hasError;
 
