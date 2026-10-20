@@ -914,6 +914,74 @@ export const api = {
       };
     }
   },
+
+  async uploadMultipleFiles(files: File[]): Promise<{ success: boolean; urls: string[]; message: string }> {
+    try {
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append("files", file);
+      }
+      const res = await fetch(`${API_BASE}/upload/multiple`, {
+        method: "POST",
+        body: formData,
+      });
+      const json = await res.json();
+      if (json.success && Array.isArray(json.results) && json.results.length > 0) {
+        const urls = json.results.map((r: any) => r.url).filter(Boolean);
+        return {
+          success: true,
+          urls,
+          message: json.message || `${urls.length}টি ছবি সফলভাবে আপলোড হয়েছে!`,
+        };
+      }
+
+      // Fallback: Upload sequentially if multi-route returned unexpected response
+      const uploadedUrls: string[] = [];
+      for (const file of files) {
+        const singleRes = await this.uploadFile(file);
+        if (singleRes.success && singleRes.url) {
+          uploadedUrls.push(singleRes.url);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        return {
+          success: true,
+          urls: uploadedUrls,
+          message: `${uploadedUrls.length}টি ছবি সফলভাবে আপলোড হয়েছে!`,
+        };
+      }
+
+      return {
+        success: false,
+        urls: [],
+        message: json.message || "ছবি আপলোড সম্পন্ন হয়নি।",
+      };
+    } catch {
+      // Fallback: sequential upload on catch
+      try {
+        const uploadedUrls: string[] = [];
+        for (const file of files) {
+          const singleRes = await this.uploadFile(file);
+          if (singleRes.success && singleRes.url) {
+            uploadedUrls.push(singleRes.url);
+          }
+        }
+        if (uploadedUrls.length > 0) {
+          return {
+            success: true,
+            urls: uploadedUrls,
+            message: `${uploadedUrls.length}টি ছবি সফলভাবে আপলোড হয়েছে!`,
+          };
+        }
+      } catch {}
+      return {
+        success: false,
+        urls: [],
+        message: "ছবি আপলোড সম্পন্ন করা যায়নি।",
+      };
+    }
+  },
 };
 
 

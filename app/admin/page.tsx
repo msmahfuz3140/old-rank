@@ -393,6 +393,12 @@ export default function AdminPage() {
   const [productCategoryFilter, setProductCategoryFilter] = useState("all");
   const [productStockFilter, setProductStockFilter] = useState<string>("all");
 
+  // Edit Product Images Management State
+  const [editImageUrlInput, setEditImageUrlInput] = useState("");
+  const [isUploadingEditImages, setIsUploadingEditImages] = useState(false);
+  const [editUploadSuccessMessage, setEditUploadSuccessMessage] = useState("");
+  const [showPresetInEdit, setShowPresetInEdit] = useState(false);
+
   // Product Drag & Drop / Reordering State
   const [draggedProductId, setDraggedProductId] = useState<string | null>(null);
   const [dragOverProductId, setDragOverProductId] = useState<string | null>(null);
@@ -629,6 +635,122 @@ export default function AdminPage() {
     }
   };
 
+  // Open Edit Product Modal with fresh image states
+  const handleOpenEditProduct = (p: IProduct) => {
+    setEditingProduct(p);
+    setEditImageUrlInput("");
+    setEditUploadSuccessMessage("");
+    setShowPresetInEdit(false);
+    setIsUploadingEditImages(false);
+  };
+
+  // Helper to extract all unique images from editing product
+  const getEditingProductImages = (prod: IProduct | null): string[] => {
+    if (!prod) return [];
+    const list: string[] = [];
+    if (prod.mainImage && typeof prod.mainImage === "string" && prod.mainImage.trim()) {
+      list.push(prod.mainImage.trim());
+    }
+    if (Array.isArray(prod.galleryImages)) {
+      prod.galleryImages.forEach((url) => {
+        if (url && typeof url === "string" && url.trim() && !list.includes(url.trim())) {
+          list.push(url.trim());
+        }
+      });
+    }
+    return list;
+  };
+
+  const updateEditingProductImages = (newImages: string[]) => {
+    if (!editingProduct) return;
+    const cleanList = newImages.filter((u) => u && typeof u === "string" && u.trim().length > 0);
+    const mainImage = cleanList[0] || "/images/old-rank-banner.jpg";
+    const galleryImages = cleanList.slice(1);
+    setEditingProduct({
+      ...editingProduct,
+      mainImage,
+      galleryImages,
+    });
+  };
+
+  const handleSetMainThumbnail = (index: number) => {
+    if (!editingProduct) return;
+    const current = getEditingProductImages(editingProduct);
+    if (index <= 0 || index >= current.length) return;
+    const selected = current[index];
+    const rest = current.filter((_, idx) => idx !== index);
+    const reordered = [selected, ...rest];
+    updateEditingProductImages(reordered);
+    showToast("⭐ প্রধান থাম্বনেইল হিসেবে সেট করা হয়েছে!");
+  };
+
+  const handleMoveImageOrder = (index: number, direction: "prev" | "next") => {
+    if (!editingProduct) return;
+    const current = [...getEditingProductImages(editingProduct)];
+    const targetIdx = direction === "prev" ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= current.length) return;
+    const temp = current[index];
+    current[index] = current[targetIdx];
+    current[targetIdx] = temp;
+    updateEditingProductImages(current);
+  };
+
+  const handleRemoveImageFromEdit = (index: number) => {
+    if (!editingProduct) return;
+    const current = getEditingProductImages(editingProduct);
+    const removed = current.filter((_, idx) => idx !== index);
+    updateEditingProductImages(removed);
+    showToast("ছবি মুছে ফেলা হয়েছে।");
+  };
+
+  const handleAddImageUrlToEdit = (urlToAdd?: string) => {
+    if (!editingProduct) return;
+    const url = (urlToAdd || editImageUrlInput).trim();
+    if (!url) {
+      showToast("অনুগ্রহ করে একটি সঠিক ইমেজ URL দিন।");
+      return;
+    }
+    const current = getEditingProductImages(editingProduct);
+    if (current.includes(url)) {
+      showToast("এই ছবিটি ইতিমধ্যে যুক্ত রয়েছে!");
+      return;
+    }
+    updateEditingProductImages([...current, url]);
+    if (!urlToAdd) setEditImageUrlInput("");
+    showToast("✅ নতুন ছবি যুক্ত হয়েছে!");
+  };
+
+  const handleUploadEditFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    if (files.length === 0 || !editingProduct) return;
+
+    setIsUploadingEditImages(true);
+    setEditUploadSuccessMessage("");
+
+    try {
+      const res = await api.uploadMultipleFiles(files);
+      if (res.success && res.urls && res.urls.length > 0) {
+        const current = getEditingProductImages(editingProduct);
+        const combined = [...current];
+        for (const u of res.urls) {
+          if (!combined.includes(u)) {
+            combined.push(u);
+          }
+        }
+        updateEditingProductImages(combined);
+        setEditUploadSuccessMessage(`✅ ${res.urls.length}টি ছবি সফলভাবে আপলোড হয়েছে!`);
+        showToast(`🎉 ${res.urls.length}টি ছবি সফলভাবে আপলোড ও যুক্ত হয়েছে!`);
+      } else {
+        showToast(res.message || "ছবি আপলোড ব্যর্থ হয়েছে।");
+      }
+    } catch {
+      showToast("⚠️ ছবি আপলোডে ত্রুটি দেখা দিয়েছে।");
+    } finally {
+      setIsUploadingEditImages(false);
+      e.target.value = "";
+    }
+  };
+
   // Helper to extract alternative phone and clean notes
   const extractAltPhone = (note?: string) => {
     if (!note) return null;
@@ -811,15 +933,24 @@ export default function AdminPage() {
         discount = Math.round(((old - base) / old) * 100);
       }
 
+      const currentImages = getEditingProductImages(editingProduct);
+      const mainImage = currentImages[0] || editingProduct.mainImage || "/images/old-rank-banner.jpg";
+      const galleryImages = currentImages.slice(1);
+
       const updatedPayload = {
         ...editingProduct,
+        mainImage,
+        galleryImages,
         basePrice: base,
         oldPrice: old,
         discountPercentage: discount,
       };
 
       const res = await api.updateProduct(editingProduct._id, updatedPayload);
-      setProducts(products.map((p) => (p._id === editingProduct._id ? (res.data || updatedPayload) : p)));
+      const savedProd = res.data
+        ? { ...updatedPayload, ...res.data, mainImage, galleryImages }
+        : updatedPayload;
+      setProducts(products.map((p) => (p._id === editingProduct._id ? savedProd : p)));
       setEditingProduct(null);
       showToast(`প্রোডাক্ট "${editingProduct.name}" সফলভাবে আপডেট হয়েছে!`);
       try {
@@ -2763,7 +2894,7 @@ export default function AdminPage() {
                                 <Eye size={13} />
                               </Link>
                               <button
-                                onClick={() => setEditingProduct(p)}
+                                onClick={() => handleOpenEditProduct(p)}
                                 className="p-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 cursor-pointer"
                                 title="এডিট করুন"
                               >
@@ -5588,14 +5719,17 @@ export default function AdminPage() {
       {editingProduct && (
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs overflow-y-auto p-3 sm:p-6">
           <div className="min-h-full flex items-start sm:items-center justify-center py-4 sm:py-8">
-            <div className="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-7 shadow-2xl border border-slate-200 animate-scaleUp relative">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+            <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[92vh] overflow-y-auto p-5 sm:p-7 shadow-2xl border border-slate-200 animate-scaleUp relative">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4 sticky top-0 bg-white z-20">
               <div>
                 <h3 className="font-black text-base text-slate-900">প্রোডাক্ট এডিট করুন</h3>
-                <p className="text-[11px] text-slate-400">মূল্য, ডিসকাউন্ট ও স্টক পরিবর্তন করুন</p>
+                <p className="text-[11px] text-slate-400">মূল্য, ডিসকাউন্ট, ছবি গ্যালারি ও স্টক পরিবর্তন করুন</p>
               </div>
               <button
-                onClick={() => setEditingProduct(null)}
+                onClick={() => {
+                  setEditingProduct(null);
+                  setEditUploadSuccessMessage("");
+                }}
                 className="p-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer"
               >
                 <X size={16} />
@@ -5768,6 +5902,238 @@ export default function AdminPage() {
                   placeholder="পণ্য ক্রয় + গাড়িভাড়া/খরচ"
                   className="w-full px-3 py-2 bg-amber-50/70 border border-amber-300 rounded-xl font-bold text-amber-950"
                 />
+              </div>
+
+              {/* Product Images & Gallery Section (Multiple Image Edit & Main Thumbnail) */}
+              <div className="p-4 bg-slate-50 border border-slate-200/90 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                      <UploadCloud size={18} />
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-slate-900 text-xs flex items-center gap-1.5">
+                        <span>প্রোডাক্ট ইমেজ ও গ্যালারি (Product Images)</span>
+                        <span className="text-[10px] bg-amber-100 text-amber-800 font-black px-2 py-0.5 rounded-full">
+                          {getEditingProductImages(editingProduct).length}টি ছবি
+                        </span>
+                      </h4>
+                      <p className="text-[10px] text-slate-500">
+                        প্রথম ছবিটি শপ ও ক্যাটালগে <strong className="text-amber-700 font-bold">প্রধান থাম্বনেইল (Main Thumbnail)</strong> হিসেবে প্রদর্শিত হবে।
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Images Preview Grid */}
+                {getEditingProductImages(editingProduct).length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                    {getEditingProductImages(editingProduct).map((imgUrl, idx) => {
+                      const isMain = idx === 0;
+                      return (
+                        <div
+                          key={`${imgUrl}-${idx}`}
+                          className={`group relative rounded-xl overflow-hidden border-2 transition-all bg-white shadow-xs flex flex-col ${
+                            isMain
+                              ? "border-amber-500 ring-2 ring-amber-400/40 shadow-amber-500/10"
+                              : "border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          {/* Image Box */}
+                          <div className="relative aspect-square w-full bg-slate-100 overflow-hidden">
+                            <ProductImage
+                              src={imgUrl}
+                              alt={`Product image ${idx + 1}`}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              showText={false}
+                              iconSize={20}
+                            />
+
+                            {/* Badge */}
+                            <div className="absolute top-1.5 left-1.5 z-10">
+                              {isMain ? (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500 text-slate-950 font-black text-[9px] shadow-sm">
+                                  <Crown size={10} className="fill-slate-950" />
+                                  <span>প্রধান থাম্বনেইল</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-slate-900/70 backdrop-blur-xs text-white font-bold text-[9px]">
+                                  #{idx + 1}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Delete Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImageFromEdit(idx)}
+                              className="absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-md bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                              title="ছবি মুছে ফেলুন"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
+
+                          {/* Action Controls for this image */}
+                          <div className="p-1.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-1 text-[10px]">
+                            {/* Reorder Buttons */}
+                            <div className="flex items-center gap-0.5">
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => handleMoveImageOrder(idx, "prev")}
+                                className="p-1 rounded bg-white hover:bg-slate-200 text-slate-700 disabled:opacity-20 disabled:cursor-not-allowed border border-slate-200 cursor-pointer"
+                                title="বামে / আগে সরান"
+                              >
+                                <ChevronLeft size={11} />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={idx === getEditingProductImages(editingProduct).length - 1}
+                                onClick={() => handleMoveImageOrder(idx, "next")}
+                                className="p-1 rounded bg-white hover:bg-slate-200 text-slate-700 disabled:opacity-20 disabled:cursor-not-allowed border border-slate-200 cursor-pointer"
+                                title="ডানে / পরে সরান"
+                              >
+                                <ChevronRight size={11} />
+                              </button>
+                            </div>
+
+                            {/* Set as Main Thumbnail button if not index 0 */}
+                            {!isMain ? (
+                              <button
+                                type="button"
+                                onClick={() => handleSetMainThumbnail(idx)}
+                                className="px-1.5 py-0.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[9px] cursor-pointer inline-flex items-center gap-0.5 border border-amber-300"
+                                title="এই ছবিটিকে প্রধান থাম্বনেইল করুন"
+                              >
+                                <Crown size={9} />
+                                <span>থাম্বনেইল</span>
+                              </button>
+                            ) : (
+                              <span className="text-[9px] text-amber-700 font-bold flex items-center gap-0.5">
+                                <Check size={10} />
+                                <span>থাম্বনেইল</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 bg-white rounded-xl border border-dashed border-slate-200 text-slate-400 text-xs">
+                    কোনো ছবি যুক্ত করা নেই। নিচে থেকে ছবি আপলোড করুন অথবা লিঙ্ক দিন।
+                  </div>
+                )}
+
+                {/* Upload & Add Controls */}
+                <div className="space-y-2 pt-2 border-t border-slate-200/70">
+                  {/* Upload Box */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <label className="flex-1 cursor-pointer">
+                      <div className="border border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/50 hover:bg-amber-100/50 rounded-xl px-3 py-2 text-center transition-all flex items-center justify-center gap-2">
+                        {isUploadingEditImages ? (
+                          <div className="flex items-center gap-2 text-amber-800 font-bold text-xs py-0.5">
+                            <div className="w-3.5 h-3.5 border-2 border-amber-700 border-t-transparent rounded-full animate-spin" />
+                            <span>আপলোড হচ্ছে...</span>
+                          </div>
+                        ) : (
+                          <>
+                            <UploadCloud size={16} className="text-amber-600" />
+                            <span className="text-xs font-bold text-slate-800">
+                              এক বা একাধিক ছবি আপলোড করুন
+                            </span>
+                            <span className="text-[10px] text-slate-500">
+                              (JPG, PNG, WEBP)
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={handleUploadEditFiles}
+                        disabled={isUploadingEditImages}
+                        className="hidden"
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowPresetInEdit(!showPresetInEdit)}
+                      className="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl font-bold text-xs cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                    >
+                      <Sparkles size={13} className="text-amber-500" />
+                      <span>{showPresetInEdit ? "প্রিসেট লুকান" : "প্রিসেট গ্যালারি"}</span>
+                    </button>
+                  </div>
+
+                  {editUploadSuccessMessage && (
+                    <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                      <CheckCircle2 size={12} /> {editUploadSuccessMessage}
+                    </p>
+                  )}
+
+                  {/* Add Image by URL input */}
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="url"
+                      placeholder="অথবা ছবির ওয়েব লিঙ্ক (URL) দিন..."
+                      value={editImageUrlInput}
+                      onChange={(e) => setEditImageUrlInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddImageUrlToEdit();
+                        }
+                      }}
+                      className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 font-mono focus:ring-2 focus:ring-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddImageUrlToEdit()}
+                      className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs cursor-pointer shrink-0 inline-flex items-center gap-1"
+                    >
+                      <Plus size={13} />
+                      <span>যোগ করুন</span>
+                    </button>
+                  </div>
+
+                  {/* Collapsible Preset Gallery in Edit Modal */}
+                  {showPresetInEdit && (
+                    <div className="p-2.5 bg-white rounded-xl border border-slate-200 space-y-1.5 animate-fadeIn">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-600">
+                          এক ক্লিকে জুয়েলারি ছবি যোগ করুন:
+                        </span>
+                        <span className="text-[9px] text-slate-400">ক্লিক করলেই যুক্ত হবে</span>
+                      </div>
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-36 overflow-y-auto p-1">
+                        {PRESET_GALLERY_IMAGES.map((img, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleAddImageUrlToEdit(img.url)}
+                            className="relative rounded-lg overflow-hidden border border-slate-200 hover:border-amber-500 aspect-square group cursor-pointer transition-all hover:scale-105"
+                            title={img.label}
+                          >
+                            <Image
+                              src={optimizeImageUrl(img.url, { width: 120, quality: "auto:good" })}
+                              alt={img.label}
+                              fill
+                              sizes="80px"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                              <Plus size={14} className="text-white" />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2 pt-1">

@@ -177,7 +177,9 @@ export default function ProductDetailPage({
     router.push("/checkout");
   };
 
-  const allImages = [product.mainImage, ...(product.galleryImages || [])];
+  const allImages = Array.from(
+    new Set([product.mainImage, ...(product.galleryImages || [])].filter((img): img is string => Boolean(img && typeof img === "string" && img.trim())))
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12">

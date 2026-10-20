@@ -208,7 +208,9 @@ export default function QuickViewModal() {
       <ProductImageZoomModal
         isOpen={isZoomOpen}
         onClose={() => setIsZoomOpen(false)}
-        images={[product.mainImage, ...(product.galleryImages || [])]}
+        images={Array.from(
+          new Set([product.mainImage, ...(product.galleryImages || [])].filter((img): img is string => Boolean(img && typeof img === "string" && img.trim())))
+        )}
         productName={product.name}
       />
     </div>
