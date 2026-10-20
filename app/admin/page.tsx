@@ -399,6 +399,25 @@ export default function AdminPage() {
   const [editUploadSuccessMessage, setEditUploadSuccessMessage] = useState("");
   const [showPresetInEdit, setShowPresetInEdit] = useState(false);
 
+  // Dedicated Image Actions ("See Image" & "Change Image")
+  const [selectedImageAction, setSelectedImageAction] = useState<{
+    isOpen: boolean;
+    productId: string;
+    imageIndex: number;
+    imageUrl: string;
+    productName: string;
+  }>({
+    isOpen: false,
+    productId: "",
+    imageIndex: -1,
+    imageUrl: "",
+    productName: "",
+  });
+  const [lightboxPreviewUrl, setLightboxPreviewUrl] = useState<string | null>(null);
+  const [isChangingSpecificImage, setIsChangingSpecificImage] = useState(false);
+  const changeImageFileInputRef = useRef<HTMLInputElement>(null);
+  const pendingChangeRef = useRef<{ productId: string; imageIndex: number } | null>(null);
+
   // Product Drag & Drop / Reordering State
   const [draggedProductId, setDraggedProductId] = useState<string | null>(null);
   const [dragOverProductId, setDragOverProductId] = useState<string | null>(null);
@@ -748,6 +767,98 @@ export default function AdminPage() {
     } finally {
       setIsUploadingEditImages(false);
       e.target.value = "";
+    }
+  };
+
+  // Trigger opening device gallery for replacing a specific image
+  const triggerGalleryChangeFor = (productId: string, imageIndex: number) => {
+    pendingChangeRef.current = { productId, imageIndex };
+    if (changeImageFileInputRef.current) {
+      changeImageFileInputRef.current.value = "";
+      changeImageFileInputRef.current.click();
+    }
+  };
+
+  // Called when user selects an image from device gallery
+  const handleSpecificImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !pendingChangeRef.current) return;
+
+    const { productId, imageIndex } = pendingChangeRef.current;
+    setIsChangingSpecificImage(true);
+    showToast("📸 গ্যালারি থেকে ছবি আপলোড ও অপটিমাইজ করা হচ্ছে...");
+
+    try {
+      const res = await api.uploadFile(file);
+      if (!res.success || !res.url) {
+        showToast(res.message || "ছবি আপলোড ব্যর্থ হয়েছে।");
+        return;
+      }
+
+      const newUrl = res.url;
+
+      // 1. If currently in editing modal for this product
+      if (editingProduct && editingProduct._id === productId) {
+        const currentList = getEditingProductImages(editingProduct);
+        const nextList = [...currentList];
+        if (imageIndex >= 0 && imageIndex < nextList.length) {
+          nextList[imageIndex] = newUrl;
+        } else if (nextList.length === 0) {
+          nextList.push(newUrl);
+        } else {
+          nextList[0] = newUrl;
+        }
+
+        const mainImage = nextList[0] || newUrl;
+        const galleryImages = nextList.slice(1);
+
+        const updatedProdState = {
+          ...editingProduct,
+          mainImage,
+          galleryImages,
+        };
+        setEditingProduct(updatedProdState);
+
+        // Immediately persist to database in an optimized way
+        const updateRes = await api.updateProduct(productId, updatedProdState);
+        const savedProd = updateRes.data || updatedProdState;
+        setProducts((prev) => prev.map((p) => (p._id === productId ? savedProd : p)));
+        showToast("🎉 নতুন ছবি সফলভাবে আপলোড ও ডাটাবেজে সেভ হয়েছে!");
+      } else {
+        // 2. Direct change from product list table
+        const targetProd = products.find((p) => p._id === productId);
+        if (targetProd) {
+          const currentList = getEditingProductImages(targetProd);
+          const nextList = [...currentList];
+          if (imageIndex >= 0 && imageIndex < nextList.length) {
+            nextList[imageIndex] = newUrl;
+          } else if (nextList.length === 0) {
+            nextList.push(newUrl);
+          } else {
+            nextList[0] = newUrl;
+          }
+
+          const mainImage = nextList[0] || newUrl;
+          const galleryImages = nextList.slice(1);
+
+          const payload = {
+            ...targetProd,
+            mainImage,
+            galleryImages,
+          };
+
+          const updateRes = await api.updateProduct(productId, payload);
+          const savedProd = updateRes.data || payload;
+          setProducts((prev) => prev.map((p) => (p._id === productId ? savedProd : p)));
+          showToast("🎉 নতুন ছবি সফলভাবে আপলোড ও ডাটাবেজে সেভ হয়েছে!");
+        }
+      }
+    } catch (err: any) {
+      showToast("⚠️ ছবি আপলোডে ত্রুটি: " + (err.message || "অজানা সমস্যা"));
+    } finally {
+      setIsChangingSpecificImage(false);
+      pendingChangeRef.current = null;
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -2783,14 +2894,30 @@ export default function AdminPage() {
                             </td>
                             <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
+                              <div
+                                onClick={() =>
+                                  setSelectedImageAction({
+                                    isOpen: true,
+                                    productId: p._id,
+                                    imageIndex: 0,
+                                    imageUrl: p.mainImage,
+                                    productName: p.name,
+                                  })
+                                }
+                                className="w-12 h-12 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-100 cursor-pointer group/thumb relative hover:border-amber-400 hover:shadow-md transition-all"
+                                title="ক্লিক করুন: See Image বা Change Image"
+                              >
                                 <ProductImage
                                   src={p.mainImage}
                                   alt={p.name}
-                                  className="w-full h-full object-cover"
+                                  className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform"
                                   showText={false}
                                   iconSize={14}
                                 />
+                                <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex flex-col items-center justify-center gap-0.5 text-white">
+                                  <Eye size={12} className="text-amber-400" />
+                                  <span className="text-[8px] font-black uppercase tracking-tighter">View</span>
+                                </div>
                               </div>
                               <div className="min-w-0 max-w-xs">
                                 <span className="font-bold text-slate-900 truncate block text-xs">{p.name}</span>
@@ -5933,14 +6060,26 @@ export default function AdminPage() {
                       return (
                         <div
                           key={`${imgUrl}-${idx}`}
-                          className={`group relative rounded-xl overflow-hidden border-2 transition-all bg-white shadow-xs flex flex-col ${
+                          className={`group relative rounded-2xl overflow-hidden border-2 transition-all bg-white shadow-xs flex flex-col ${
                             isMain
                               ? "border-amber-500 ring-2 ring-amber-400/40 shadow-amber-500/10"
-                              : "border-slate-200 hover:border-slate-300"
+                              : "border-slate-200 hover:border-amber-400"
                           }`}
                         >
-                          {/* Image Box */}
-                          <div className="relative aspect-square w-full bg-slate-100 overflow-hidden">
+                          {/* Image Box (Clicking opens See Image / Change Image action) */}
+                          <div
+                            onClick={() =>
+                              setSelectedImageAction({
+                                isOpen: true,
+                                productId: editingProduct._id,
+                                imageIndex: idx,
+                                imageUrl: imgUrl,
+                                productName: editingProduct.name,
+                              })
+                            }
+                            className="relative aspect-square w-full bg-slate-100 overflow-hidden cursor-pointer"
+                            title="ক্লিক করুন: See Image বা Change Image"
+                          >
                             <ProductImage
                               src={imgUrl}
                               alt={`Product image ${idx + 1}`}
@@ -5950,7 +6089,7 @@ export default function AdminPage() {
                             />
 
                             {/* Badge */}
-                            <div className="absolute top-1.5 left-1.5 z-10">
+                            <div className="absolute top-1.5 left-1.5 z-10 pointer-events-none">
                               {isMain ? (
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500 text-slate-950 font-black text-[9px] shadow-sm">
                                   <Crown size={10} className="fill-slate-950" />
@@ -5966,55 +6105,110 @@ export default function AdminPage() {
                             {/* Delete Button */}
                             <button
                               type="button"
-                              onClick={() => handleRemoveImageFromEdit(idx)}
-                              className="absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-md bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveImageFromEdit(idx);
+                              }}
+                              className="absolute top-1.5 right-1.5 z-20 w-6 h-6 rounded-md bg-rose-600/90 hover:bg-rose-600 text-white flex items-center justify-center transition-all cursor-pointer shadow-sm"
                               title="ছবি মুছে ফেলুন"
                             >
                               <Trash2 size={11} />
                             </button>
+
+                            {/* Hover Overlay with See Image and Change Image */}
+                            <div className="absolute inset-0 bg-slate-950/65 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2 backdrop-blur-xs z-15">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setLightboxPreviewUrl(imgUrl);
+                                }}
+                                className="w-full py-1.5 px-2 bg-white/95 hover:bg-white text-slate-900 font-bold text-[10px] rounded-lg shadow-sm flex items-center justify-center gap-1 cursor-pointer transition-transform hover:scale-102"
+                              >
+                                <Eye size={12} className="text-indigo-600" />
+                                <span>See Image</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  triggerGalleryChangeFor(editingProduct._id, idx);
+                                }}
+                                className="w-full py-1.5 px-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-[10px] rounded-lg shadow-sm flex items-center justify-center gap-1 cursor-pointer transition-transform hover:scale-102"
+                              >
+                                <RefreshCw size={11} className="text-slate-950" />
+                                <span>Change Image</span>
+                              </button>
+                            </div>
                           </div>
 
                           {/* Action Controls for this image */}
-                          <div className="p-1.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-1 text-[10px]">
-                            {/* Reorder Buttons */}
-                            <div className="flex items-center gap-0.5">
-                              <button
-                                type="button"
-                                disabled={idx === 0}
-                                onClick={() => handleMoveImageOrder(idx, "prev")}
-                                className="p-1 rounded bg-white hover:bg-slate-200 text-slate-700 disabled:opacity-20 disabled:cursor-not-allowed border border-slate-200 cursor-pointer"
-                                title="বামে / আগে সরান"
-                              >
-                                <ChevronLeft size={11} />
-                              </button>
-                              <button
-                                type="button"
-                                disabled={idx === getEditingProductImages(editingProduct).length - 1}
-                                onClick={() => handleMoveImageOrder(idx, "next")}
-                                className="p-1 rounded bg-white hover:bg-slate-200 text-slate-700 disabled:opacity-20 disabled:cursor-not-allowed border border-slate-200 cursor-pointer"
-                                title="ডানে / পরে সরান"
-                              >
-                                <ChevronRight size={11} />
-                              </button>
+                          <div className="p-1.5 bg-slate-50 border-t border-slate-100 space-y-1">
+                            <div className="flex items-center justify-between gap-1 text-[10px]">
+                              {/* Reorder Buttons */}
+                              <div className="flex items-center gap-0.5">
+                                <button
+                                  type="button"
+                                  disabled={idx === 0}
+                                  onClick={() => handleMoveImageOrder(idx, "prev")}
+                                  className="p-1 rounded bg-white hover:bg-slate-200 text-slate-700 disabled:opacity-20 disabled:cursor-not-allowed border border-slate-200 cursor-pointer"
+                                  title="বামে / আগে সরান"
+                                >
+                                  <ChevronLeft size={11} />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={idx === getEditingProductImages(editingProduct).length - 1}
+                                  onClick={() => handleMoveImageOrder(idx, "next")}
+                                  className="p-1 rounded bg-white hover:bg-slate-200 text-slate-700 disabled:opacity-20 disabled:cursor-not-allowed border border-slate-200 cursor-pointer"
+                                  title="ডানে / পরে সরান"
+                                >
+                                  <ChevronRight size={11} />
+                                </button>
+                              </div>
+
+                              {/* Set as Main Thumbnail button if not index 0 */}
+                              {!isMain ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetMainThumbnail(idx)}
+                                  className="px-1.5 py-0.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[9px] cursor-pointer inline-flex items-center gap-0.5 border border-amber-300"
+                                  title="এই ছবিটিকে প্রধান থাম্বনেইল করুন"
+                                >
+                                  <Crown size={9} />
+                                  <span>থাম্বনেইল</span>
+                                </button>
+                              ) : (
+                                <span className="text-[9px] text-amber-700 font-bold flex items-center gap-0.5">
+                                  <Check size={10} />
+                                  <span>থাম্বনেইল</span>
+                                </span>
+                              )}
                             </div>
 
-                            {/* Set as Main Thumbnail button if not index 0 */}
-                            {!isMain ? (
+                            {/* Dual Direct Action Buttons: See Image & Change Image */}
+                            <div className="grid grid-cols-2 gap-1 pt-0.5">
                               <button
                                 type="button"
-                                onClick={() => handleSetMainThumbnail(idx)}
-                                className="px-1.5 py-0.5 rounded bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[9px] cursor-pointer inline-flex items-center gap-0.5 border border-amber-300"
-                                title="এই ছবিটিকে প্রধান থাম্বনেইল করুন"
+                                onClick={() => setLightboxPreviewUrl(imgUrl)}
+                                className="py-1 px-1 rounded-md bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 text-indigo-700 text-[9px] font-bold inline-flex items-center justify-center gap-1 cursor-pointer"
+                                title="বড় করে দেখুন"
                               >
-                                <Crown size={9} />
-                                <span>থাম্বনেইল</span>
+                                <Eye size={10} />
+                                <span>See Image</span>
                               </button>
-                            ) : (
-                              <span className="text-[9px] text-amber-700 font-bold flex items-center gap-0.5">
-                                <Check size={10} />
-                                <span>থাম্বনেইল</span>
-                              </span>
-                            )}
+
+                              <button
+                                type="button"
+                                onClick={() => triggerGalleryChangeFor(editingProduct._id, idx)}
+                                className="py-1 px-1 rounded-md bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-400 text-amber-900 text-[9px] font-bold inline-flex items-center justify-center gap-1 cursor-pointer"
+                                title="গ্যালারি থেকে পরিবর্তন করুন"
+                              >
+                                <RefreshCw size={9} className="text-amber-600" />
+                                <span>Change Image</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -6860,6 +7054,159 @@ export default function AdminPage() {
                     <span>{confirmModal.confirmText || "মুছে ফেলুন"}</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HIDDEN FILE INPUT FOR SELECTING IMAGE FROM GALLERY */}
+      <input
+        type="file"
+        ref={changeImageFileInputRef}
+        onChange={handleSpecificImageSelected}
+        accept="image/*"
+        className="hidden"
+      />
+
+      {/* MODAL: IMAGE ACTIONS ("See Image" & "Change Image") */}
+      {selectedImageAction.isOpen && (
+        <div
+          className="fixed inset-0 z-60 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setSelectedImageAction((prev) => ({ ...prev, isOpen: false }))}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 text-center space-y-4 animate-scaleUp relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedImageAction((prev) => ({ ...prev, isOpen: false }))}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 cursor-pointer"
+            >
+              <X size={16} />
+            </button>
+
+            {/* Image Preview Box */}
+            <div className="relative w-36 h-36 mx-auto rounded-2xl overflow-hidden border-2 border-amber-400 shadow-md bg-slate-100">
+              <ProductImage
+                src={selectedImageAction.imageUrl}
+                alt={selectedImageAction.productName || "Product"}
+                className="w-full h-full object-cover"
+                showText={false}
+              />
+            </div>
+
+            <div>
+              <h4 className="font-black text-slate-900 text-sm truncate max-w-xs mx-auto">
+                {selectedImageAction.productName || "প্রোডাক্ট ইমেজ"}
+              </h4>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                নিচের যেকোনো অপশন নির্বাচন করুন
+              </p>
+            </div>
+
+            {/* Actions Grid */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              {/* Option 1: See Image */}
+              <button
+                type="button"
+                onClick={() => {
+                  setLightboxPreviewUrl(selectedImageAction.imageUrl);
+                  setSelectedImageAction((prev) => ({ ...prev, isOpen: false }));
+                }}
+                className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-2xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-950 font-black text-xs transition-all cursor-pointer shadow-xs active:scale-95"
+              >
+                <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                  <Eye size={18} />
+                </div>
+                <span>See Image</span>
+                <span className="text-[10px] text-indigo-600 font-medium">ছবি বড় করে দেখুন</span>
+              </button>
+
+              {/* Option 2: Change Image */}
+              <button
+                type="button"
+                onClick={() => {
+                  triggerGalleryChangeFor(selectedImageAction.productId, selectedImageAction.imageIndex);
+                  setSelectedImageAction((prev) => ({ ...prev, isOpen: false }));
+                }}
+                className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-950 font-black text-xs transition-all cursor-pointer shadow-xs active:scale-95"
+              >
+                <div className="w-9 h-9 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shadow-xs">
+                  <RefreshCw size={18} />
+                </div>
+                <span>Change Image</span>
+                <span className="text-[10px] text-amber-800 font-medium">গ্যালারি থেকে বদলান</span>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setSelectedImageAction((prev) => ({ ...prev, isOpen: false }))}
+              className="w-full py-2 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+            >
+              বাতিল (Cancel)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* LIGHTBOX MODAL: FULL PREVIEW (See Image) */}
+      {lightboxPreviewUrl && (
+        <div
+          className="fixed inset-0 z-70 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setLightboxPreviewUrl(null)}
+        >
+          <div
+            className="relative max-w-2xl w-full max-h-[90vh] bg-white rounded-3xl overflow-hidden shadow-2xl p-5 flex flex-col items-center gap-4 animate-scaleUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                  <Eye size={15} />
+                </div>
+                <div>
+                  <h4 className="font-black text-sm text-slate-900">ছবি প্রিভিউ (See Image)</h4>
+                  <p className="text-[10px] text-slate-400">উচ্চ রেজোলিউশনে ছবি প্রদর্শিত হচ্ছে</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLightboxPreviewUrl(null)}
+                className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="relative w-full max-h-[60vh] aspect-square rounded-2xl overflow-hidden bg-slate-100 flex items-center justify-center border border-slate-200">
+              <ProductImage
+                src={lightboxPreviewUrl}
+                alt="Full Preview"
+                className="w-full h-full object-contain"
+                showText={true}
+                iconSize={36}
+              />
+            </div>
+
+            <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-2 border-t border-slate-100">
+              <span className="text-[11px] text-slate-400 font-mono truncate max-w-xs">{lightboxPreviewUrl}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (editingProduct) {
+                    const currentList = getEditingProductImages(editingProduct);
+                    const idx = currentList.indexOf(lightboxPreviewUrl);
+                    triggerGalleryChangeFor(editingProduct._id, idx >= 0 ? idx : 0);
+                  }
+                  setLightboxPreviewUrl(null);
+                }}
+                className="w-full sm:w-auto px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-xs cursor-pointer inline-flex items-center justify-center gap-1.5"
+              >
+                <RefreshCw size={13} />
+                <span>Change Image (গ্যালারি থেকে পরিবর্তন করুন)</span>
               </button>
             </div>
           </div>
