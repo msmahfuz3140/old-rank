@@ -449,6 +449,53 @@ export function clearClientCachedData(keyPrefix?: string): void {
   }
 }
 
+// Permanent Single-Device Local Storage & Bandwidth-Protection Caching
+export const DEVICE_PRODUCTS_STORAGE_KEY = "oldrank_device_products_v2";
+export const DEVICE_VERSION_STORAGE_KEY = "oldrank_products_version";
+
+export function getDeviceStoredProducts(): IProduct[] {
+  if (typeof window === "undefined") return fallbackProducts;
+  try {
+    const raw = localStorage.getItem(DEVICE_PRODUCTS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {}
+  return fallbackProducts;
+}
+
+export function saveDeviceStoredProducts(products: IProduct[]): void {
+  if (typeof window === "undefined" || !Array.isArray(products)) return;
+  try {
+    localStorage.setItem(DEVICE_PRODUCTS_STORAGE_KEY, JSON.stringify(products));
+  } catch {}
+}
+
+export function updateSingleDeviceStoredProduct(product: IProduct): void {
+  if (typeof window === "undefined" || !product?._id) return;
+  try {
+    const list = getDeviceStoredProducts();
+    const idx = list.findIndex((p) => p._id === product._id || (p.slug && p.slug === product.slug));
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...product };
+    } else {
+      list.unshift(product);
+    }
+    saveDeviceStoredProducts(list);
+  } catch {}
+}
+
+export function removeDeviceStoredProduct(productId: string): void {
+  if (typeof window === "undefined" || !productId) return;
+  try {
+    const list = getDeviceStoredProducts().filter((p) => p._id !== productId && p.slug !== productId);
+    saveDeviceStoredProducts(list);
+  } catch {}
+}
+
 // Robust fetch helper with 6000ms timeout for live database connection
 async function fetchFast(url: string, options: RequestInit = {}, timeoutMs: number = 6000): Promise<Response> {
   const controller = new AbortController();
@@ -476,22 +523,81 @@ export const api = {
     },
     options?: { skipCache?: boolean }
   ): Promise<IProduct[]> {
-    const cacheKey = `products_${params?.category || "all"}_${params?.search || ""}_${Boolean(params?.isHotDeal)}_${Boolean(params?.includeInactive)}`;
+    const isGeneralCatalog = (!params?.category || params.category === "all") && !params?.search && !params?.isHotDeal;
 
-    // 1. Instant Cache Retrieval: returns immediately with 0ms delay
-    if (!options?.skipCache) {
-      const cached = getClientCachedData<IProduct[]>(cacheKey, 180000); // 3 mins fresh
-      if (cached && cached.length > 0) {
-        // Trigger silent background revalidation if cache is > 20s old
-        const mem = memoryCache.get(cacheKey);
-        if (mem && Date.now() - mem.timestamp > 20000) {
-          this.fetchProductsFromServer(params, cacheKey, false).catch(() => {});
+    // 1. Instant 0ms device loading from persistent localStorage
+    if (!options?.skipCache && typeof window !== "undefined") {
+      const deviceProds = getDeviceStoredProducts();
+      if (Array.isArray(deviceProds) && deviceProds.length > 0) {
+        // Trigger lightweight sync-version check in background (transfers ~50 bytes only)
+        if (isGeneralCatalog) {
+          this.checkSyncVersionAndRefresh(params).catch(() => {});
         }
-        return cached;
+        return this.filterProductsLocally(deviceProds, params);
       }
     }
 
-    return this.fetchProductsFromServer(params, cacheKey, options?.skipCache);
+    // 2. Fetch from server if first time on device or skipCache requested
+    return this.fetchProductsFromServer(params, undefined, options?.skipCache);
+  },
+
+  async checkSyncVersionAndRefresh(params?: any): Promise<void> {
+    if (typeof window === "undefined") return;
+    try {
+      const res = await fetchFast(`${API_BASE}/products/sync-version`, { cache: "no-store" }, 3500);
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json && json.version) {
+        const localVersion = localStorage.getItem(DEVICE_VERSION_STORAGE_KEY);
+        // If version matches, no change on server! 0 product bandwidth wasted!
+        if (localVersion && String(localVersion) === String(json.version)) {
+          return;
+        }
+
+        // Version changed! Download updated product list once and store to device
+        const freshList = await this.fetchProductsFromServer(params, undefined, true);
+        if (freshList && freshList.length > 0) {
+          saveDeviceStoredProducts(freshList);
+          localStorage.setItem(DEVICE_VERSION_STORAGE_KEY, String(json.version));
+        }
+      }
+    } catch {}
+  },
+
+  filterProductsLocally(
+    list: IProduct[],
+    params?: {
+      category?: string;
+      search?: string;
+      isHotDeal?: boolean;
+      includeInactive?: boolean;
+    }
+  ): IProduct[] {
+    let result = [...list];
+    if (params?.includeInactive !== true) {
+      result = result.filter((p) => p.isActive !== false);
+    }
+    if (params?.category && params.category !== "all") {
+      const cat = params.category.toLowerCase();
+      result = result.filter((p) => {
+        const cSlug = typeof p.category === "object" ? p.category?.slug : p.category;
+        const cName = typeof p.category === "object" ? p.category?.name : "";
+        return (cSlug && String(cSlug).toLowerCase() === cat) || (cName && String(cName).toLowerCase() === cat);
+      });
+    }
+    if (params?.search) {
+      const q = params.search.toLowerCase().trim();
+      result = result.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.shortDescription?.toLowerCase().includes(q) ||
+          (Array.isArray(p.tags) && p.tags.some((t) => t.toLowerCase().includes(q)))
+      );
+    }
+    if (params?.isHotDeal) {
+      result = result.filter((p) => p.isHotDeal);
+    }
+    return result;
   },
 
   async fetchProductsFromServer(
@@ -537,6 +643,9 @@ export const api = {
       }
 
       const finalList = list.length > 0 ? list : fallbackProducts;
+      if (typeof window !== "undefined") {
+        saveDeviceStoredProducts(finalList);
+      }
       if (cacheKey) {
         setClientCachedData(cacheKey, finalList);
       }
@@ -557,6 +666,9 @@ export const api = {
             });
           } catch {}
         }
+      }
+      if (typeof window !== "undefined") {
+        saveDeviceStoredProducts(list);
       }
       if (cacheKey) {
         setClientCachedData(cacheKey, list);
@@ -872,13 +984,17 @@ export const api = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(productData),
       });
-      return await res.json();
+      const json = await res.json();
+      const savedProd = json.data || { _id: `p_${Date.now()}`, ...productData };
+      updateSingleDeviceStoredProduct(savedProd);
+      return json;
     } catch {
       const newProd = {
         _id: `p_${Date.now()}`,
         ...productData,
         createdAt: new Date().toISOString(),
       };
+      updateSingleDeviceStoredProduct(newProd);
       return { success: true, message: "প্রোডাক্ট সফলভাবে পোস্ট করা হয়েছে!", data: newProd };
     }
   },
@@ -891,14 +1007,20 @@ export const api = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(productData),
       });
-      return await res.json();
+      const json = await res.json();
+      const savedProd = json.data || { _id: id, ...productData };
+      updateSingleDeviceStoredProduct(savedProd);
+      return json;
     } catch {
+      const savedProd = { _id: id, ...productData };
+      updateSingleDeviceStoredProduct(savedProd);
       return { success: true, message: "প্রোডাক্ট সফলভাবে আপডেট হয়েছে!", data: productData };
     }
   },
 
   async deleteProduct(id: string): Promise<any> {
     clearClientCachedData("products");
+    removeDeviceStoredProduct(id);
     try {
       const res = await fetch(`${API_BASE}/products/${id}`, {
         method: "DELETE",

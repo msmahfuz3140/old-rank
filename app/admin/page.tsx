@@ -76,10 +76,13 @@ import {
   getClientCachedData,
   setClientCachedData,
   clearClientCachedData,
+  getDeviceStoredProducts,
+  updateSingleDeviceStoredProduct,
+  removeDeviceStoredProduct,
 } from "@/lib/api";
 import { IOrder, IIncompleteOrder, IProduct, IVendor } from "@/lib/types";
 import ProductImage from "@/components/product/ProductImage";
-import { optimizeImageUrl, compressImageClient } from "@/lib/imageUtils";
+import { optimizeImageUrl, compressImageClient, fileToDataUrl } from "@/lib/imageUtils";
 import {
   SalesBarChart,
   StackedBarChart,
@@ -157,10 +160,12 @@ export default function AdminPage() {
   const [incompleteOrders, setIncompleteOrders] = useState<IIncompleteOrder[]>([]);
   const [products, setProducts] = useState<IProduct[]>(() => {
     if (typeof window !== "undefined") {
+      const deviceProds = getDeviceStoredProducts();
+      if (Array.isArray(deviceProds) && deviceProds.length > 0) return deviceProds;
       const cached = getClientCachedData<IProduct[]>("products_all__false_true", 300000);
       if (cached && Array.isArray(cached) && cached.length > 0) return cached;
     }
-    return [];
+    return fallbackProducts;
   });
   const [vendors, setVendors] = useState<IVendor[]>(() => {
     if (typeof window !== "undefined") {
@@ -192,10 +197,12 @@ export default function AdminPage() {
 
   const [isLoading, setIsLoading] = useState(() => {
     if (typeof window !== "undefined") {
+      const deviceProds = getDeviceStoredProducts();
+      if (Array.isArray(deviceProds) && deviceProds.length > 0) return false;
       const cached = getClientCachedData<IProduct[]>("products_all__false_true", 300000);
       if (cached && Array.isArray(cached) && cached.length > 0) return false;
     }
-    return true;
+    return false;
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -809,176 +816,144 @@ export default function AdminPage() {
     showToast("✅ নতুন ছবি যুক্ত হয়েছে!");
   };
 
-  // Upload Multiple Images in Edit Modal (Instant Preview + Client Compression + Cloudinary)
+  // Upload Multiple Images in Edit Modal (Persistent Data URL Preview + Client Compression + Cloudinary)
   const handleUploadEditFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawFiles = e.target.files ? Array.from(e.target.files) : [];
     if (rawFiles.length === 0 || !editingProduct) return;
 
-    // 1. Instant Preview: Show all selected files in the thumbnail & gallery immediately
-    const fileEntries = rawFiles.map((file) => ({
-      file,
-      previewUrl: URL.createObjectURL(file),
-    }));
-    const previewUrls = fileEntries.map((fe) => fe.previewUrl);
-
-    setEditingProduct((prev) => {
-      if (!prev) return null;
-      const current = getEditingProductImages(prev).filter((u) => !u.startsWith("blob:"));
-      const combined = [...previewUrls, ...current];
-      return {
-        ...prev,
-        mainImage: combined[0] || "",
-        galleryImages: combined.slice(1),
-      };
-    });
-
     setIsUploadingEditImages(true);
-    setEditUploadSuccessMessage(`⚡ ${rawFiles.length}টি ছবির প্রিভিউ লোড হয়েছে (অপটিমাইজ ও আপলোড হচ্ছে...)`);
-    showToast(`📸 ${rawFiles.length}টি ছবির প্রিভিউ থাম্বনেইলে দৃশ্যমান, ক্লাউডিনারিতে অপটিমাইজ ও আপলোড হচ্ছে...`);
+    setEditUploadSuccessMessage(`⚡ ${rawFiles.length}টি ছবির থাম্বনেইল প্রসেসিং হচ্ছে...`);
 
     try {
-      // 2. Client-side compression to reduce multi-MB files to lightweight KB
+      // 1. Client-side compression to lightweight KB
       const compressedFiles = await Promise.all(
         rawFiles.map((f) => compressImageClient(f, 1600, 0.82))
       );
 
-      // 3. Upload compressed files to Cloudinary
-      const res = await api.uploadMultipleFiles(compressedFiles);
-      if (res.success && res.urls && res.urls.length > 0) {
-        const cloudUrls = res.urls;
+      // 2. Generate permanent Base64 Data URLs so the image NEVER disappears
+      const dataUrls = await Promise.all(
+        compressedFiles.map((f) => fileToDataUrl(f))
+      );
 
-        // Replace blob preview URLs with permanent Cloudinary URLs
-        setEditingProduct((prev) => {
-          if (!prev) return null;
-          const current = getEditingProductImages(prev);
-          const mapped: string[] = [];
-          for (const u of current) {
-            const previewIdx = previewUrls.indexOf(u);
-            if (previewIdx !== -1 && cloudUrls[previewIdx]) {
-              mapped.push(cloudUrls[previewIdx]);
-            } else if (!u.startsWith("blob:")) {
-              mapped.push(u);
-            }
-          }
-          for (const cUrl of cloudUrls) {
-            if (!mapped.includes(cUrl)) {
-              mapped.unshift(cUrl);
-            }
-          }
-          const clean = mapped.filter(Boolean);
-          return {
-            ...prev,
-            mainImage: clean[0] || "",
-            galleryImages: clean.slice(1),
-          };
-        });
-
-        setEditUploadSuccessMessage(`✅ ${cloudUrls.length}টি ছবি ক্লাউডিনারিতে অপটিমাইজ ও থাম্বনেইলে সেট হয়েছে!`);
-        showToast(`🎉 ছবি আপলোড সফল ও নতুন থাম্বনেইল সেট হয়েছে! সেভ করতে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করুন।`);
-      } else {
-        setEditUploadSuccessMessage("");
-        showToast(res.message || "ছবি আপলোড ব্যর্থ হয়েছে।");
-        // Revert blob preview URLs if upload failed
-        setEditingProduct((prev) => {
-          if (!prev) return null;
-          const current = getEditingProductImages(prev).filter((u) => !previewUrls.includes(u));
-          return {
-            ...prev,
-            mainImage: current[0] || "",
-            galleryImages: current.slice(1),
-          };
-        });
-      }
-    } catch (err: any) {
-      setEditUploadSuccessMessage("");
-      showToast(err?.message || "⚠️ ছবি আপলোডে ত্রুটি দেখা দিয়েছে।");
       setEditingProduct((prev) => {
         if (!prev) return null;
-        const current = getEditingProductImages(prev).filter((u) => !previewUrls.includes(u));
+        const current = getEditingProductImages(prev).filter((u) => !u.startsWith("blob:"));
+        const combined = [...dataUrls, ...current];
         return {
           ...prev,
-          mainImage: current[0] || "",
-          galleryImages: current.slice(1),
+          mainImage: combined[0] || "",
+          galleryImages: combined.slice(1),
         };
       });
+
+      setEditUploadSuccessMessage(`⚡ ${rawFiles.length}টি ছবি থাম্বনেইলে সেট হয়েছে (ক্লাউডে সিঙ্ক হচ্ছে...)`);
+      showToast(`📸 ছবি থাম্বনেইলে দৃশ্যমান! সেভ করতে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করুন।`);
+
+      // 3. Upload compressed files to Cloudinary / Server in background
+      try {
+        const res = await api.uploadMultipleFiles(compressedFiles);
+        if (res.success && res.urls && res.urls.length > 0) {
+          const cloudUrls = res.urls;
+
+          setEditingProduct((prev) => {
+            if (!prev) return null;
+            const current = getEditingProductImages(prev);
+            const mapped: string[] = [];
+            for (const u of current) {
+              const dataIdx = dataUrls.indexOf(u);
+              if (dataIdx !== -1 && cloudUrls[dataIdx]) {
+                mapped.push(cloudUrls[dataIdx]);
+              } else {
+                mapped.push(u);
+              }
+            }
+            for (const cUrl of cloudUrls) {
+              if (!mapped.includes(cUrl)) {
+                mapped.unshift(cUrl);
+              }
+            }
+            const clean = mapped.filter(Boolean);
+            return {
+              ...prev,
+              mainImage: clean[0] || "",
+              galleryImages: clean.slice(1),
+            };
+          });
+
+          setEditUploadSuccessMessage(`✅ ছবি সফলভাবে অপটিমাইজ ও ক্লাউডে সেট হয়েছে!`);
+          showToast(`🎉 ছবি ক্লাউডে অপটিমাইজ হয়েছে! সেভ করতে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করুন।`);
+        } else {
+          // Keep dataUrls! Never remove preview
+          setEditUploadSuccessMessage("✅ ছবি থাম্বনেইলে সেট রয়েছে! সেভ করতে পারেন।");
+        }
+      } catch {
+        // Keep dataUrls! Never remove preview
+        setEditUploadSuccessMessage("✅ ছবি থাম্বনেইলে সেট রয়েছে! সেভ করতে পারেন।");
+      }
+    } catch (err: any) {
+      showToast(err?.message || "⚠️ ছবি প্রসেসিংয়ে সমস্যা হয়েছে।");
     } finally {
       setIsUploadingEditImages(false);
       if (e.target) e.target.value = "";
     }
   };
 
-  // Upload New Main Thumbnail Directly (Instant Preview + Client Compression + Cloudinary)
+  // Upload New Main Thumbnail Directly (Persistent Data URL Preview + Client Compression + Cloudinary)
   const handleUploadNewThumbnailDirectly = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !editingProduct) return;
 
-    // 1. Instant Preview: Show selected thumbnail immediately in UI
-    const previewUrl = URL.createObjectURL(file);
-    const originalFile = file;
-
-    setEditingProduct((prev) => {
-      if (!prev) return null;
-      const current = getEditingProductImages(prev);
-      const rest = current.filter((u) => u !== previewUrl && !u.startsWith("blob:"));
-      return {
-        ...prev,
-        mainImage: previewUrl,
-        galleryImages: rest,
-      };
-    });
-
     setIsUploadingEditImages(true);
-    setEditUploadSuccessMessage("⚡ নতুন থাম্বনেইল প্রিভিউ লোড হয়েছে (অপটিমাইজ ও ক্লাউডিনারিতে আপলোড হচ্ছে...)");
-    showToast("📸 প্রধান থাম্বনেইল প্রিভিউ লোড হয়েছে, ক্লাউডিনারিতে অপটিমাইজ হচ্ছে...");
+    setEditUploadSuccessMessage("⚡ নতুন থাম্বনেইল অপটিমাইজ হচ্ছে...");
 
     try {
-      // 2. Client-side pre-compression
-      const compressedFile = await compressImageClient(originalFile, 1600, 0.82);
+      // 1. Client-side pre-compression
+      const compressedFile = await compressImageClient(file, 1600, 0.82);
 
-      // 3. Upload to Cloudinary
-      const res = await api.uploadFile(compressedFile);
-      if (res.success && res.url) {
-        const cloudUrl = res.url;
-        setEditingProduct((prev) => {
-          if (!prev) return null;
-          const current = getEditingProductImages(prev);
-          const clean = current.filter((u) => u !== previewUrl && !u.startsWith("blob:") && u !== cloudUrl);
-          return {
-            ...prev,
-            mainImage: cloudUrl,
-            galleryImages: clean,
-          };
-        });
-        setEditUploadSuccessMessage("✅ প্রধান থাম্বনেইল সফলভাবে অপটিমাইজ ও ক্লাউডিনারিতে সেট হয়েছে!");
-        showToast("⭐ প্রধান থাম্বনেইল প্রস্তুত! নিচে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করে সেভ করুন।");
-      } else {
-        setEditUploadSuccessMessage("");
-        showToast(res.message || "থাম্বনেইল আপলোড ব্যর্থ হয়েছে।");
-        // Revert blob preview if upload failed
-        setEditingProduct((prev) => {
-          if (!prev) return null;
-          const current = getEditingProductImages(prev);
-          const reverted = current.filter((u) => u !== previewUrl);
-          return {
-            ...prev,
-            mainImage: reverted[0] || "",
-            galleryImages: reverted.slice(1),
-          };
-        });
-      }
-    } catch (err: any) {
-      setEditUploadSuccessMessage("");
-      showToast(err?.message || "⚠️ থাম্বনেইল আপলোডে ত্রুটি দেখা দিয়েছে।");
+      // 2. Generate permanent Base64 Data URL so it NEVER disappears
+      const dataUrl = await fileToDataUrl(compressedFile);
+
       setEditingProduct((prev) => {
         if (!prev) return null;
         const current = getEditingProductImages(prev);
-        const reverted = current.filter((u) => u !== previewUrl);
+        const rest = current.filter((u) => u !== dataUrl && !u.startsWith("blob:"));
         return {
           ...prev,
-          mainImage: reverted[0] || "",
-          galleryImages: reverted.slice(1),
+          mainImage: dataUrl,
+          galleryImages: rest,
         };
       });
+
+      setEditUploadSuccessMessage("⚡ প্রধান থাম্বনেইল থাম্বনেইলে সেট হয়েছে (ক্লাউডে সিঙ্ক হচ্ছে...)");
+      showToast("📸 প্রধান থাম্বনেইল প্রস্তুত! সেভ করতে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করুন।");
+
+      // 3. Upload to Cloudinary / Server in background
+      try {
+        const res = await api.uploadFile(compressedFile);
+        if (res.success && res.url) {
+          const cloudUrl = res.url;
+          setEditingProduct((prev) => {
+            if (!prev) return null;
+            const current = getEditingProductImages(prev);
+            const clean = current.filter((u) => u !== dataUrl && !u.startsWith("blob:") && u !== cloudUrl);
+            return {
+              ...prev,
+              mainImage: cloudUrl,
+              galleryImages: clean,
+            };
+          });
+          setEditUploadSuccessMessage("✅ প্রধান থাম্বনেইল সফলভাবে অপটিমাইজ ও ক্লাউডে সেট হয়েছে!");
+          showToast("⭐ প্রধান থাম্বনেইল ক্লাউডে অপটিমাইজ হয়েছে! সেভ করতে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করুন।");
+        } else {
+          // Keep dataUrl! Never remove preview
+          setEditUploadSuccessMessage("✅ প্রধান থাম্বনেইল থাম্বনেইলে সেট রয়েছে!");
+        }
+      } catch {
+        // Keep dataUrl! Never remove preview
+        setEditUploadSuccessMessage("✅ প্রধান থাম্বনেইল থাম্বনেইলে সেট রয়েছে!");
+      }
+    } catch (err: any) {
+      showToast("⚠️ থাম্বনেইল প্রক্রিয়াকরণে সমস্যা হয়েছে।");
     } finally {
       setIsUploadingEditImages(false);
       if (e.target) e.target.value = "";
@@ -1236,13 +1211,10 @@ export default function AdminPage() {
 
       const res = await api.createProduct(payload);
       const createdProd = res.data || payload;
-      setProducts([createdProd, ...products]);
+      setProducts((prev) => [createdProd, ...prev.filter((p) => p._id !== createdProd._id)]);
+      updateSingleDeviceStoredProduct(createdProd);
       setIsAddProductOpen(false);
       showToast(`🎉 "${productForm.name}" সফলভাবে পোস্ট করা হয়েছে!`);
-      try {
-        const fresh = await api.getProducts({ includeInactive: true });
-        if (fresh && fresh.length > 0) setProducts(fresh);
-      } catch {}
 
       // Reset form
       setProductForm({
@@ -1283,9 +1255,9 @@ export default function AdminPage() {
         discount = Math.round(((old - base) / old) * 100);
       }
 
-      const currentImages = getEditingProductImages(editingProduct).filter((u) => !u.startsWith("blob:"));
-      const mainImage = currentImages[0] || (editingProduct.mainImage?.startsWith("blob:") ? "" : editingProduct.mainImage) || "";
-      const galleryImages = currentImages.slice(1);
+      const allImages = getEditingProductImages(editingProduct);
+      const mainImage = allImages[0] || editingProduct.mainImage || "";
+      const galleryImages = allImages.slice(1);
 
       const updatedPayload = {
         ...editingProduct,
@@ -1302,16 +1274,9 @@ export default function AdminPage() {
         : updatedPayload;
       const updatedList = products.map((p) => (p._id === editingProduct._id ? savedProd : p));
       setProducts(updatedList);
-      setClientCachedData("products_all__false_true", updatedList);
+      updateSingleDeviceStoredProduct(savedProd);
       setEditingProduct(null);
       showToast(`প্রোডাক্ট "${editingProduct.name}" সফলভাবে আপডেট হয়েছে!`);
-      try {
-        const fresh = await api.getProducts({ includeInactive: true }, { skipCache: true });
-        if (fresh && fresh.length > 0) {
-          setProducts(fresh);
-          setClientCachedData("products_all__false_true", fresh);
-        }
-      } catch {}
     } catch {
       showToast("আপডেট ব্যর্থ হয়েছে।");
     }
@@ -1331,15 +1296,8 @@ export default function AdminPage() {
           await api.deleteProduct(id);
           const updatedList = products.filter((p) => p._id !== id);
           setProducts(updatedList);
-          setClientCachedData("products_all__false_true", updatedList);
+          removeDeviceStoredProduct(id);
           showToast(`"${name}" প্রোডাক্টটি সফলভাবে মুছে ফেলা হয়েছে।`);
-          try {
-            const fresh = await api.getProducts({ includeInactive: true }, { skipCache: true });
-            if (fresh && fresh.length > 0) {
-              setProducts(fresh);
-              setClientCachedData("products_all__false_true", fresh);
-            }
-          } catch {}
         } catch {
           showToast("ডিলিট করা সম্ভব হয়নি।");
         } finally {

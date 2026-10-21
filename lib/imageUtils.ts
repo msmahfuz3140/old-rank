@@ -222,3 +222,21 @@ export const shimmerPlaceholder = (w: number = 700, h: number = 700): string => 
   return `data:image/svg+xml;base64,${window.btoa(shimmer)}`;
 };
 
+/**
+ * Converts a File or Blob into a base64 Data URL
+ */
+export function fileToDataUrl(file: Blob | File): Promise<string> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined" || !file) {
+      resolve("");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      resolve((reader.result as string) || "");
+    };
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
+}
+
