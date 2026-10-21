@@ -391,6 +391,64 @@ export const fallbackDeliveryZones: IDeliveryZone[] = BANGLADESH_64_DISTRICTS.ma
   estimatedDelivery: d.estimatedDelivery,
 }));
 
+// Fast Client-Side Cache (SWR) for instantaneous page loads & zero-delay admin navigation
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+const memoryCache = new Map<string, CacheEntry<any>>();
+
+export function getClientCachedData<T>(key: string, maxAgeMs: number = 300000): T | null {
+  if (typeof window === "undefined") return null;
+  const mem = memoryCache.get(key);
+  if (mem && Date.now() - mem.timestamp < maxAgeMs) {
+    return mem.data as T;
+  }
+  try {
+    const raw = sessionStorage.getItem(`oldrank_cache_${key}`);
+    if (raw) {
+      const parsed: CacheEntry<T> = JSON.parse(raw);
+      if (Date.now() - parsed.timestamp < maxAgeMs) {
+        memoryCache.set(key, parsed);
+        return parsed.data;
+      }
+    }
+  } catch {}
+  return null;
+}
+
+export function setClientCachedData<T>(key: string, data: T): void {
+  const entry: CacheEntry<T> = { data, timestamp: Date.now() };
+  memoryCache.set(key, entry);
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.setItem(`oldrank_cache_${key}`, JSON.stringify(entry));
+    } catch {}
+  }
+}
+
+export function clearClientCachedData(keyPrefix?: string): void {
+  if (!keyPrefix) {
+    memoryCache.clear();
+    if (typeof window !== "undefined") {
+      try {
+        const keysToRemove = Object.keys(sessionStorage).filter((k) => k.startsWith("oldrank_cache_"));
+        keysToRemove.forEach((k) => sessionStorage.removeItem(k));
+      } catch {}
+    }
+    return;
+  }
+  for (const k of memoryCache.keys()) {
+    if (k.startsWith(keyPrefix)) memoryCache.delete(k);
+  }
+  if (typeof window !== "undefined") {
+    try {
+      const keysToRemove = Object.keys(sessionStorage).filter((k) => k.startsWith(`oldrank_cache_${keyPrefix}`));
+      keysToRemove.forEach((k) => sessionStorage.removeItem(k));
+    } catch {}
+  }
+}
+
 // Robust fetch helper with 6000ms timeout for live database connection
 async function fetchFast(url: string, options: RequestInit = {}, timeoutMs: number = 6000): Promise<Response> {
   const controller = new AbortController();
@@ -409,12 +467,43 @@ async function fetchFast(url: string, options: RequestInit = {}, timeoutMs: numb
 }
 
 export const api = {
-  async getProducts(params?: {
-    category?: string;
-    search?: string;
-    isHotDeal?: boolean;
-    includeInactive?: boolean;
-  }): Promise<IProduct[]> {
+  async getProducts(
+    params?: {
+      category?: string;
+      search?: string;
+      isHotDeal?: boolean;
+      includeInactive?: boolean;
+    },
+    options?: { skipCache?: boolean }
+  ): Promise<IProduct[]> {
+    const cacheKey = `products_${params?.category || "all"}_${params?.search || ""}_${Boolean(params?.isHotDeal)}_${Boolean(params?.includeInactive)}`;
+
+    // 1. Instant Cache Retrieval: returns immediately with 0ms delay
+    if (!options?.skipCache) {
+      const cached = getClientCachedData<IProduct[]>(cacheKey, 180000); // 3 mins fresh
+      if (cached && cached.length > 0) {
+        // Trigger silent background revalidation if cache is > 20s old
+        const mem = memoryCache.get(cacheKey);
+        if (mem && Date.now() - mem.timestamp > 20000) {
+          this.fetchProductsFromServer(params, cacheKey, false).catch(() => {});
+        }
+        return cached;
+      }
+    }
+
+    return this.fetchProductsFromServer(params, cacheKey, options?.skipCache);
+  },
+
+  async fetchProductsFromServer(
+    params?: {
+      category?: string;
+      search?: string;
+      isHotDeal?: boolean;
+      includeInactive?: boolean;
+    },
+    cacheKey?: string,
+    skipCache?: boolean
+  ): Promise<IProduct[]> {
     try {
       const query = new URLSearchParams();
       if (params?.category && params.category !== "all") query.set("category", params.category);
@@ -422,7 +511,11 @@ export const api = {
       if (params?.isHotDeal) query.set("isHotDeal", "true");
       if (params?.includeInactive) query.set("includeInactive", "true");
 
-      const res = await fetchFast(`${API_BASE}/products?${query.toString()}`, { cache: "no-store" }, 8000);
+      const res = await fetchFast(
+        `${API_BASE}/products?${query.toString()}`,
+        { cache: skipCache ? "no-store" : "default" },
+        8000
+      );
       if (!res.ok) throw new Error("Failed to fetch products");
       const json = await res.json();
       let list: IProduct[] = Array.isArray(json.data) ? json.data : [];
@@ -443,7 +536,11 @@ export const api = {
         }
       }
 
-      return list.length > 0 ? list : fallbackProducts;
+      const finalList = list.length > 0 ? list : fallbackProducts;
+      if (cacheKey) {
+        setClientCachedData(cacheKey, finalList);
+      }
+      return finalList;
     } catch {
       let list = [...fallbackProducts];
       if (typeof window !== "undefined") {
@@ -461,6 +558,9 @@ export const api = {
           } catch {}
         }
       }
+      if (cacheKey) {
+        setClientCachedData(cacheKey, list);
+      }
       return list;
     }
   },
@@ -470,6 +570,7 @@ export const api = {
       if (typeof window !== "undefined") {
         localStorage.setItem("oldrank_products_order", JSON.stringify(orderedIds));
       }
+      clearClientCachedData("products");
       const res = await fetch(`${API_BASE}/products/reorder`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -483,7 +584,7 @@ export const api = {
 
   async getProductBySlug(slug: string): Promise<{ product: IProduct; relatedProducts: IProduct[] } | null> {
     try {
-      const res = await fetchFast(`${API_BASE}/products/slug/${slug}`, { cache: "no-store" }, 8000);
+      const res = await fetchFast(`${API_BASE}/products/slug/${slug}`, { cache: "default" }, 8000);
       if (!res.ok) throw new Error("Failed to fetch product");
       const json = await res.json();
       return json.data || null;
@@ -492,34 +593,52 @@ export const api = {
     }
   },
 
-  async getCategories(): Promise<ICategory[]> {
+  async getCategories(options?: { skipCache?: boolean }): Promise<ICategory[]> {
+    if (!options?.skipCache) {
+      const cached = getClientCachedData<ICategory[]>("categories", 600000);
+      if (cached && cached.length > 0) return cached;
+    }
     try {
-      const res = await fetchFast(`${API_BASE}/products/categories`, { cache: "no-store" }, 6000);
+      const res = await fetchFast(`${API_BASE}/products/categories`, { cache: options?.skipCache ? "no-store" : "default" }, 6000);
       if (!res.ok) throw new Error("Failed to fetch categories");
       const json = await res.json();
-      return json.data || fallbackCategories;
+      const data = json.data || fallbackCategories;
+      setClientCachedData("categories", data);
+      return data;
     } catch {
       return fallbackCategories;
     }
   },
 
-  async getDeliveryZones(): Promise<IDeliveryZone[]> {
+  async getDeliveryZones(options?: { skipCache?: boolean }): Promise<IDeliveryZone[]> {
+    if (!options?.skipCache) {
+      const cached = getClientCachedData<IDeliveryZone[]>("delivery_zones", 600000);
+      if (cached && cached.length > 0) return cached;
+    }
     try {
-      const res = await fetchFast(`${API_BASE}/delivery/zones`, { cache: "no-store" }, 6000);
+      const res = await fetchFast(`${API_BASE}/delivery/zones`, { cache: options?.skipCache ? "no-store" : "default" }, 6000);
       if (!res.ok) throw new Error("Failed to fetch zones");
       const json = await res.json();
-      return json.data?.raw || fallbackDeliveryZones;
+      const data = json.data?.raw || fallbackDeliveryZones;
+      setClientCachedData("delivery_zones", data);
+      return data;
     } catch {
       return fallbackDeliveryZones;
     }
   },
 
-  async getVendors(): Promise<IVendor[]> {
+  async getVendors(options?: { skipCache?: boolean }): Promise<IVendor[]> {
+    if (!options?.skipCache) {
+      const cached = getClientCachedData<IVendor[]>("vendors", 600000);
+      if (cached && cached.length > 0) return cached;
+    }
     try {
-      const res = await fetchFast(`${API_BASE}/vendors`, { cache: "no-store" }, 6000);
+      const res = await fetchFast(`${API_BASE}/vendors`, { cache: options?.skipCache ? "no-store" : "default" }, 6000);
       if (!res.ok) throw new Error("Failed to fetch vendors");
       const json = await res.json();
-      return json.data || fallbackVendors;
+      const data = json.data || fallbackVendors;
+      setClientCachedData("vendors", data);
+      return data;
     } catch {
       return fallbackVendors;
     }
@@ -746,6 +865,7 @@ export const api = {
   },
 
   async createProduct(productData: any): Promise<any> {
+    clearClientCachedData("products");
     try {
       const res = await fetch(`${API_BASE}/products`, {
         method: "POST",
@@ -764,6 +884,7 @@ export const api = {
   },
 
   async updateProduct(id: string, productData: any): Promise<any> {
+    clearClientCachedData("products");
     try {
       const res = await fetch(`${API_BASE}/products/${id}`, {
         method: "PATCH",
@@ -777,6 +898,7 @@ export const api = {
   },
 
   async deleteProduct(id: string): Promise<any> {
+    clearClientCachedData("products");
     try {
       const res = await fetch(`${API_BASE}/products/${id}`, {
         method: "DELETE",

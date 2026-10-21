@@ -69,7 +69,14 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import { useAuthStore } from "@/lib/store";
-import { api, fallbackProducts, fallbackVendors } from "@/lib/api";
+import {
+  api,
+  fallbackProducts,
+  fallbackVendors,
+  getClientCachedData,
+  setClientCachedData,
+  clearClientCachedData,
+} from "@/lib/api";
 import { IOrder, IIncompleteOrder, IProduct, IVendor } from "@/lib/types";
 import ProductImage from "@/components/product/ProductImage";
 import { optimizeImageUrl, compressImageClient } from "@/lib/imageUtils";
@@ -139,27 +146,57 @@ export default function AdminPage() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadSuccessMessage, setUploadSuccessMessage] = useState("");
 
-  // Core Data States
-  const [orders, setOrders] = useState<IOrder[]>([]);
+  // Core Data States - Hydrated from client cache for instantaneous 0ms display
+  const [orders, setOrders] = useState<IOrder[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = getClientCachedData<IOrder[]>("admin_orders_all", 180000);
+      if (cached && Array.isArray(cached) && cached.length > 0) return cached;
+    }
+    return [];
+  });
   const [incompleteOrders, setIncompleteOrders] = useState<IIncompleteOrder[]>([]);
-  const [products, setProducts] = useState<IProduct[]>([]);
-  const [vendors, setVendors] = useState<IVendor[]>([]);
-  const [stats, setStats] = useState({
-    totalRevenue: 0,
-    totalSales: 0,
-    totalCost: 0,
-    netProfit: 0,
-    pendingRevenue: 0,
-    confirmedRevenue: 0,
-    totalOrders: 0,
-    pendingOrders: 0,
-    confirmedOrders: 0,
-    deliveredOrders: 0,
-    incompleteCount: 0,
-    activeProductsCount: 0,
+  const [products, setProducts] = useState<IProduct[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = getClientCachedData<IProduct[]>("products_all__false_true", 300000);
+      if (cached && Array.isArray(cached) && cached.length > 0) return cached;
+    }
+    return [];
+  });
+  const [vendors, setVendors] = useState<IVendor[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = getClientCachedData<IVendor[]>("vendors", 600000);
+      if (cached && Array.isArray(cached) && cached.length > 0) return cached;
+    }
+    return [];
+  });
+  const [stats, setStats] = useState(() => {
+    if (typeof window !== "undefined") {
+      const cached = getClientCachedData<any>("admin_stats", 180000);
+      if (cached && cached.totalOrders !== undefined) return cached;
+    }
+    return {
+      totalRevenue: 0,
+      totalSales: 0,
+      totalCost: 0,
+      netProfit: 0,
+      pendingRevenue: 0,
+      confirmedRevenue: 0,
+      totalOrders: 0,
+      pendingOrders: 0,
+      confirmedOrders: 0,
+      deliveredOrders: 0,
+      incompleteCount: 0,
+      activeProductsCount: 0,
+    };
   });
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    if (typeof window !== "undefined") {
+      const cached = getClientCachedData<IProduct[]>("products_all__false_true", 300000);
+      if (cached && Array.isArray(cached) && cached.length > 0) return false;
+    }
+    return true;
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedInvoice, setSelectedInvoice] = useState<IOrder | null>(null);
@@ -393,6 +430,10 @@ export default function AdminPage() {
   const [productCategoryFilter, setProductCategoryFilter] = useState("all");
   const [productStockFilter, setProductStockFilter] = useState<string>("all");
 
+  // Lazy Loading State for Admin Products Table (loads 25 at a time for fast 60fps rendering)
+  const [visibleProductCount, setVisibleProductCount] = useState(25);
+  const loadMoreSentinelRef = useRef<HTMLDivElement | null>(null);
+
   // Edit Product Images Management State
   const [editImageUrlInput, setEditImageUrlInput] = useState("");
   const [isUploadingEditImages, setIsUploadingEditImages] = useState(false);
@@ -475,22 +516,36 @@ export default function AdminPage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (forceShowLoading: boolean = false) => {
+    if (forceShowLoading || products.length === 0) {
+      setIsLoading(true);
+    }
     try {
       const [fetchedOrders, fetchedIncomplete, fetchedStats, fetchedProducts, fetchedVendors] = await Promise.all([
         api.getAllOrders(statusFilter, searchQuery),
         api.getIncompleteOrders(),
         api.getAdminStats(),
-        api.getProducts({ includeInactive: true }),
-        api.getVendors(),
+        api.getProducts({ includeInactive: true }, { skipCache: forceShowLoading }),
+        api.getVendors({ skipCache: forceShowLoading }),
       ]);
 
-      setOrders(fetchedOrders);
-      setIncompleteOrders(fetchedIncomplete);
-      if (fetchedStats) setStats(fetchedStats);
-      setProducts(fetchedProducts);
-      setVendors(fetchedVendors);
+      if (Array.isArray(fetchedOrders)) {
+        setOrders(fetchedOrders);
+        if (statusFilter === "all" && !searchQuery) {
+          setClientCachedData("admin_orders_all", fetchedOrders);
+        }
+      }
+      if (Array.isArray(fetchedIncomplete)) setIncompleteOrders(fetchedIncomplete);
+      if (fetchedStats) {
+        setStats(fetchedStats);
+        setClientCachedData("admin_stats", fetchedStats);
+      }
+      if (Array.isArray(fetchedProducts) && fetchedProducts.length > 0) {
+        setProducts(fetchedProducts);
+      }
+      if (Array.isArray(fetchedVendors) && fetchedVendors.length > 0) {
+        setVendors(fetchedVendors);
+      }
 
       // Fetch Hot Deal / Timer settings
       try {
@@ -573,14 +628,14 @@ export default function AdminPage() {
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     setNewOrderCount(0);
-    await loadData();
+    await loadData(true);
     setLastUpdated(new Date());
     setIsRefreshing(false);
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    loadData();
+    loadData(true);
   };
 
   // Hot Deal / Timer Management Handlers
@@ -662,7 +717,7 @@ export default function AdminPage() {
       setProductForm((prev) => ({ ...prev, mainImage: "" }));
     } finally {
       setIsUploadingImage(false);
-      URL.revokeObjectURL(previewUrl);
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -821,6 +876,7 @@ export default function AdminPage() {
         setEditUploadSuccessMessage(`✅ ${cloudUrls.length}টি ছবি ক্লাউডিনারিতে অপটিমাইজ ও থাম্বনেইলে সেট হয়েছে!`);
         showToast(`🎉 ছবি আপলোড সফল ও নতুন থাম্বনেইল সেট হয়েছে! সেভ করতে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করুন।`);
       } else {
+        setEditUploadSuccessMessage("");
         showToast(res.message || "ছবি আপলোড ব্যর্থ হয়েছে।");
         // Revert blob preview URLs if upload failed
         setEditingProduct((prev) => {
@@ -833,8 +889,9 @@ export default function AdminPage() {
           };
         });
       }
-    } catch {
-      showToast("⚠️ ছবি আপলোডে ত্রুটি দেখা দিয়েছে।");
+    } catch (err: any) {
+      setEditUploadSuccessMessage("");
+      showToast(err?.message || "⚠️ ছবি আপলোডে ত্রুটি দেখা দিয়েছে।");
       setEditingProduct((prev) => {
         if (!prev) return null;
         const current = getEditingProductImages(prev).filter((u) => !previewUrls.includes(u));
@@ -846,8 +903,7 @@ export default function AdminPage() {
       });
     } finally {
       setIsUploadingEditImages(false);
-      previewUrls.forEach((u) => URL.revokeObjectURL(u));
-      e.target.value = "";
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -867,7 +923,7 @@ export default function AdminPage() {
       return {
         ...prev,
         mainImage: previewUrl,
-        galleryImages: rest.filter((u) => u !== prev.mainImage),
+        galleryImages: rest,
       };
     });
 
@@ -886,19 +942,17 @@ export default function AdminPage() {
         setEditingProduct((prev) => {
           if (!prev) return null;
           const current = getEditingProductImages(prev);
-          const replaced = current.map((u) => (u === previewUrl ? cloudUrl : u));
-          const clean = replaced.filter((u) => !u.startsWith("blob:") || u === cloudUrl);
-          const finalMain = clean.includes(cloudUrl) ? cloudUrl : (clean[0] || cloudUrl);
-          const finalGallery = clean.filter((u) => u !== finalMain);
+          const clean = current.filter((u) => u !== previewUrl && !u.startsWith("blob:") && u !== cloudUrl);
           return {
             ...prev,
-            mainImage: finalMain,
-            galleryImages: finalGallery,
+            mainImage: cloudUrl,
+            galleryImages: clean,
           };
         });
         setEditUploadSuccessMessage("✅ প্রধান থাম্বনেইল সফলভাবে অপটিমাইজ ও ক্লাউডিনারিতে সেট হয়েছে!");
         showToast("⭐ প্রধান থাম্বনেইল প্রস্তুত! নিচে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করে সেভ করুন।");
       } else {
+        setEditUploadSuccessMessage("");
         showToast(res.message || "থাম্বনেইল আপলোড ব্যর্থ হয়েছে।");
         // Revert blob preview if upload failed
         setEditingProduct((prev) => {
@@ -912,8 +966,9 @@ export default function AdminPage() {
           };
         });
       }
-    } catch {
-      showToast("⚠️ থাম্বনেইল আপলোডে ত্রুটি দেখা দিয়েছে।");
+    } catch (err: any) {
+      setEditUploadSuccessMessage("");
+      showToast(err?.message || "⚠️ থাম্বনেইল আপলোডে ত্রুটি দেখা দিয়েছে।");
       setEditingProduct((prev) => {
         if (!prev) return null;
         const current = getEditingProductImages(prev);
@@ -926,8 +981,7 @@ export default function AdminPage() {
       });
     } finally {
       setIsUploadingEditImages(false);
-      URL.revokeObjectURL(previewUrl);
-      e.target.value = "";
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -1043,7 +1097,6 @@ export default function AdminPage() {
     } finally {
       setIsChangingSpecificImage(false);
       pendingChangeRef.current = null;
-      URL.revokeObjectURL(previewUrl);
       if (e.target) e.target.value = "";
     }
   };
@@ -1247,12 +1300,17 @@ export default function AdminPage() {
       const savedProd = res.data
         ? { ...updatedPayload, ...res.data, mainImage, galleryImages }
         : updatedPayload;
-      setProducts(products.map((p) => (p._id === editingProduct._id ? savedProd : p)));
+      const updatedList = products.map((p) => (p._id === editingProduct._id ? savedProd : p));
+      setProducts(updatedList);
+      setClientCachedData("products_all__false_true", updatedList);
       setEditingProduct(null);
       showToast(`প্রোডাক্ট "${editingProduct.name}" সফলভাবে আপডেট হয়েছে!`);
       try {
-        const fresh = await api.getProducts({ includeInactive: true });
-        if (fresh) setProducts(fresh);
+        const fresh = await api.getProducts({ includeInactive: true }, { skipCache: true });
+        if (fresh && fresh.length > 0) {
+          setProducts(fresh);
+          setClientCachedData("products_all__false_true", fresh);
+        }
       } catch {}
     } catch {
       showToast("আপডেট ব্যর্থ হয়েছে।");
@@ -1271,11 +1329,16 @@ export default function AdminPage() {
         setIsConfirmLoading(true);
         try {
           await api.deleteProduct(id);
-          setProducts((prev) => prev.filter((p) => p._id !== id));
+          const updatedList = products.filter((p) => p._id !== id);
+          setProducts(updatedList);
+          setClientCachedData("products_all__false_true", updatedList);
           showToast(`"${name}" প্রোডাক্টটি সফলভাবে মুছে ফেলা হয়েছে।`);
           try {
-            const fresh = await api.getProducts({ includeInactive: true });
-            if (fresh) setProducts(fresh);
+            const fresh = await api.getProducts({ includeInactive: true }, { skipCache: true });
+            if (fresh && fresh.length > 0) {
+              setProducts(fresh);
+              setClientCachedData("products_all__false_true", fresh);
+            }
           } catch {}
         } catch {
           showToast("ডিলিট করা সম্ভব হয়নি।");
@@ -1715,6 +1778,30 @@ export default function AdminPage() {
 
     return matchesSearch && matchesCat && matchesStock;
   });
+
+  // Lazy Loaded slice of products
+  const displayedProducts = filteredProducts.slice(0, visibleProductCount);
+
+  // Auto-load next batch when user scrolls near the end of products list
+  useEffect(() => {
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleProductCount((prev) => prev + 25);
+        }
+      },
+      { rootMargin: "400px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [filteredProducts.length, visibleProductCount]);
+
+  // Reset pagination when searching or filtering
+  useEffect(() => {
+    setVisibleProductCount(25);
+  }, [productSearch, productCategoryFilter, productStockFilter]);
 
   // Filtered Sellers
   const filteredVendors = vendors.filter((v) => {
@@ -2336,7 +2423,7 @@ export default function AdminPage() {
 
               {/* Refresh Data */}
               <button
-                onClick={loadData}
+                onClick={() => loadData(true)}
                 className="p-1.5 sm:p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
                 title="রিফ্রেশ করুন"
               >
@@ -3008,7 +3095,7 @@ export default function AdminPage() {
                         </td>
                       </tr>
                     ) : (
-                      filteredProducts.map((p) => {
+                      displayedProducts.map((p) => {
                         const globalIndex = products.findIndex((prod) => prod._id === p._id);
                         const isFirst = globalIndex <= 0;
                         const isLast = globalIndex >= products.length - 1 || globalIndex === -1;
@@ -3230,6 +3317,41 @@ export default function AdminPage() {
                   </tbody>
                 </table>
               </div>
+
+              {filteredProducts.length > visibleProductCount && (
+                <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-500">
+                      মোট <strong className="text-slate-900 font-bold">{filteredProducts.length}</strong> টির মধ্যে <strong className="text-amber-700 font-bold">{displayedProducts.length}</strong> টি প্রোডাক্ট দৃশ্যমান
+                    </span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                      লেজি লোডিং সক্রিয় ⚡
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setVisibleProductCount((prev) => prev + 25)}
+                      className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+                    >
+                      <span>আরও ২৫টি লোড করুন</span>
+                      <ChevronDown size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVisibleProductCount(filteredProducts.length)}
+                      className="px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-xl text-xs font-black transition-all shadow-xs cursor-pointer"
+                    >
+                      <span>সবগুলো দেখুন ({filteredProducts.length}টি)</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+              {/* Invisible sentinel for automatic lazy loading as user scrolls */}
+              {filteredProducts.length > visibleProductCount && (
+                <div ref={loadMoreSentinelRef} className="h-6 w-full pointer-events-none" />
+              )}
             </div>
           </div>
         )}
@@ -5111,7 +5233,7 @@ export default function AdminPage() {
 
                   <button
                     type="button"
-                    onClick={loadData}
+                    onClick={() => loadData(true)}
                     className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
                     title="ডাটাবেজ থেকে রিলোড করুন"
                   >

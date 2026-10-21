@@ -71,6 +71,7 @@ export default function ProductImage({
           src={rawSrc}
           alt={alt || "Product Preview"}
           className={`w-full h-full ${className}`}
+          decoding="async"
           onError={() => setHasError(true)}
         />
       </div>
@@ -95,6 +96,7 @@ export default function ProductImage({
           alt={alt || "Product Image"}
           className={`w-full h-full ${className}`}
           loading={priority ? "eager" : "lazy"}
+          decoding="async"
           onError={() => setHasError(true)}
         />
       </div>
