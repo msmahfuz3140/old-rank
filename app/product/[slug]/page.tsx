@@ -232,6 +232,7 @@ export default function ProductDetailPage({
                     src={img}
                     alt=""
                     className="w-full h-full object-cover"
+                    targetWidth={160}
                     showText={false}
                     iconSize={16}
                   />

@@ -72,7 +72,7 @@ import { useAuthStore } from "@/lib/store";
 import { api, fallbackProducts, fallbackVendors } from "@/lib/api";
 import { IOrder, IIncompleteOrder, IProduct, IVendor } from "@/lib/types";
 import ProductImage from "@/components/product/ProductImage";
-import { optimizeImageUrl } from "@/lib/imageUtils";
+import { optimizeImageUrl, compressImageClient } from "@/lib/imageUtils";
 import {
   SalesBarChart,
   StackedBarChart,
@@ -631,26 +631,38 @@ export default function AdminPage() {
     );
   };
 
-  // Image Upload Handler
+  // Image Upload Handler (Add Product Form)
   const handleCloudinaryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // 1. Instant Preview: Show image immediately
+    const previewUrl = URL.createObjectURL(file);
+    setProductForm((prev) => ({ ...prev, mainImage: previewUrl }));
+
     setIsUploadingImage(true);
-    setUploadSuccessMessage("");
+    setUploadSuccessMessage("⚡ ছবির প্রিভিউ লোড হয়েছে (অপটিমাইজ ও ক্লাউডিনারিতে আপলোড হচ্ছে...)");
+    showToast("📸 ছবির প্রিভিউ লোড হয়েছে, ক্লাউডিনারিতে অপটিমাইজ হচ্ছে...");
+
     try {
-      const res = await api.uploadFile(file);
+      // 2. Client-side compression to lightweight KB
+      const compressedFile = await compressImageClient(file, 1600, 0.82);
+      const res = await api.uploadFile(compressedFile);
+
       if (res.success && res.url) {
         setProductForm((prev) => ({ ...prev, mainImage: res.url }));
-        setUploadSuccessMessage(`✅ ছবি সফলভাবে আপলোড হয়েছে! (${file.name})`);
-        showToast("🎉 ছবি সফলভাবে আপলোড হয়েছে!");
+        setUploadSuccessMessage(`✅ ছবি সফলভাবে ক্লাউডিনারিতে আপলোড হয়েছে! (${file.name})`);
+        showToast("🎉 ছবি ক্লাউডিনারিতে সফলভাবে অপটিমাইজ ও আপলোড হয়েছে!");
       } else {
         showToast(res.message || "আপলোড ব্যর্থ হয়েছে।");
+        setProductForm((prev) => ({ ...prev, mainImage: "" }));
       }
     } catch (err: any) {
       showToast("⚠️ ছবি আপলোডে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+      setProductForm((prev) => ({ ...prev, mainImage: "" }));
     } finally {
       setIsUploadingImage(false);
+      URL.revokeObjectURL(previewUrl);
     }
   };
 
@@ -681,14 +693,16 @@ export default function AdminPage() {
   };
 
   const updateEditingProductImages = (newImages: string[]) => {
-    if (!editingProduct) return;
-    const cleanList = newImages.filter((u) => u && typeof u === "string" && u.trim().length > 0);
-    const mainImage = cleanList.length > 0 ? cleanList[0] : "";
-    const galleryImages = cleanList.slice(1);
-    setEditingProduct({
-      ...editingProduct,
-      mainImage,
-      galleryImages,
+    setEditingProduct((prev) => {
+      if (!prev) return null;
+      const cleanList = newImages.filter((u) => u && typeof u === "string" && u.trim().length > 0);
+      const mainImage = cleanList.length > 0 ? cleanList[0] : "";
+      const galleryImages = cleanList.slice(1);
+      return {
+        ...prev,
+        mainImage,
+        galleryImages,
+      };
     });
   };
 
@@ -740,56 +754,179 @@ export default function AdminPage() {
     showToast("✅ নতুন ছবি যুক্ত হয়েছে!");
   };
 
+  // Upload Multiple Images in Edit Modal (Instant Preview + Client Compression + Cloudinary)
   const handleUploadEditFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
-    if (files.length === 0 || !editingProduct) return;
+    const rawFiles = e.target.files ? Array.from(e.target.files) : [];
+    if (rawFiles.length === 0 || !editingProduct) return;
+
+    // 1. Instant Preview: Show all selected files in the thumbnail & gallery immediately
+    const fileEntries = rawFiles.map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
+    const previewUrls = fileEntries.map((fe) => fe.previewUrl);
+
+    setEditingProduct((prev) => {
+      if (!prev) return null;
+      const current = getEditingProductImages(prev).filter((u) => !u.startsWith("blob:"));
+      const combined = [...previewUrls, ...current];
+      return {
+        ...prev,
+        mainImage: combined[0] || "",
+        galleryImages: combined.slice(1),
+      };
+    });
 
     setIsUploadingEditImages(true);
-    setEditUploadSuccessMessage("");
+    setEditUploadSuccessMessage(`⚡ ${rawFiles.length}টি ছবির প্রিভিউ লোড হয়েছে (অপটিমাইজ ও আপলোড হচ্ছে...)`);
+    showToast(`📸 ${rawFiles.length}টি ছবির প্রিভিউ থাম্বনেইলে দৃশ্যমান, ক্লাউডিনারিতে অপটিমাইজ ও আপলোড হচ্ছে...`);
 
     try {
-      const res = await api.uploadMultipleFiles(files);
+      // 2. Client-side compression to reduce multi-MB files to lightweight KB
+      const compressedFiles = await Promise.all(
+        rawFiles.map((f) => compressImageClient(f, 1600, 0.82))
+      );
+
+      // 3. Upload compressed files to Cloudinary
+      const res = await api.uploadMultipleFiles(compressedFiles);
       if (res.success && res.urls && res.urls.length > 0) {
-        const current = getEditingProductImages(editingProduct);
-        // Put newly uploaded images at index 0 so thumbnail updates immediately!
-        const combined = [...res.urls, ...current.filter((u) => !res.urls.includes(u))];
-        updateEditingProductImages(combined);
-        setEditUploadSuccessMessage(`✅ ${res.urls.length}টি ছবি সফলভাবে আপলোড ও থাম্বনেইলে সেট হয়েছে!`);
+        const cloudUrls = res.urls;
+
+        // Replace blob preview URLs with permanent Cloudinary URLs
+        setEditingProduct((prev) => {
+          if (!prev) return null;
+          const current = getEditingProductImages(prev);
+          const mapped: string[] = [];
+          for (const u of current) {
+            const previewIdx = previewUrls.indexOf(u);
+            if (previewIdx !== -1 && cloudUrls[previewIdx]) {
+              mapped.push(cloudUrls[previewIdx]);
+            } else if (!u.startsWith("blob:")) {
+              mapped.push(u);
+            }
+          }
+          for (const cUrl of cloudUrls) {
+            if (!mapped.includes(cUrl)) {
+              mapped.unshift(cUrl);
+            }
+          }
+          const clean = mapped.filter(Boolean);
+          return {
+            ...prev,
+            mainImage: clean[0] || "",
+            galleryImages: clean.slice(1),
+          };
+        });
+
+        setEditUploadSuccessMessage(`✅ ${cloudUrls.length}টি ছবি ক্লাউডিনারিতে অপটিমাইজ ও থাম্বনেইলে সেট হয়েছে!`);
         showToast(`🎉 ছবি আপলোড সফল ও নতুন থাম্বনেইল সেট হয়েছে! সেভ করতে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করুন।`);
       } else {
         showToast(res.message || "ছবি আপলোড ব্যর্থ হয়েছে।");
+        // Revert blob preview URLs if upload failed
+        setEditingProduct((prev) => {
+          if (!prev) return null;
+          const current = getEditingProductImages(prev).filter((u) => !previewUrls.includes(u));
+          return {
+            ...prev,
+            mainImage: current[0] || "",
+            galleryImages: current.slice(1),
+          };
+        });
       }
     } catch {
       showToast("⚠️ ছবি আপলোডে ত্রুটি দেখা দিয়েছে।");
+      setEditingProduct((prev) => {
+        if (!prev) return null;
+        const current = getEditingProductImages(prev).filter((u) => !previewUrls.includes(u));
+        return {
+          ...prev,
+          mainImage: current[0] || "",
+          galleryImages: current.slice(1),
+        };
+      });
     } finally {
       setIsUploadingEditImages(false);
+      previewUrls.forEach((u) => URL.revokeObjectURL(u));
       e.target.value = "";
     }
   };
 
+  // Upload New Main Thumbnail Directly (Instant Preview + Client Compression + Cloudinary)
   const handleUploadNewThumbnailDirectly = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !editingProduct) return;
 
+    // 1. Instant Preview: Show selected thumbnail immediately in UI
+    const previewUrl = URL.createObjectURL(file);
+    const originalFile = file;
+
+    setEditingProduct((prev) => {
+      if (!prev) return null;
+      const current = getEditingProductImages(prev);
+      const rest = current.filter((u) => u !== previewUrl && !u.startsWith("blob:"));
+      return {
+        ...prev,
+        mainImage: previewUrl,
+        galleryImages: rest.filter((u) => u !== prev.mainImage),
+      };
+    });
+
     setIsUploadingEditImages(true);
-    setEditUploadSuccessMessage("");
+    setEditUploadSuccessMessage("⚡ নতুন থাম্বনেইল প্রিভিউ লোড হয়েছে (অপটিমাইজ ও ক্লাউডিনারিতে আপলোড হচ্ছে...)");
+    showToast("📸 প্রধান থাম্বনেইল প্রিভিউ লোড হয়েছে, ক্লাউডিনারিতে অপটিমাইজ হচ্ছে...");
 
     try {
-      const res = await api.uploadFile(file);
+      // 2. Client-side pre-compression
+      const compressedFile = await compressImageClient(originalFile, 1600, 0.82);
+
+      // 3. Upload to Cloudinary
+      const res = await api.uploadFile(compressedFile);
       if (res.success && res.url) {
-        const current = getEditingProductImages(editingProduct);
-        const rest = current.filter((u) => u !== res.url);
-        const nextList = [res.url, ...rest];
-        updateEditingProductImages(nextList);
-        setEditUploadSuccessMessage("✅ প্রধান থাম্বনেইল সফলভাবে পরিবর্তন হয়েছে!");
-        showToast("⭐ প্রধান থাম্বনেইল পরিবর্তিত হয়েছে! নিচে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করে সেভ করুন।");
+        const cloudUrl = res.url;
+        setEditingProduct((prev) => {
+          if (!prev) return null;
+          const current = getEditingProductImages(prev);
+          const replaced = current.map((u) => (u === previewUrl ? cloudUrl : u));
+          const clean = replaced.filter((u) => !u.startsWith("blob:") || u === cloudUrl);
+          const finalMain = clean.includes(cloudUrl) ? cloudUrl : (clean[0] || cloudUrl);
+          const finalGallery = clean.filter((u) => u !== finalMain);
+          return {
+            ...prev,
+            mainImage: finalMain,
+            galleryImages: finalGallery,
+          };
+        });
+        setEditUploadSuccessMessage("✅ প্রধান থাম্বনেইল সফলভাবে অপটিমাইজ ও ক্লাউডিনারিতে সেট হয়েছে!");
+        showToast("⭐ প্রধান থাম্বনেইল প্রস্তুত! নিচে 'আপডেট সংরক্ষণ করুন' এ ক্লিক করে সেভ করুন।");
       } else {
         showToast(res.message || "থাম্বনেইল আপলোড ব্যর্থ হয়েছে।");
+        // Revert blob preview if upload failed
+        setEditingProduct((prev) => {
+          if (!prev) return null;
+          const current = getEditingProductImages(prev);
+          const reverted = current.filter((u) => u !== previewUrl);
+          return {
+            ...prev,
+            mainImage: reverted[0] || "",
+            galleryImages: reverted.slice(1),
+          };
+        });
       }
     } catch {
       showToast("⚠️ থাম্বনেইল আপলোডে ত্রুটি দেখা দিয়েছে।");
+      setEditingProduct((prev) => {
+        if (!prev) return null;
+        const current = getEditingProductImages(prev);
+        const reverted = current.filter((u) => u !== previewUrl);
+        return {
+          ...prev,
+          mainImage: reverted[0] || "",
+          galleryImages: reverted.slice(1),
+        };
+      });
     } finally {
       setIsUploadingEditImages(false);
+      URL.revokeObjectURL(previewUrl);
       e.target.value = "";
     }
   };
@@ -803,17 +940,40 @@ export default function AdminPage() {
     }
   };
 
-  // Called when user selects an image from device gallery
+  // Called when user selects an image from device gallery (Replace specific image)
   const handleSpecificImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !pendingChangeRef.current) return;
 
     const { productId, imageIndex } = pendingChangeRef.current;
+    const previewUrl = URL.createObjectURL(file);
+
+    // 1. Instant Preview in the specific slot
+    if (editingProduct && editingProduct._id === productId) {
+      setEditingProduct((prev) => {
+        if (!prev) return null;
+        const list = [...getEditingProductImages(prev)];
+        if (imageIndex >= 0 && imageIndex < list.length) {
+          list[imageIndex] = previewUrl;
+        } else {
+          list.push(previewUrl);
+        }
+        return {
+          ...prev,
+          mainImage: list[0] || previewUrl,
+          galleryImages: list.slice(1),
+        };
+      });
+    }
+
     setIsChangingSpecificImage(true);
-    showToast("📸 গ্যালারি থেকে ছবি আপলোড ও অপটিমাইজ করা হচ্ছে...");
+    showToast("📸 ছবির প্রিভিউ প্রদর্শিত হয়েছে, ক্লাউডিনারিতে অপটিমাইজ ও আপলোড হচ্ছে...");
 
     try {
-      const res = await api.uploadFile(file);
+      // 2. Client-side compression
+      const compressedFile = await compressImageClient(file, 1600, 0.82);
+      const res = await api.uploadFile(compressedFile);
+
       if (!res.success || !res.url) {
         showToast(res.message || "ছবি আপলোড ব্যর্থ হয়েছে।");
         return;
@@ -823,31 +983,32 @@ export default function AdminPage() {
 
       // 1. If currently in editing modal for this product
       if (editingProduct && editingProduct._id === productId) {
-        const currentList = getEditingProductImages(editingProduct);
-        const nextList = [...currentList];
-        if (imageIndex >= 0 && imageIndex < nextList.length) {
-          nextList[imageIndex] = newUrl;
-        } else if (nextList.length === 0) {
-          nextList.push(newUrl);
-        } else {
-          nextList[0] = newUrl;
-        }
-
-        const mainImage = nextList[0] || newUrl;
-        const galleryImages = nextList.slice(1);
-
-        const updatedProdState = {
-          ...editingProduct,
-          mainImage,
-          galleryImages,
-        };
-        setEditingProduct(updatedProdState);
+        let updatedProdState: any = null;
+        setEditingProduct((prev) => {
+          if (!prev) return null;
+          const currentList = getEditingProductImages(prev);
+          const nextList = currentList.map((u, idx) => (idx === imageIndex || u === previewUrl ? newUrl : u));
+          if (!nextList.includes(newUrl)) {
+            nextList[imageIndex] = newUrl;
+          }
+          const clean = nextList.filter((u) => !u.startsWith("blob:") || u === newUrl);
+          const mainImage = clean[0] || newUrl;
+          const galleryImages = clean.slice(1);
+          updatedProdState = {
+            ...prev,
+            mainImage,
+            galleryImages,
+          };
+          return updatedProdState;
+        });
 
         // Immediately persist to database in an optimized way
-        const updateRes = await api.updateProduct(productId, updatedProdState);
-        const savedProd = updateRes.data || updatedProdState;
-        setProducts((prev) => prev.map((p) => (p._id === productId ? savedProd : p)));
-        showToast("🎉 নতুন ছবি সফলভাবে আপলোড ও ডাটাবেজে সেভ হয়েছে!");
+        if (updatedProdState) {
+          const updateRes = await api.updateProduct(productId, updatedProdState);
+          const savedProd = updateRes.data || updatedProdState;
+          setProducts((prev) => prev.map((p) => (p._id === productId ? savedProd : p)));
+          showToast("🎉 নতুন ছবি সফলভাবে ক্লাউডিনারিতে অপটিমাইজ ও সেভ হয়েছে!");
+        }
       } else {
         // 2. Direct change from product list table
         const targetProd = products.find((p) => p._id === productId);
@@ -874,7 +1035,7 @@ export default function AdminPage() {
           const updateRes = await api.updateProduct(productId, payload);
           const savedProd = updateRes.data || payload;
           setProducts((prev) => prev.map((p) => (p._id === productId ? savedProd : p)));
-          showToast("🎉 নতুন ছবি সফলভাবে আপলোড ও ডাটাবেজে সেভ হয়েছে!");
+          showToast("🎉 নতুন ছবি সফলভাবে অপটিমাইজ ও সেভ হয়েছে!");
         }
       }
     } catch (err: any) {
@@ -882,6 +1043,7 @@ export default function AdminPage() {
     } finally {
       setIsChangingSpecificImage(false);
       pendingChangeRef.current = null;
+      URL.revokeObjectURL(previewUrl);
       if (e.target) e.target.value = "";
     }
   };
@@ -1068,8 +1230,8 @@ export default function AdminPage() {
         discount = Math.round(((old - base) / old) * 100);
       }
 
-      const currentImages = getEditingProductImages(editingProduct);
-      const mainImage = currentImages[0] || editingProduct.mainImage || "";
+      const currentImages = getEditingProductImages(editingProduct).filter((u) => !u.startsWith("blob:"));
+      const mainImage = currentImages[0] || (editingProduct.mainImage?.startsWith("blob:") ? "" : editingProduct.mainImage) || "";
       const galleryImages = currentImages.slice(1);
 
       const updatedPayload = {
@@ -2935,6 +3097,7 @@ export default function AdminPage() {
                                   src={p.mainImage}
                                   alt={p.name}
                                   className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform"
+                                  targetWidth={120}
                                   showText={false}
                                   iconSize={14}
                                 />
@@ -6088,6 +6251,7 @@ export default function AdminPage() {
                             src={activeThumb}
                             alt="Current Thumbnail"
                             className="w-full h-full object-cover"
+                            targetWidth={200}
                             showText={false}
                           />
                         ) : (
@@ -6099,6 +6263,12 @@ export default function AdminPage() {
                           <Crown size={9} className="fill-slate-950" />
                           <span>মূল থাম্বনেইল</span>
                         </div>
+                        {activeThumb.startsWith("blob:") && (
+                          <div className="absolute bottom-1 inset-x-1 bg-amber-500 text-slate-950 font-black text-[7.5px] px-1 py-0.5 rounded text-center backdrop-blur-xs flex items-center justify-center gap-1 z-20 shadow">
+                            <div className="w-2 h-2 border border-slate-950 border-t-transparent rounded-full animate-spin" />
+                            <span>অপটিমাইজ হচ্ছে</span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex-1 text-center sm:text-left space-y-1">
@@ -6175,6 +6345,7 @@ export default function AdminPage() {
                               src={imgUrl}
                               alt={`Product image ${idx + 1}`}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              targetWidth={200}
                               showText={false}
                               iconSize={20}
                             />
@@ -6192,6 +6363,14 @@ export default function AdminPage() {
                                 </span>
                               )}
                             </div>
+
+                            {/* Blob optimizing badge */}
+                            {imgUrl.startsWith("blob:") && (
+                              <div className="absolute bottom-1.5 right-1.5 z-20 bg-amber-500 text-slate-950 font-black text-[8px] px-1.5 py-0.5 rounded shadow flex items-center gap-1">
+                                <div className="w-2 h-2 border border-slate-950 border-t-transparent rounded-full animate-spin" />
+                                <span>অপটিমাইজেশন</span>
+                              </div>
+                            )}
 
                             {/* Top-Right Delete Button (z-30 pointer-events-auto) */}
                             <button
@@ -6474,9 +6653,17 @@ export default function AdminPage() {
                 </button>
                 <button
                   type="submit"
-                  className="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-5 py-2 rounded-xl shadow cursor-pointer"
+                  disabled={isUploadingEditImages}
+                  className="bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-slate-950 font-black px-5 py-2 rounded-xl shadow cursor-pointer disabled:cursor-not-allowed inline-flex items-center gap-2"
                 >
-                  আপডেট সংরক্ষণ করুন
+                  {isUploadingEditImages ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                      <span>ছবি অপটিমাইজ হচ্ছে...</span>
+                    </>
+                  ) : (
+                    <span>আপডেট সংরক্ষণ করুন</span>
+                  )}
                 </button>
               </div>
             </form>

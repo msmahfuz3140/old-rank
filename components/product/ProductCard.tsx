@@ -88,6 +88,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           src={product.mainImage}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          targetWidth={420}
           showText={true}
           iconSize={24}
         />

@@ -29,12 +29,15 @@ export default function ProductImage({
   targetWidth = 800,
 }: ProductImageProps) {
   const [hasError, setHasError] = useState(false);
+  const [useFallbackImg, setUseFallbackImg] = useState(false);
 
   useEffect(() => {
     setHasError(false);
+    setUseFallbackImg(false);
   }, [src]);
 
-  const isInvalid = !src || typeof src !== "string" || src.trim() === "" || hasError;
+  const rawSrc = typeof src === "string" ? src.trim() : "";
+  const isInvalid = !rawSrc || hasError;
 
   if (isInvalid) {
     return (
@@ -58,10 +61,45 @@ export default function ProductImage({
     );
   }
 
-  const optimizedSrc = optimizeImageUrl(src, {
+  // 1. Instant local preview (blob: or data: URL) - Render native <img> for 0ms instantaneous display
+  const isBlobOrData = rawSrc.startsWith("blob:") || rawSrc.startsWith("data:");
+  if (isBlobOrData) {
+    return (
+      <div className={`relative overflow-hidden ${containerClassName}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={rawSrc}
+          alt={alt || "Product Preview"}
+          className={`w-full h-full ${className}`}
+          onError={() => setHasError(true)}
+        />
+      </div>
+    );
+  }
+
+  // 2. Cloudinary or external CDN URL optimization
+  const optimizedSrc = optimizeImageUrl(rawSrc, {
     width: targetWidth,
     quality: "auto:good",
   });
+
+  const isCloudinary = rawSrc.includes("res.cloudinary.com");
+
+  // 3. If Next.js proxy encountered an issue, fallback directly to native <img> loaded from CDN
+  if (useFallbackImg) {
+    return (
+      <div className={`relative overflow-hidden ${containerClassName}`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={optimizedSrc || rawSrc}
+          alt={alt || "Product Image"}
+          className={`w-full h-full ${className}`}
+          loading={priority ? "eager" : "lazy"}
+          onError={() => setHasError(true)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={`relative overflow-hidden ${containerClassName}`}>
@@ -72,11 +110,16 @@ export default function ProductImage({
         sizes={sizes}
         priority={priority}
         loading={priority ? undefined : "lazy"}
-        placeholder="blur"
-        blurDataURL={shimmerPlaceholder(targetWidth, targetWidth)}
+        unoptimized={isCloudinary}
+        placeholder={isCloudinary ? undefined : "blur"}
+        blurDataURL={isCloudinary ? undefined : shimmerPlaceholder(targetWidth, targetWidth)}
         className={`${className}`}
-        onError={() => setHasError(true)}
+        onError={() => {
+          // Attempt direct CDN fetch before showing broken image icon
+          setUseFallbackImg(true);
+        }}
       />
     </div>
   );
 }
+

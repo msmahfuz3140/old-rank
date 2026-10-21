@@ -5,6 +5,8 @@
  * - Dynamic Cloudinary URL transformations (f_auto, q_auto, c_limit, responsive widths)
  * - Browser caching headers compatibility (public, max-age=31536000, immutable)
  * - Bandwidth protection by avoiding delivering full-resolution unoptimized assets
+ * - Instant local preview support (blob: and data: URIs)
+ * - Fast client-side image compression prior to uploading
  * - Graceful fallback handling for local and third-party images
  */
 
@@ -19,8 +21,9 @@ interface OptimizeImageOptions {
 /**
  * Optimizes a Cloudinary or third-party image URL for web delivery:
  * - Inserts 'f_auto' to serve modern formats (WebP/AVIF) dynamically
- * - Inserts 'q_auto' to apply AI perceptual compression without visual loss
- * - Applies responsive width limit (e.g. w_800) to protect Cloudinary bandwidth
+ * - Inserts 'q_auto:good' for high perceptual quality with tiny file size
+ * - Applies responsive width limit (e.g. w_800 or w_150 for thumbs) to protect Cloudinary bandwidth
+ * - Guarantees safe bypass for client-side blob: / data: preview URLs
  */
 export function optimizeImageUrl(
   url?: string | null,
@@ -33,36 +36,44 @@ export function optimizeImageUrl(
   const trimmed = url.trim();
   if (!trimmed) return "";
 
+  // 0. Local instant preview URLs (blob: / data:) - preserve unchanged
+  if (trimmed.startsWith("blob:") || trimmed.startsWith("data:")) {
+    return trimmed;
+  }
+
   // 1. Cloudinary URLs
   if (trimmed.includes("res.cloudinary.com")) {
     const width = options.width || 800;
-    const quality = options.quality || "auto";
+    const quality = options.quality || "auto:good";
     const crop = options.crop || "limit";
     const format = options.format || "auto";
 
     const transformSegment = `f_${format},q_${quality},w_${width},c_${crop}`;
+    const uploadMarker = "/image/upload/";
+    const uploadIndex = trimmed.indexOf(uploadMarker);
 
-    // If already has transformation parameters right after /upload/
-    const uploadIndex = trimmed.indexOf("/image/upload/");
     if (uploadIndex !== -1) {
-      const prefix = trimmed.substring(0, uploadIndex + "/image/upload/".length);
-      const rest = trimmed.substring(uploadIndex + "/image/upload/".length);
+      const prefix = trimmed.substring(0, uploadIndex + uploadMarker.length);
+      const afterUpload = trimmed.substring(uploadIndex + uploadMarker.length);
 
-      // Check if already transformed
-      if (/^(f_[^/]+|q_[^/]+|w_[^/]+|c_[^/]+|v\d+)/.test(rest)) {
-        // If it starts with v\d+, insert transformations before version
-        if (/^v\d+\//.test(rest)) {
-          return `${prefix}${transformSegment}/${rest}`;
-        }
-        // If it already has f_auto,q_auto, leave or replace with dimension limit
-        if (rest.startsWith("f_auto,q_auto/")) {
-          return `${prefix}f_auto,q_auto,w_${width},c_${crop}/${rest.replace("f_auto,q_auto/", "")}`;
-        }
-        return trimmed;
+      const segments = afterUpload.split("/");
+      // Cloudinary version segment starts with 'v' followed by digits (e.g. v17454231)
+      const versionIndex = segments.findIndex((seg) => /^v\d+$/.test(seg));
+
+      if (versionIndex !== -1) {
+        // Strip out any previous transformations and insert our exact dimensions
+        const pathFromVersion = segments.slice(versionIndex).join("/");
+        return `${prefix}${transformSegment}/${pathFromVersion}`;
+      } else {
+        // If there's no version tag, check if first segment is a transformation
+        const firstSeg = segments[0] || "";
+        const isTransformation = /^(f_|q_|w_|c_|h_|g_|r_|e_|b_|dpr_)/.test(firstSeg);
+        const pathPart = isTransformation ? segments.slice(1).join("/") : afterUpload;
+        return `${prefix}${transformSegment}/${pathPart}`;
       }
-
-      return `${prefix}${transformSegment}/${rest}`;
     }
+
+    return trimmed;
   }
 
   // 2. Unsplash URLs
@@ -83,6 +94,108 @@ export function optimizeImageUrl(
 
   // 3. Local or other images returned directly
   return trimmed;
+}
+
+/**
+ * Compresses an image on the client before upload:
+ * - Downscales large smartphone/camera photos (e.g., 4000x3000) to max 1600x1600
+ * - Compresses down to lightweight WebP/JPEG (reducing multi-MB files to ~150-300KB)
+ * - Drastically saves upload latency, mobile user data, and Cloudinary storage/bandwidth
+ * - Operates safely in-browser using HTMLCanvasElement
+ */
+export async function compressImageClient(
+  file: File,
+  maxDimension: number = 1600,
+  quality: number = 0.82
+): Promise<File> {
+  // If not in browser or not an image (e.g. PDF/SVG), return untouched
+  if (typeof window === "undefined" || !file || !file.type.startsWith("image/") || file.type === "image/svg+xml") {
+    return file;
+  }
+
+  // If already lightweight (< 350 KB), no need to compress further
+  if (file.size <= 350 * 1024) {
+    return file;
+  }
+
+  try {
+    return await new Promise<File>((resolve) => {
+      const img = new window.Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        let { width, height } = img;
+
+        if (width <= 0 || height <= 0) {
+          resolve(file);
+          return;
+        }
+
+        // Maintain aspect ratio while bounding within maxDimension
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert to webp if supported, otherwise jpeg
+        const outputMime = file.type === "image/png" ? "image/webp" : "image/jpeg";
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob || blob.size >= file.size) {
+              resolve(file);
+              return;
+            }
+
+            const extension = outputMime === "image/webp" ? ".webp" : ".jpg";
+            const newName = file.name.replace(/\.[^/.]+$/, "") + extension;
+            const compressedFile = new File([blob], newName, {
+              type: outputMime,
+              lastModified: Date.now(),
+            });
+
+            console.log(
+              `⚡ Client compressed (${file.name}): ${(file.size / 1024).toFixed(0)} KB -> ${(blob.size / 1024).toFixed(0)} KB (${Math.round((1 - blob.size / file.size) * 100)}% saved)`
+            );
+
+            resolve(compressedFile);
+          },
+          outputMime,
+          quality
+        );
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      };
+
+      img.src = objectUrl;
+    });
+  } catch (err) {
+    console.warn("Client image compression fallback to original:", err);
+    return file;
+  }
 }
 
 /**
@@ -108,3 +221,4 @@ export const shimmerPlaceholder = (w: number = 700, h: number = 700): string => 
   }
   return `data:image/svg+xml;base64,${window.btoa(shimmer)}`;
 };
+
