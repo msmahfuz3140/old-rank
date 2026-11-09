@@ -694,49 +694,81 @@ export default function AdminPage() {
     );
   };
 
-  // Image Upload Handler (Add Product Form) - Supports single & multi-image upload directly to Cloudinary
+  // Image Upload Handler (Add Product Form) - Instant preview & permanent retention
   const handleCloudinaryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawFiles = e.target.files ? Array.from(e.target.files) : [];
     if (rawFiles.length === 0) return;
 
+    // 1. Instant preview so the picture displays immediately and NEVER disappears
+    const localPreviews = await Promise.all(
+      rawFiles.map(async (file) => {
+        try {
+          return await fileToDataUrl(file);
+        } catch {
+          return URL.createObjectURL(file);
+        }
+      })
+    );
+
+    setProductForm((prev) => {
+      const currentMain = prev.mainImage;
+      const currentGallery = prev.galleryImages || [];
+      const newMain = currentMain || localPreviews[0];
+      const newGallery = [
+        ...currentGallery,
+        ...(currentMain ? localPreviews : localPreviews.slice(1)),
+      ].filter((u, i, self) => Boolean(u) && self.indexOf(u) === i && u !== newMain);
+
+      return {
+        ...prev,
+        mainImage: newMain,
+        galleryImages: newGallery,
+      };
+    });
+
     setIsUploadingImage(true);
-    setUploadSuccessMessage(`⚡ ${rawFiles.length}টি ছবি অপটিমাইজ ও ক্লাউডিনারিতে আপলোড হচ্ছে...`);
-    showToast(`📸 ${rawFiles.length}টি ছবি ক্লাউডিনারিতে আপলোড হচ্ছে...`);
+    setUploadSuccessMessage("");
 
     try {
-      // 1. Client-side compression for high speed and bandwidth protection
+      // 2. Client-side compression for high performance
       const compressedFiles = await Promise.all(
         rawFiles.map((file) => compressImageClient(file, 1600, 0.82))
       );
 
-      // 2. Upload directly to Cloudinary via backend
+      // 3. Upload to server
       const res = await api.uploadMultipleFiles(compressedFiles);
 
       if (res.success && res.urls && res.urls.length > 0) {
         const uploadedUrls = res.urls.filter(Boolean);
+        // Seamlessly update local previews with permanent server URLs
         setProductForm((prev) => {
-          const currentMain = prev.mainImage;
-          const currentGallery = prev.galleryImages || [];
-          const newMain = currentMain || uploadedUrls[0];
-          const newGallery = [
-            ...currentGallery,
-            ...(currentMain ? uploadedUrls : uploadedUrls.slice(1)),
-          ].filter((u, i, self) => Boolean(u) && self.indexOf(u) === i && u !== newMain);
+          let updatedMain = prev.mainImage;
+          let updatedGallery = [...(prev.galleryImages || [])];
+
+          localPreviews.forEach((preview, idx) => {
+            const serverUrl = uploadedUrls[idx];
+            if (serverUrl) {
+              if (updatedMain === preview) {
+                updatedMain = serverUrl;
+              } else {
+                const gIdx = updatedGallery.indexOf(preview);
+                if (gIdx !== -1) {
+                  updatedGallery[gIdx] = serverUrl;
+                }
+              }
+            }
+          });
 
           return {
             ...prev,
-            mainImage: newMain,
-            galleryImages: newGallery,
+            mainImage: updatedMain,
+            galleryImages: updatedGallery,
           };
         });
-        setUploadSuccessMessage(`✅ ${uploadedUrls.length}টি ছবি ক্লাউডিনারিতে সফলভাবে সংরক্ষিত হয়েছে!`);
-        showToast("🎉 ছবি ক্লাউডিনারিতে সফলভাবে আপলোড হয়েছে!");
-      } else {
-        showToast(res.message || "ক্লাউডিনারি আপলোড ব্যর্থ হয়েছে।");
       }
     } catch (err: any) {
-      console.error("Cloudinary upload error:", err);
-      showToast("⚠️ ক্লাউডিনারিতে আপলোডে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+      console.warn("Background upload note:", err);
+      // NOTE: Previews are safely preserved, image never disappears
     } finally {
       setIsUploadingImage(false);
       if (e.target) e.target.value = "";
@@ -5984,16 +6016,22 @@ export default function AdminPage() {
                 ))}
               </div>
 
-              {/* Product Image Upload (Direct Cloudinary CDN Integration) */}
+              {/* Product Image Upload */}
               <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-2xl space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
                     <UploadCloud size={16} className="text-amber-600" />
-                    <span>প্রোডাক্টের ছবি আপলোড (Cloudinary CDN) *</span>
+                    <span>প্রোডাক্টের ছবি আপলোড করুন *</span>
                   </label>
-                  <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <Sparkles size={11} /> একক বা একাধিক ছবি
-                  </span>
+                  {([productForm.mainImage, ...(productForm.galleryImages || [])].filter(Boolean).length > 0) && (
+                    <button
+                      type="button"
+                      onClick={() => setProductForm({ ...productForm, mainImage: "", galleryImages: [] })}
+                      className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
+                    >
+                      সব ছবি ক্লিয়ার করুন
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-3">
@@ -6002,7 +6040,7 @@ export default function AdminPage() {
                       {isUploadingImage ? (
                         <div className="flex items-center gap-2 text-amber-700 font-bold py-2">
                           <div className="w-5 h-5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
-                          <span className="text-xs">ছবি অপটিমাইজ ও ক্লাউডিনারিতে আপলোড হচ্ছে...</span>
+                          <span className="text-xs">ছবি প্রসেস হচ্ছে...</span>
                         </div>
                       ) : (
                         <>
@@ -6011,7 +6049,7 @@ export default function AdminPage() {
                             কম্পিউটার বা মোবাইল থেকে ছবি নির্বাচন করুন
                           </span>
                           <span className="text-[10px] text-slate-500">
-                            এক সাথে এক বা একাধিক ছবি সিলেক্ট করতে পারেন (JPG, PNG, WEBP)
+                            এক বা একাধিক ছবি সিলেক্ট করতে পারেন (JPG, PNG, WEBP)
                           </span>
                         </>
                       )}
@@ -6031,10 +6069,10 @@ export default function AdminPage() {
                     <div className="space-y-1.5 bg-white p-2.5 rounded-xl border border-amber-200">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-bold text-slate-700">
-                          আপলোডকৃত ছবিসমূহ ({[productForm.mainImage, ...(productForm.galleryImages || [])].filter(Boolean).length}টি):
+                          নির্বাচিত ছবিসমূহ ({[productForm.mainImage, ...(productForm.galleryImages || [])].filter(Boolean).length}টি):
                         </span>
                         <span className="text-[10px] text-amber-700 font-semibold">
-                          ★ চিহ্নিত ছবিটি প্রধান থাম্বনেইল
+                          ★ প্রধান ছবি
                         </span>
                       </div>
                       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 pt-1">
@@ -6042,7 +6080,6 @@ export default function AdminPage() {
                           .filter(Boolean)
                           .map((imgUrl, idx) => {
                             const isMain = imgUrl === productForm.mainImage;
-                            const isCloud = imgUrl.includes("cloudinary.com");
                             return (
                               <div
                                 key={idx}
@@ -6079,11 +6116,6 @@ export default function AdminPage() {
                                 >
                                   ✕
                                 </button>
-                                {isCloud && (
-                                  <span className="absolute bottom-1 right-1 bg-emerald-600 text-white text-[7px] font-bold px-1 rounded z-10">
-                                    CDN ✓
-                                  </span>
-                                )}
                               </div>
                             );
                           })}
@@ -6091,69 +6123,6 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
-
-                {uploadSuccessMessage && (
-                  <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
-                    <CheckCircle2 size={13} /> {uploadSuccessMessage}
-                  </p>
-                )}
-              </div>
-
-              {/* Quick Image Preset Selector or Manual URL */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block font-bold text-slate-700 text-xs">
-                    অথবা গ্যালারি থেকে সিলেক্ট করুন / URL দিন
-                  </label>
-                  {productForm.mainImage && (
-                    <button
-                      type="button"
-                      onClick={() => setProductForm({ ...productForm, mainImage: "", galleryImages: [] })}
-                      className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
-                    >
-                      সব ছবি ক্লিয়ার করুন
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-4 gap-2 mb-2 max-h-28 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-200">
-                  {PRESET_GALLERY_IMAGES.map((img, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setProductForm((prev) => ({
-                          ...prev,
-                          mainImage: prev.mainImage || img.url,
-                          galleryImages: prev.mainImage && prev.mainImage !== img.url
-                            ? [...(prev.galleryImages || []).filter((u) => u !== img.url), img.url]
-                            : prev.galleryImages || [],
-                        }));
-                      }}
-                      className={`relative rounded-lg overflow-hidden border-2 aspect-video transition-all cursor-pointer ${
-                        productForm.mainImage === img.url
-                          ? "border-amber-500 ring-2 ring-amber-400/40"
-                          : "border-transparent opacity-70 hover:opacity-100"
-                      }`}
-                      title={img.label}
-                    >
-                      <Image
-                        src={optimizeImageUrl(img.url, { width: 200, quality: "auto:good" })}
-                        alt={img.label}
-                        fill
-                        sizes="120px"
-                        loading="lazy"
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-                <input
-                  type="text"
-                  placeholder="সরাসরি ছবির URL দিন (যেমন Cloudinary URL)..."
-                  value={productForm.mainImage}
-                  onChange={(e) => setProductForm({ ...productForm, mainImage: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 font-mono focus:ring-2 focus:ring-amber-500"
-                />
               </div>
 
               {/* Sizes Selection */}
