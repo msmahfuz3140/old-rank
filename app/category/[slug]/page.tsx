@@ -4,8 +4,7 @@ import { ArrowLeft, Layers } from "lucide-react";
 import { api, fallbackCategories } from "@/lib/api";
 import PopUpProductCard from "@/components/product/PopUpProductCard";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 60; // ISR cache for instant millisecond load
 
 export default function CategoryPage({
   params,

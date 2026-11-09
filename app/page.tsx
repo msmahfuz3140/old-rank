@@ -15,8 +15,7 @@ import HotDealsSection from "@/components/home/HotDealsSection";
 import { api } from "@/lib/api";
 import { optimizeImageUrl } from "@/lib/imageUtils";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 30; // ISR cache for instant millisecond load
 
 export default async function HomePage() {
   const [products, categories] = await Promise.all([
@@ -242,43 +241,57 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-          {allProducts.map((p, idx) => (
-            <PopUpProductCard key={p._id} product={p} index={idx} />
-          ))}
-        </div>
+        {allProducts.length === 0 ? (
+          <div className="bg-white rounded-3xl p-8 sm:p-12 border border-slate-100 shadow-xs text-center max-w-lg mx-auto space-y-3 my-4">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto text-2xl font-black">
+              💎
+            </div>
+            <h3 className="text-base sm:text-lg font-black text-slate-800">নতুন এক্সক্লুসিভ কালেকশন আসছে</h3>
+            <p className="text-xs text-slate-500 font-medium">
+              আমাদের স্টোরে নতুন কালেকশন খুব শীঘ্রই যুক্ত করা হচ্ছে। অ্যাডমিন প্যানেল থেকে সরাসরি নতুন প্রোডাক্ট পোস্ট করুন।
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+            {allProducts.map((p, idx) => (
+              <PopUpProductCard key={p._id} product={p} index={idx} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* 5. All Store Products Grid */}
-      <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
-                All Products
-              </span>
+      {allProducts.length > 0 && (
+        <section className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+                  All Products
+                </span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
+                শপের সমস্ত প্রোডাক্ট কালেকশন
+              </h2>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                আমাদের সমস্ত ট্রেন্ডিং প্রিমিয়াম প্রোডাক্ট ব্রাউজ করুন
+              </p>
             </div>
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1">
-              শপের সমস্ত প্রোডাক্ট কালেকশন
-            </h2>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              আমাদের সমস্ত ট্রেন্ডিং প্রিমিয়াম প্রোডাক্ট ব্রাউজ করুন
-            </p>
+            <Link
+              href="/category/jewelry"
+              className="text-xs sm:text-sm font-bold text-[#303d6e] hover:underline flex items-center gap-1 shrink-0"
+            >
+              সব দেখুন <ArrowRight size={14} />
+            </Link>
           </div>
-          <Link
-            href="/category/jewelry"
-            className="text-xs sm:text-sm font-bold text-[#303d6e] hover:underline flex items-center gap-1 shrink-0"
-          >
-            সব দেখুন <ArrowRight size={14} />
-          </Link>
-        </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-          {allProducts.map((p, idx) => (
-            <PopUpProductCard key={p._id} product={p} index={idx} />
-          ))}
-        </div>
-      </section>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+            {allProducts.map((p, idx) => (
+              <PopUpProductCard key={p._id} product={p} index={idx} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

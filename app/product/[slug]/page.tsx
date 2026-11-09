@@ -15,7 +15,7 @@ import {
   ZoomIn,
   MessageSquarePlus,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, getDeviceStoredProducts } from "@/lib/api";
 import { useCartStore } from "@/lib/store";
 import { IProduct, IReview } from "@/lib/types";
 import PopUpProductCard from "@/components/product/PopUpProductCard";
@@ -34,9 +34,23 @@ export default function ProductDetailPage({
   const setDirectBuyItem = useCartStore((state) => state.setDirectBuyItem);
   const closeCartDrawer = useCartStore((state) => state.closeCartDrawer);
 
-  const [product, setProduct] = useState<IProduct | null>(null);
+  // Fast millisecond instant initial render from client storage
+  const [product, setProduct] = useState<IProduct | null>(() => {
+    if (typeof window !== "undefined") {
+      const stored = getDeviceStoredProducts();
+      return stored.find((p) => p.slug === resolvedParams.slug || p._id === resolvedParams.slug) || null;
+    }
+    return null;
+  });
   const [relatedProducts, setRelatedProducts] = useState<IProduct[]>([]);
-  const [selectedImage, setSelectedImage] = useState("");
+  const [selectedImage, setSelectedImage] = useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = getDeviceStoredProducts();
+      const p = stored.find((item) => item.slug === resolvedParams.slug || item._id === resolvedParams.slug);
+      return p?.mainImage || "";
+    }
+    return "";
+  });
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<"desc" | "spec">("desc");
