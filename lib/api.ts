@@ -248,8 +248,8 @@ export function clearClientCachedData(keyPrefix?: string): void {
 }
 
 // Permanent Single-Device Local Storage & Bandwidth-Protection Caching
-export const DEVICE_PRODUCTS_STORAGE_KEY = "oldrank_device_products_v2";
-export const DEVICE_VERSION_STORAGE_KEY = "oldrank_products_version";
+export const DEVICE_PRODUCTS_STORAGE_KEY = "oldrank_device_products_v3";
+export const DEVICE_VERSION_STORAGE_KEY = "oldrank_products_version_v3";
 
 export function getDeviceStoredProducts(): IProduct[] {
   if (typeof window === "undefined") return [];
@@ -686,21 +686,8 @@ export const api = {
       return await res.json();
     } catch {
       return {
-        success: true,
-        data: [
-          {
-            invoiceId: query.startsWith("SG-") ? query : "SG-10025",
-            customer: { name: "Sample Customer", phone: query, address: "Dhaka", district: "Dhaka City" },
-            items: [{ name: fallbackProducts[0].name, price: fallbackProducts[0].basePrice, quantity: 1 }],
-            grandTotal: fallbackProducts[0].basePrice + 60,
-            status: "processing",
-            timeline: [
-              { status: "Order Placed", timestamp: new Date(Date.now() - 3600000 * 5), note: "অর্ডার সফলভাবে গ্রহণ করা হয়েছে।" },
-              { status: "Order Confirmed", timestamp: new Date(Date.now() - 3600000 * 3), note: "অর্ডার কনফার্ম করা হয়েছে এবং প্যাকিং চলছে।" },
-              { status: "In Transit", timestamp: new Date(Date.now() - 3600000 * 1), note: "ডেলিভারির জন্য কুরিয়ারে হস্তান্তর করা হয়েছে।" },
-            ],
-          },
-        ],
+        success: false,
+        data: [],
       };
     }
   },
@@ -711,11 +698,7 @@ export const api = {
       const json = await res.json();
       return json.items || [];
     } catch {
-      return [
-        { name: "Tanvir from Mirpur", product_name: "Ultra Modern Smartwatch Series 9", time: "2 minutes ago", image: fallbackProducts[1].mainImage, product_url: `/product/${fallbackProducts[1].slug}` },
-        { name: "Sabbir from Dhanmondi", product_name: "Premium Oxford Cotton Casual Shirt", time: "5 minutes ago", image: fallbackProducts[2].mainImage, product_url: `/product/${fallbackProducts[2].slug}` },
-        { name: "Nusrat from Uttara", product_name: "Canva Pro Lifetime Owner Access", time: "8 minutes ago", image: fallbackProducts[4].mainImage, product_url: `/product/${fallbackProducts[4].slug}` },
-      ];
+      return [];
     }
   },
 
